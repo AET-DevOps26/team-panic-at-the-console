@@ -24,4 +24,4 @@ jobs:
           persist-credentials: false
 
       - name: Run actionlint
-        uses: rhysd/actionlint@ee5d09471989b35faea26f6899e8f1ad22e37740 # v1.7.7
+        uses: rhysd/actionlint@03d0035246f3e81f36aed592ffb4bebf33a03106 # v1.7.7
