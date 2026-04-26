@@ -1,0 +1,156 @@
+name: Auto Triage
+
+on:
+  pull_request:
+    types:
+      - opened
+      - edited
+      - synchronize
+      - reopened
+  issues:
+    types:
+      - opened
+      - edited
+      - reopened
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+
+jobs:
+  pr-triage:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Label PR from semantic title and assign author
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8.0.0
+        with:
+          script: |
+            const pr = context.payload.pull_request;
+            const title = pr.title || "";
+            const match = title.match(/^([a-z]+)(\([^)]+\))?(!)?:\s+/i);
+            const type = match?.[1]?.toLowerCase();
+
+            const labelMap = {
+              feat: { name: "feature", color: "0e8a16", description: "New feature" },
+              fix: { name: "fix", color: "d73a4a", description: "Bug fix" },
+              docs: { name: "docs", color: "0075ca", description: "Documentation changes" },
+              chore: { name: "chore", color: "cfd3d7", description: "Maintenance task" },
+              refactor: { name: "refactor", color: "fbca04", description: "Code refactoring" },
+              perf: { name: "performance", color: "5319e7", description: "Performance improvements" },
+              test: { name: "test", color: "1d76db", description: "Testing changes" },
+              build: { name: "build", color: "b60205", description: "Build changes" },
+              ci: { name: "ci", color: "0366d6", description: "CI changes" },
+              style: { name: "style", color: "f9d0c4", description: "Style-only changes" }
+            };
+
+            async function ensureLabel(label) {
+              try {
+                await github.rest.issues.getLabel({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  name: label.name
+                });
+              } catch (error) {
+                if (error.status === 404) {
+                  await github.rest.issues.createLabel({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    name: label.name,
+                    color: label.color,
+                    description: label.description
+                  });
+                } else {
+                  throw error;
+                }
+              }
+            }
+
+            if (type && labelMap[type]) {
+              const label = labelMap[type];
+              await ensureLabel(label);
+              await github.rest.issues.addLabels({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: pr.number,
+                labels: [label.name]
+              });
+            }
+
+            try {
+              await github.rest.issues.addAssignees({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: pr.number,
+                assignees: [pr.user.login]
+              });
+            } catch (error) {
+              core.warning(`Could not assign PR author (${pr.user.login}): ${error.message}`);
+            }
+
+  issue-triage:
+    if: github.event_name == 'issues'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Label issue from semantic title and assign author
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8.0.0
+        with:
+          script: |
+            const issue = context.payload.issue;
+            const title = issue.title || "";
+            const match = title.match(/^\[?([a-z]+)\]?[:\-\s]/i) || title.match(/^([a-z]+)(\([^)]+\))?(!)?:\s+/i);
+            const type = match?.[1]?.toLowerCase();
+
+            const labelMap = {
+              feat: { name: "enhancement", color: "a2eeef", description: "Feature request" },
+              feature: { name: "enhancement", color: "a2eeef", description: "Feature request" },
+              fix: { name: "bug", color: "d73a4a", description: "Bug report" },
+              bug: { name: "bug", color: "d73a4a", description: "Bug report" },
+              docs: { name: "docs", color: "0075ca", description: "Documentation" },
+              chore: { name: "chore", color: "cfd3d7", description: "Maintenance task" }
+            };
+
+            async function ensureLabel(label) {
+              try {
+                await github.rest.issues.getLabel({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  name: label.name
+                });
+              } catch (error) {
+                if (error.status === 404) {
+                  await github.rest.issues.createLabel({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    name: label.name,
+                    color: label.color,
+                    description: label.description
+                  });
+                } else {
+                  throw error;
+                }
+              }
+            }
+
+            if (type && labelMap[type]) {
+              const label = labelMap[type];
+              await ensureLabel(label);
+              await github.rest.issues.addLabels({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                labels: [label.name]
+              });
+            }
+
+            try {
+              await github.rest.issues.addAssignees({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                assignees: [issue.user.login]
+              });
+            } catch (error) {
+              core.warning(`Could not assign issue author (${issue.user.login}): ${error.message}`);
+            }
