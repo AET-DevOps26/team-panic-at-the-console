@@ -30,7 +30,7 @@ jobs:
       - name: Lint OpenAPI spec
         run: |
           if [ -f api/openapi.yaml ]; then
-            npx @redocly/cli lint api/openapi.yaml
+            npx --yes @redocly/cli@1.19.0 lint api/openapi.yaml
           else
             echo "No api/openapi.yaml found, skipping OpenAPI lint"
           fi

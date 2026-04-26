@@ -15,19 +15,17 @@ Repository for team Panic! At the Console
 ## Quick Start
 
 ```bash
-cp .env.example .env
-docker compose up --build
+pixi run lint
 ```
 
-App runs at `http://localhost:3000`, API at `http://localhost:8080`.
+This repository currently provides project scaffolding, CI, and linting automation.
 
 ## Installation
 
 Prerequisites:
 
-- Docker + Docker Compose
 - Git
-- Pixi (recommended for local tooling)
+- Pixi
 
 Install Pixi on macOS:
 
@@ -52,48 +50,43 @@ pixi run lint
 
 ```
 .
-├── api/                    # OpenAPI spec (single source of truth)
+├── api/                    # API specs and related scripts
+│   ├── scripts/
+│   └── specs/
 ├── services/
-│   ├── gateway/            # Spring Cloud Gateway
-│   ├── user-service/       # Spring Boot — user management
-│   ├── content-service/    # Spring Boot — core business logic
-│   └── genai-service/      # Python — LangChain AI service
-├── client/                 # Frontend (React/Vue/Angular)
+│   ├── content-service/
+│   ├── gateway/
+│   ├── genai-service/
+│   └── user-service/
 ├── infra/
-│   ├── helm/               # Helm charts for Kubernetes
-│   ├── k8s/                # Raw Kubernetes manifests
-│   └── monitoring/         # Prometheus + Grafana config
-├── docs/                   # Architecture diagrams, ADRs, API docs
-└── docker-compose.yml      # Local orchestration
+│   ├── compose/
+│   ├── helm/
+│   ├── k8s/
+│   └── monitoring/
+├── docs/
+│   ├── adr/
+│   ├── architecture/
+│   └── submissions/
+├── tests/
+└── scripts/
 ```
 
 ## Architecture
 
 See [docs/architecture/](docs/architecture/) for UML diagrams.
 
-API docs: `http://localhost:8080/swagger-ui.html` (when running)
-
 ## CI/CD
 
-- **CI**: Runs on every PR — lint, build, test all services
-- **CD**: Deploys to Kubernetes on merge to `main`
+- **CI**: Runs on pull requests and merge queues.
+- **CD**: Not configured yet.
 
 See [.github/workflows/](.github/workflows/).
-
-## Monitoring
-
-Grafana: `http://localhost:3001` (admin/admin)
-Prometheus: `http://localhost:9090`
-
-Dashboards exported to [infra/monitoring/grafana/dashboards/](infra/monitoring/grafana/dashboards/).
 
 ## Testing
 
 ```bash
-# All services
-docker compose run --rm user-service ./mvnw test
-docker compose run --rm content-service ./mvnw test
-docker compose run --rm genai-service pytest
+# Lint and hook checks (same command as CI)
+pixi run lint
 ```
 
 ## Student Responsibilities

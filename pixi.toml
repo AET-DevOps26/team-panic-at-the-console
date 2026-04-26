@@ -10,15 +10,11 @@ nodejs = ">=22,<23"
 
 [feature.lint.dependencies]
 lefthook = "*"
-docformatter = "*"
 ruff = "*"
-mypy = "*"
 prettier = "*"
 taplo = "*"
 pre-commit-hooks = "*"
 typos = "*"
-zizmor = "*"
-conftest = "*"
 
 [feature.lint.tasks]
 pre-commit-install = "lefthook install"
