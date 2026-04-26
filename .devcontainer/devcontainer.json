@@ -1,0 +1,21 @@
+{
+  "name": "devops-project-2026",
+  "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
+  "features": {
+    "ghcr.io/devcontainers/features/docker-outside-of-docker:1": {},
+    "ghcr.io/devcontainers/features/common-utils:2": {
+      "installZsh": true,
+      "configureZshAsDefaultShell": true
+    },
+    "ghcr.io/devcontainers/features/github-cli:1": {}
+  },
+  "postCreateCommand": "curl -fsSL https://pixi.sh/install.sh | sh && ~/.pixi/bin/pixi install && ~/.pixi/bin/pixi run pre-commit-install",
+  "customizations": {
+    "vscode": {
+      "extensions": ["ms-azuretools.vscode-docker", "redhat.vscode-yaml", "tamasfe.even-better-toml", "GitHub.vscode-github-actions", "esbenp.prettier-vscode"]
+    }
+  },
+  "remoteEnv": {
+    "PATH": "${containerEnv:PATH}:/home/vscode/.pixi/bin"
+  }
+}

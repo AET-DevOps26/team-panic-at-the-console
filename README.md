@@ -23,6 +23,21 @@ pixi run pre-commit-install
 pixi run lint
 ```
 
+Run local service scaffold with Docker Compose:
+
+```bash
+cp .env.example .env
+docker compose up --build
+```
+
+Equivalent Pixi tasks:
+
+```bash
+pixi run compose-up
+pixi run compose-down
+pixi run compose-validate
+```
+
 This repository currently provides project scaffolding, CI, and linting automation.
 
 ## Installation
@@ -36,6 +51,12 @@ Install Pixi on macOS:
 
 ```bash
 brew install pixi
+```
+
+Use a VS Code Dev Container (optional):
+
+```bash
+# in VS Code: Dev Containers: Reopen in Container
 ```
 
 Install project tooling and Git hooks:
@@ -91,6 +112,12 @@ Create a Git tag like `v0.1.0` (or publish a GitHub Release for that tag) to tri
 # Current scaffold test target (same command as CI)
 pixi run lint
 ```
+
+## Local Runtime
+
+- Local compose file: `docker-compose.yml`
+- Production-oriented compose with Traefik + TLS: `docker-compose.prod.yml`
+- Images default to GHCR tag `main` and can be overridden with `IMAGE_TAG`.
 
 ## Student Responsibilities
 
