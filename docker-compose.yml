@@ -1,0 +1,36 @@
+services:
+  gateway:
+    image: ghcr.io/manuellerchner/devops-project-2026/gateway:${IMAGE_TAG:-main}
+    build:
+      context: ./services/gateway
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    restart: unless-stopped
+
+  user-service:
+    image: ghcr.io/manuellerchner/devops-project-2026/user-service:${IMAGE_TAG:-main}
+    build:
+      context: ./services/user-service
+      dockerfile: Dockerfile
+    ports:
+      - "8081:8081"
+    restart: unless-stopped
+
+  content-service:
+    image: ghcr.io/manuellerchner/devops-project-2026/content-service:${IMAGE_TAG:-main}
+    build:
+      context: ./services/content-service
+      dockerfile: Dockerfile
+    ports:
+      - "8082:8082"
+    restart: unless-stopped
+
+  genai-service:
+    image: ghcr.io/manuellerchner/devops-project-2026/genai-service:${IMAGE_TAG:-main}
+    build:
+      context: ./services/genai-service
+      dockerfile: Dockerfile
+    ports:
+      - "8083:8083"
+    restart: unless-stopped
