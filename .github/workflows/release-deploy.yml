@@ -31,6 +31,10 @@ jobs:
       - name: Checkout branch
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
+      - name: Normalize image repository
+        id: repo
+        run: echo "lower=${GITHUB_REPOSITORY,,}" >> "$GITHUB_OUTPUT"
+
       - name: Resolve release tag
         id: tag
         run: |
@@ -57,8 +61,8 @@ jobs:
           file: ./services/${{ matrix.service }}/Dockerfile
           push: true
           tags: |
-            ghcr.io/${{ github.repository }}/${{ matrix.service }}:${{ steps.tag.outputs.value }}
-            ghcr.io/${{ github.repository }}/${{ matrix.service }}:sha-${{ github.sha }}
+            ghcr.io/${{ steps.repo.outputs.lower }}/${{ matrix.service }}:${{ steps.tag.outputs.value }}
+            ghcr.io/${{ steps.repo.outputs.lower }}/${{ matrix.service }}:sha-${{ github.sha }}
 
   deploy:
     name: Deploy tagged release
