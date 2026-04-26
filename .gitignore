@@ -52,3 +52,6 @@ client/src/api.ts
 # Monitoring
 infra/monitoring/grafana/data/
 infra/monitoring/prometheus/data/
+
+# Helm / SOPS decrypted secrets
+infra/helm/secrets/*.dec.yaml

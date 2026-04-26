@@ -99,12 +99,22 @@ See [docs/architecture/](docs/architecture/) for UML diagrams.
 
 - **CI**: Runs on pull requests and merge queues.
 - **CD**: Tag/release workflow builds and publishes service images to GHCR.
+- **Deploy**: Helm + SOPS deployment scaffold is provided in `.github/workflows/deploy-helm-sops.yml`.
 
 See [.github/workflows/](.github/workflows/).
 
 ### Release tags
 
 Create a Git tag like `v0.1.0` (or publish a GitHub Release for that tag) to trigger release image publishing.
+
+### Helm + SOPS setup
+
+- SOPS policy file: `.sops.yaml`
+- Helm chart scaffold: `infra/helm/devops-platform`
+- Encrypted production values expected at: `infra/helm/secrets/values.prod.enc.yaml`
+- Required secrets for deploy workflow:
+  - `KUBECONFIG_B64` (base64 encoded kubeconfig)
+  - `SOPS_AGE_KEY` (AGE private key content)
 
 ## Testing
 

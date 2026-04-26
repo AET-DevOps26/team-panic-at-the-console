@@ -1,0 +1,27 @@
+global:
+  image:
+    registry: ghcr.io/manuellerchner/devops-project-2026
+    tag: main
+  namespace: default
+
+services:
+  gateway:
+    enabled: true
+    port: 8080
+    image:
+      repository: gateway
+  user-service:
+    enabled: true
+    port: 8081
+    image:
+      repository: user-service
+  content-service:
+    enabled: true
+    port: 8082
+    image:
+      repository: content-service
+  genai-service:
+    enabled: true
+    port: 8083
+    image:
+      repository: genai-service

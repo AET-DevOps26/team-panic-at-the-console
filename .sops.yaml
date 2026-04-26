@@ -1,0 +1,4 @@
+creation_rules:
+  - path_regex: infra/helm/secrets/.*\.enc\.ya?ml$
+    age:
+      - age1replacewithyourteamrecipientpublickeyxxxxxxxxxxxxxxxxxxxxxxxxxxxx
