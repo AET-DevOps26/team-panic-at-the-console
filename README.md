@@ -48,7 +48,7 @@ pixi run lint
 
 ## Project Structure
 
-```
+```text
 .
 ├── api/                    # API specs and related scripts
 │   ├── scripts/
@@ -78,9 +78,13 @@ See [docs/architecture/](docs/architecture/) for UML diagrams.
 ## CI/CD
 
 - **CI**: Runs on pull requests and merge queues.
-- **CD**: Not configured yet.
+- **CD**: Tag/release workflow builds and publishes service images to GHCR.
 
 See [.github/workflows/](.github/workflows/).
+
+### Release tags
+
+Create a Git tag like `v0.1.0` (or publish a GitHub Release for that tag) to trigger release image publishing.
 
 ## Testing
 
