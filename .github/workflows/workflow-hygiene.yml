@@ -1,0 +1,27 @@
+name: Workflow Hygiene
+
+on:
+  pull_request:
+    paths:
+      - .github/workflows/**
+      - .github/dependabot.yml
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/**
+      - .github/dependabot.yml
+
+jobs:
+  actionlint:
+    name: Lint GitHub workflows
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          persist-credentials: false
+
+      - name: Run actionlint
+        uses: docker://rhysd/actionlint:1.7.7

@@ -1,0 +1,28 @@
+[workspace]
+name = "devops-project-2026"
+description = "Tooling workspace for hooks and CI quality checks"
+channels = ["conda-forge"]
+platforms = ["linux-64", "osx-arm64", "osx-64", "win-64"]
+
+[dependencies]
+python = ">=3.12,<3.14"
+nodejs = ">=22,<23"
+
+[feature.lint.dependencies]
+lefthook = "*"
+docformatter = "*"
+ruff = "*"
+mypy = "*"
+prettier = "*"
+taplo = "*"
+pre-commit-hooks = "*"
+typos = "*"
+zizmor = "*"
+conftest = "*"
+
+[feature.lint.tasks]
+pre-commit-install = "lefthook install"
+lint = "lefthook run pre-commit --all-files"
+
+[environments]
+default = ["lint"]

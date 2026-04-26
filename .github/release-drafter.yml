@@ -1,0 +1,75 @@
+name-template: "v$RESOLVED_VERSION"
+tag-template: "v$RESOLVED_VERSION"
+
+change-template: "- $TITLE ([#$NUMBER]($URL))"
+no-changes-template: "- No notable changes in this release."
+template: |
+  ## What Changed
+
+  $CHANGES
+
+  ## Contributors
+
+  $CONTRIBUTORS
+
+version-resolver:
+  major:
+    labels:
+      - breaking
+  minor:
+    labels:
+      - feature
+      - enhancement
+  patch:
+    labels:
+      - fix
+      - bug
+      - dependencies
+  default: patch
+
+categories:
+  - title: "Features"
+    labels:
+      - feature
+      - enhancement
+  - title: "Fixes"
+    labels:
+      - fix
+      - bug
+  - title: "Dependencies"
+    labels:
+      - dependencies
+      - chore
+  - title: "Documentation"
+    labels:
+      - docs
+  - title: "Infrastructure"
+    labels:
+      - infra
+  - title: "Other"
+    labels:
+      - "*"
+
+autolabeler:
+  - label: docs
+    files:
+      - "docs/**"
+      - "README.md"
+  - label: infra
+    files:
+      - "infra/**"
+      - ".github/**"
+  - label: dependencies
+    files:
+      - "**/pom.xml"
+      - "**/build.gradle"
+      - "**/build.gradle.kts"
+      - "**/package.json"
+      - "**/requirements*.txt"
+      - "pixi.toml"
+      - "pixi.lock"
+  - label: feature
+    files:
+      - "services/**"
+      - "client/**"
+      - "api/**"

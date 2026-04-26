@@ -1,0 +1,17 @@
+# CODEOWNERS
+#
+# Format: <path> <owner>
+# Owners can be GitHub users (@user) or teams (@org/team).
+
+# Default owner for everything in the repository
+* @manuellerchner
+
+# Area 1: Frontend
+/client/ @manuellerchner
+
+# Area 2: API and Services
+/api/ @manuellerchner
+/services/ @manuellerchner
+
+# Area 3: Infrastructure and Operations
+/infra/ @manuellerchner

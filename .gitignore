@@ -1,0 +1,54 @@
+# Environment
+.env
+*.local
+
+# Pixi
+.pixi/
+
+# Java
+target/
+*.class
+*.jar
+*.war
+.mvn/wrapper/maven-wrapper.jar
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+*.egg-info/
+dist/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+coverage/
+htmlcov/
+
+# Node
+node_modules/
+dist/
+build/
+.next/
+
+# IDE
+.idea/
+.vscode/
+*.iml
+.DS_Store
+
+# Lefthook
+.lefthook-local.yml
+
+# Docker
+*.override.yml
+
+# Generated API clients
+services/*/generated/
+client/src/api.ts
+
+# Monitoring
+infra/monitoring/grafana/data/
+infra/monitoring/prometheus/data/
