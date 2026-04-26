@@ -42,4 +42,10 @@ pixi run lint
 - Keep `README.md` realistic; avoid documenting services that do not exist yet.
 - Keep `pixi.toml` focused on currently used tools and tasks.
 - Extend Dependabot only after manifests are added in the referenced paths.
+
 - Avoid root-level language/runtime toolchains until related service manifests and tasks exist.
+## Toolchain Policy
+
+- Keep root Pixi minimal and split concerns by feature (`lint`, `deploy`, etc.).
+- Include deploy tooling (`helm`, `kubectl`, `sops`, `age`) in Pixi when used by project workflows.
+- Do not add root-level Java/JDK, Maven, npm, or framework-specific toolchains until corresponding service manifests/tasks are committed.

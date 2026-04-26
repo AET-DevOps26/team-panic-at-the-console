@@ -27,6 +27,16 @@ compose-up-prod = "docker compose --env-file .env.example -f docker-compose.prod
 compose-validate = "docker compose --env-file .env.example -f docker-compose.yml config > /dev/null && docker compose --env-file .env.example -f docker-compose.prod.yml config > /dev/null"
 openapi-lint = "bash -lc 'if [ -f api/openapi.yaml ]; then npx --yes @redocly/cli@1.19.0 lint api/openapi.yaml; else echo \"No api/openapi.yaml found, skipping OpenAPI lint\"; fi'"
 
+[feature.deploy.dependencies]
+kubernetes-helm = "*"
+kubernetes-client = "*"
+go-sops = "*"
+age = "*"
+
+[feature.deploy.tasks]
+deploy-tools-version = "helm version --short && kubectl version --client --short && sops --version"
+
 [environments]
 default = ["lint"]
 dev = ["lint", "dev"]
+deploy = ["deploy"]
