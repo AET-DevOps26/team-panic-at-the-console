@@ -1,0 +1,41 @@
+ci:
+  - changed-files:
+      - any-glob-to-any-file:
+          - ".github/workflows/**"
+          - ".github/dependabot.yml"
+          - "lefthook.yml"
+          - "pixi.toml"
+          - "pixi.lock"
+
+api:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "api/**"
+
+services:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "services/**"
+
+infra:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "infra/**"
+
+docs:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "docs/**"
+          - "README.md"
+
+tests:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "tests/**"
+
+deps:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "pixi.toml"
+          - "pixi.lock"
+          - ".github/dependabot.yml"

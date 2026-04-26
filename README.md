@@ -15,6 +15,11 @@ Repository for team Panic! At the Console
 ## Quick Start
 
 ```bash
+# install tools and hooks once
+pixi install
+pixi run pre-commit-install
+
+# run the same checks as CI
 pixi run lint
 ```
 
@@ -38,12 +43,6 @@ Install project tooling and Git hooks:
 ```bash
 pixi install
 pixi run pre-commit-install
-```
-
-Run the same checks as CI locally:
-
-```bash
-pixi run lint
 ```
 
 ## Project Structure
@@ -89,7 +88,7 @@ Create a Git tag like `v0.1.0` (or publish a GitHub Release for that tag) to tri
 ## Testing
 
 ```bash
-# Lint and hook checks (same command as CI)
+# Current scaffold test target (same command as CI)
 pixi run lint
 ```
 
