@@ -1,0 +1,41 @@
+name: Compose Validate
+
+on:
+  pull_request:
+    paths:
+      - "docker-compose*.yml"
+      - ".env.example"
+      - "pixi.toml"
+      - ".github/workflows/compose-validate.yml"
+  merge_group:
+  push:
+    branches:
+      - main
+    paths:
+      - "docker-compose*.yml"
+      - ".env.example"
+      - "pixi.toml"
+      - ".github/workflows/compose-validate.yml"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  compose-config:
+    name: Validate Docker Compose config
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+
+      - name: Set up pixi
+        uses: prefix-dev/setup-pixi@a0af7a228712d6121d37aba47adf55c1332c9c2e # v0.9.4
+
+      - name: Validate compose files via Pixi task
+        run: pixi run compose-validate

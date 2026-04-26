@@ -20,5 +20,13 @@ typos = "*"
 pre-commit-install = "lefthook install"
 lint = "lefthook run pre-commit --all-files"
 
+[feature.dev.tasks]
+compose-up = "docker compose --env-file .env.example up --build"
+compose-down = "docker compose down --remove-orphans"
+compose-up-prod = "docker compose --env-file .env.example -f docker-compose.prod.yml up -d"
+compose-validate = "docker compose --env-file .env.example -f docker-compose.yml config > /dev/null && docker compose --env-file .env.example -f docker-compose.prod.yml config > /dev/null"
+openapi-lint = "bash -lc 'if [ -f api/openapi.yaml ]; then npx --yes @redocly/cli@1.19.0 lint api/openapi.yaml; else echo \"No api/openapi.yaml found, skipping OpenAPI lint\"; fi'"
+
 [environments]
 default = ["lint"]
+dev = ["lint", "dev"]
