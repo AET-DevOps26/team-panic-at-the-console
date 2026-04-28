@@ -2,6 +2,12 @@
 .env
 *.local
 
+# Claude Code
+.claude/settings.local.json
+
+# Traefik / Let's Encrypt (prod compose volume)
+letsencrypt/
+
 # Pixi
 .pixi/
 

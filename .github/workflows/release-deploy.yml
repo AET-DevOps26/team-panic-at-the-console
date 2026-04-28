@@ -23,9 +23,14 @@ jobs:
       fail-fast: false
       matrix:
         service:
+          - frontend
           - gateway
+          - incident-service
+          - event-service
+          - rule-engine
           - user-service
-          - content-service
+          - notification-service
+          - webhook-service
           - genai-service
     steps:
       - name: Checkout branch

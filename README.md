@@ -4,14 +4,6 @@ Repository for team Panic! At the Console
 
 > TUM DevOps Project — Spring 2026
 
-## Team
-
-| Name | GitHub | TUMonline | Matriculation | Subsystem |
-| ---- | ------ | --------- | ------------- | --------- |
-| TBD  | TBD    | TBD       | TBD           | Client    |
-| TBD  | TBD    | TBD       | TBD           | Server    |
-| TBD  | TBD    | TBD       | TBD           | GenAI     |
-
 ## Quick Start
 
 ```bash
@@ -38,7 +30,7 @@ pixi run compose-down
 pixi run compose-validate
 ```
 
-This repository currently provides project scaffolding, CI, and linting automation.
+Lightweight incident management system — detect, track, and resolve incidents with an immutable event log and AI-assisted analysis.
 
 ## Installation
 
@@ -70,16 +62,20 @@ pixi run pre-commit-install
 
 ```text
 .
-├── api/                    # API specs and related scripts
+├── api/                        # OpenAPI specs and scripts
 │   ├── scripts/
 │   └── specs/
 ├── services/
-│   ├── content-service/
-│   ├── gateway/
-│   ├── genai-service/
-│   └── user-service/
+│   ├── frontend/               # Web dashboard (Client subsystem)
+│   ├── gateway/                # API gateway — single entry point
+│   ├── incident-service/       # Core incident CRUD + lifecycle
+│   ├── event-service/          # Append-only event log / timeline
+│   ├── rule-engine/            # Evaluates external signals → incident decisions
+│   ├── user-service/           # Auth + role management
+│   ├── notification-service/   # Notifies users on incident events
+│   ├── webhook-service/        # Receives CI/CD webhook events
+│   └── genai-service/          # AI summaries, triage, postmortem drafts
 ├── infra/
-│   ├── compose/
 │   ├── helm/
 │   ├── k8s/
 │   └── monitoring/
@@ -131,6 +127,6 @@ pixi run lint
 
 ## Student Responsibilities
 
-- **Client**: TBD
-- **Server**: TBD
-- **GenAI**: TBD
+- **Frontend** (`/services/frontend`): @LeonSpoerl
+- **Backend** (`/services/gateway`, `incident-service`, `event-service`, `rule-engine`, `user-service`, `notification-service`, `webhook-service`): @florian-pesco
+- **GenAI** (`/services/genai-service`): @manuellerchner

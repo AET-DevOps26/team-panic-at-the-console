@@ -2,16 +2,34 @@
 #
 # Format: <path> <owner>
 # Owners can be GitHub users (@user) or teams (@org/team).
+#
+# Subsystem ownership:
+#   Frontend  → @LeonSpoerl
+#   Backend   → @florian-pesco
+#   GenAI     → @manuellerchner
+#   Infra/CI  → @manuellerchner (all team members required for review)
+#
+# Default: all three review anything not matched below
+* @manuellerchner @florian-pesco @LeonSpoerl
 
-# Default owner for everything in the repository
-* @manuellerchner
+# ── Frontend ──────────────────────────────────────────────────────────────────
+/services/frontend/    @LeonSpoerl
 
-# Area 1: Frontend
-/client/ @manuellerchner
+# ── Backend Services ──────────────────────────────────────────────────────────
+/services/gateway/             @florian-pesco
+/services/incident-service/   @florian-pesco
+/services/event-service/       @florian-pesco
+/services/rule-engine/         @florian-pesco
+/services/user-service/        @florian-pesco
+/services/notification-service/ @florian-pesco
+/services/webhook-service/     @florian-pesco
+/api/                          @florian-pesco
 
-# Area 2: API and Services
-/api/ @manuellerchner
-/services/ @manuellerchner
+# ── GenAI Service ─────────────────────────────────────────────────────────────
+/services/genai-service/       @manuellerchner
 
-# Area 3: Infrastructure and Operations
-/infra/ @manuellerchner
+# ── Infrastructure & CI/CD ────────────────────────────────────────────────────
+# All team members review infra changes — affects everyone's deployments
+/infra/       @manuellerchner @florian-pesco @LeonSpoerl
+/.github/     @manuellerchner @florian-pesco @LeonSpoerl
+/scripts/     @manuellerchner
