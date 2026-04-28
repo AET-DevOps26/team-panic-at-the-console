@@ -53,8 +53,7 @@ pixi run pre-commit-install
 
 ```text
 .
-├── api/                        # OpenAPI specs and scripts
-│   ├── scripts/
+├── api/                        # OpenAPI specs
 │   └── specs/
 ├── services/
 │   ├── frontend/               # Web dashboard (Client subsystem)
@@ -67,20 +66,14 @@ pixi run pre-commit-install
 │   ├── webhook-service/        # Receives CI/CD webhook events
 │   └── genai-service/          # AI summaries, triage, postmortem drafts
 ├── infra/
-│   ├── helm/
-│   ├── k8s/
+│   ├── helm/                   # Helm chart scaffold
+│   ├── compose/                # Compose overrides
 │   └── postgres/               # Dev DB init scripts
 ├── docs/
-│   ├── adr/
-│   ├── architecture/
 │   └── submissions/
 ├── tests/
 └── scripts/
 ```
-
-## Architecture
-
-See [docs/architecture/](docs/architecture/) for UML diagrams.
 
 ## CI/CD
 
