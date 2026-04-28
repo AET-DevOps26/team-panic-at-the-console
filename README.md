@@ -1,8 +1,8 @@
 # DevOps Project 2026
 
-Repository for team Panic! At the Console
+Lightweight incident management system — detect, track, and resolve incidents with an immutable event log and AI-assisted analysis.
 
-> TUM DevOps Project — Spring 2026
+> TUM DevOps Project — Spring 2026 · Team Panic! At the Console
 
 ## Quick Start
 
@@ -15,13 +15,6 @@ pixi run pre-commit-install
 pixi run lint
 ```
 
-Run local service scaffold with Docker Compose:
-
-```bash
-cp .env.example .env
-docker compose up --build
-```
-
 Equivalent Pixi tasks:
 
 ```bash
@@ -29,8 +22,6 @@ pixi run compose-up
 pixi run compose-down
 pixi run compose-validate
 ```
-
-Lightweight incident management system — detect, track, and resolve incidents with an immutable event log and AI-assisted analysis.
 
 ## Installation
 
@@ -78,7 +69,7 @@ pixi run pre-commit-install
 ├── infra/
 │   ├── helm/
 │   ├── k8s/
-│   └── monitoring/
+│   └── postgres/               # Dev DB init scripts
 ├── docs/
 │   ├── adr/
 │   ├── architecture/
@@ -121,9 +112,15 @@ pixi run lint
 
 ## Local Runtime
 
-- Local compose file: `docker-compose.yml`
-- Production-oriented compose with Traefik + TLS: `docker-compose.prod.yml`
-- Images default to GHCR tag `main` and can be overridden with `IMAGE_TAG`.
+```bash
+cp .env.example .env
+docker compose up --build
+```
+
+Starts all services plus shared infrastructure (Postgres, NATS). Service env vars (`DATABASE_URL`, `NATS_URL`) are pre-wired.
+
+- Production compose with Traefik + TLS: `docker-compose.prod.yml`
+- Override the image tag: `IMAGE_TAG=v0.1.0 docker compose up`
 
 ## Student Responsibilities
 
