@@ -30,7 +30,7 @@ pixi run lint
 - GitHub workflows should avoid mutable or floating dependencies.
 - CI should fail if the lockfile is outdated (`pixi install --frozen`).
 - Add new jobs only when they validate real repository behavior.
-- Keep required check contexts stable: `Lint`, `lint-openapi`, `semantic-pr`, `dependency-review`.
+- Keep required check contexts stable: `Lint`, `lint-openapi`, `semantic-pr`.
 - If any required-check job is renamed, update the branch ruleset required status checks in the same PR.
 - Keep merge-critical workflows compatible with merge queues (`pull_request` + `merge_group`).
 - Use `main` as default branch target in workflows and automation.
