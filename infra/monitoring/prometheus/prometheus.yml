@@ -1,0 +1,40 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: gateway
+    static_configs:
+      - targets: ["gateway:8080"]
+
+  - job_name: incident-service
+    static_configs:
+      - targets: ["incident-service:8081"]
+
+  - job_name: event-service
+    static_configs:
+      - targets: ["event-service:8082"]
+
+  - job_name: rule-engine
+    static_configs:
+      - targets: ["rule-engine:8083"]
+
+  - job_name: user-service
+    static_configs:
+      - targets: ["user-service:8084"]
+
+  - job_name: notification-service
+    static_configs:
+      - targets: ["notification-service:8085"]
+
+  - job_name: webhook-service
+    static_configs:
+      - targets: ["webhook-service:8086"]
+
+  - job_name: genai-service
+    static_configs:
+      - targets: ["genai-service:8087"]
+
+  - job_name: nats
+    static_configs:
+      - targets: ["nats:7777"]
