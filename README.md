@@ -1,8 +1,8 @@
 # DevOps Project 2026
 
-Lightweight incident management system — detect, track, and resolve incidents with an immutable event log and AI-assisted analysis.
+Lightweight incident management system - detect, track, and resolve incidents with an immutable event log and AI-assisted analysis.
 
-> TUM DevOps Project — Spring 2026 · Team Panic! At the Console
+> TUM DevOps Project - Spring 2026 · Team Panic! At the Console
 
 ## Quick Start
 
@@ -57,7 +57,7 @@ pixi run pre-commit-install
 │   └── specs/
 ├── services/
 │   ├── frontend/               # Web dashboard (Client subsystem)
-│   ├── gateway/                # API gateway — single entry point
+│   ├── gateway/                # API gateway - single entry point
 │   ├── incident-service/       # Core incident CRUD + lifecycle
 │   ├── event-service/          # Append-only event log / timeline
 │   ├── rule-engine/            # Evaluates external signals → incident decisions

@@ -29,7 +29,7 @@
 /services/genai-service/       @manuellerchner
 
 # ── Infrastructure & CI/CD ────────────────────────────────────────────────────
-# All team members review infra changes — affects everyone's deployments
+# All team members review infra changes - affects everyone's deployments
 /infra/       @manuellerchner @florian-pesco @LeonSpoerl
 /.github/     @manuellerchner @florian-pesco @LeonSpoerl
 /scripts/     @manuellerchner
