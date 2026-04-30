@@ -14,8 +14,7 @@ npx --yes @openapitools/openapi-generator-cli@2.13.0 generate \
   -i "$SPEC" \
   -g spring \
   --additional-properties=useSpringBoot3=true,interfaceOnly=true,useTags=true \
-  -o "$REPO_ROOT/services/generated/java" \
-  --skip-validate-spec
+  -o "$REPO_ROOT/services/generated/java"
 
 echo "==> Generating Python client (genai-service)"
 pixi run openapi-python-client generate \
