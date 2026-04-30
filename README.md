@@ -119,8 +119,8 @@ Enable observability stack (opt-in):
 docker compose --profile observe up
 ```
 
-- Prometheus: `http://localhost:9090` — scrapes all 9 services + NATS
-- Grafana: `http://localhost:3001` — Prometheus pre-wired as default datasource; dashboards persist via `grafana_data` volume
+- Prometheus: `http://localhost:9090` - configured to scrape all 9 services + NATS; service targets require a Prometheus-compatible `/metrics` endpoint to appear `UP`
+- Grafana: `http://localhost:3001` - Prometheus pre-wired as default datasource; dashboards persist via `grafana_data` volume
 - Set `GRAFANA_PASSWORD` in `.env` (default: `admin`)
 
 - Production compose with Traefik + TLS: `docker-compose.prod.yml`
