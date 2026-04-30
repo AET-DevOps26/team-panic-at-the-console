@@ -1,0 +1,60 @@
+global:
+  image:
+    registry: ghcr.io/aet-devops26/team-panic-at-the-console
+    tag: main
+  namespace: default
+
+services:
+  frontend:
+    enabled: true
+    port: 3000
+    image:
+      repository: frontend
+
+  gateway:
+    enabled: true
+    port: 8080
+    image:
+      repository: gateway
+
+  incident-service:
+    enabled: true
+    port: 8081
+    image:
+      repository: incident-service
+
+  event-service:
+    enabled: true
+    port: 8082
+    image:
+      repository: event-service
+
+  rule-engine:
+    enabled: true
+    port: 8083
+    image:
+      repository: rule-engine
+
+  user-service:
+    enabled: true
+    port: 8084
+    image:
+      repository: user-service
+
+  notification-service:
+    enabled: true
+    port: 8085
+    image:
+      repository: notification-service
+
+  webhook-service:
+    enabled: true
+    port: 8086
+    image:
+      repository: webhook-service
+
+  genai-service:
+    enabled: true
+    port: 8087
+    image:
+      repository: genai-service

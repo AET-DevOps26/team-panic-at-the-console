@@ -1,0 +1,157 @@
+services:
+
+  # ── Infrastructure ────────────────────────────────────────────────────────
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-devops}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-devops}
+      POSTGRES_DB: postgres
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./infra/postgres/init-dbs.sh:/docker-entrypoint-initdb.d/init-dbs.sh
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-devops}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  nats:
+    image: nats:2.10-alpine
+    command: ["--jetstream", "--http_port", "8222"]
+    ports:
+      - "4222:4222"  # client
+      - "8222:8222"  # monitoring / metrics
+    restart: unless-stopped
+
+  # ── Application Services ──────────────────────────────────────────────────
+
+  frontend:
+    image: ghcr.io/aet-devops26/team-panic-at-the-console/frontend:${IMAGE_TAG:-main}
+    build:
+      context: ./services/frontend
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    restart: unless-stopped
+
+  gateway:
+    image: ghcr.io/aet-devops26/team-panic-at-the-console/gateway:${IMAGE_TAG:-main}
+    build:
+      context: ./services/gateway
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    restart: unless-stopped
+
+  incident-service:
+    image: ghcr.io/aet-devops26/team-panic-at-the-console/incident-service:${IMAGE_TAG:-main}
+    build:
+      context: ./services/incident-service
+      dockerfile: Dockerfile
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER:-devops}:${POSTGRES_PASSWORD:-devops}@postgres:5432/incidents
+      NATS_URL: nats://nats:4222
+    ports:
+      - "8081:8081"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      nats:
+        condition: service_started
+    restart: unless-stopped
+
+  event-service:
+    image: ghcr.io/aet-devops26/team-panic-at-the-console/event-service:${IMAGE_TAG:-main}
+    build:
+      context: ./services/event-service
+      dockerfile: Dockerfile
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER:-devops}:${POSTGRES_PASSWORD:-devops}@postgres:5432/events
+      NATS_URL: nats://nats:4222
+    ports:
+      - "8082:8082"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      nats:
+        condition: service_started
+    restart: unless-stopped
+
+  rule-engine:
+    image: ghcr.io/aet-devops26/team-panic-at-the-console/rule-engine:${IMAGE_TAG:-main}
+    build:
+      context: ./services/rule-engine
+      dockerfile: Dockerfile
+    environment:
+      NATS_URL: nats://nats:4222
+    ports:
+      - "8083:8083"
+    depends_on:
+      nats:
+        condition: service_started
+    restart: unless-stopped
+
+  user-service:
+    image: ghcr.io/aet-devops26/team-panic-at-the-console/user-service:${IMAGE_TAG:-main}
+    build:
+      context: ./services/user-service
+      dockerfile: Dockerfile
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER:-devops}:${POSTGRES_PASSWORD:-devops}@postgres:5432/users
+    ports:
+      - "8084:8084"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  notification-service:
+    image: ghcr.io/aet-devops26/team-panic-at-the-console/notification-service:${IMAGE_TAG:-main}
+    build:
+      context: ./services/notification-service
+      dockerfile: Dockerfile
+    environment:
+      NATS_URL: nats://nats:4222
+    ports:
+      - "8085:8085"
+    depends_on:
+      nats:
+        condition: service_started
+    restart: unless-stopped
+
+  webhook-service:
+    image: ghcr.io/aet-devops26/team-panic-at-the-console/webhook-service:${IMAGE_TAG:-main}
+    build:
+      context: ./services/webhook-service
+      dockerfile: Dockerfile
+    environment:
+      NATS_URL: nats://nats:4222
+    ports:
+      - "8086:8086"
+    depends_on:
+      nats:
+        condition: service_started
+    restart: unless-stopped
+
+  genai-service:
+    image: ghcr.io/aet-devops26/team-panic-at-the-console/genai-service:${IMAGE_TAG:-main}
+    build:
+      context: ./services/genai-service
+      dockerfile: Dockerfile
+    environment:
+      NATS_URL: nats://nats:4222
+      LLM_API_KEY: ${LLM_API_KEY:-}
+    ports:
+      - "8087:8087"
+    depends_on:
+      nats:
+        condition: service_started
+    restart: unless-stopped
+
+volumes:
+  postgres_data:

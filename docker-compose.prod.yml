@@ -1,0 +1,69 @@
+services:
+  reverse-proxy:
+    image: traefik:v3.3
+    command:
+      - "--providers.docker=true"
+      - "--providers.docker.exposedByDefault=false"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.websecure.address=:443"
+      - "--entrypoints.web.http.redirections.entryPoint.to=websecure"
+      - "--entrypoints.web.http.redirections.entryPoint.scheme=https"
+      - "--certificatesresolvers.letsencrypt.acme.httpchallenge=true"
+      - "--certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web"
+      - "--certificatesresolvers.letsencrypt.acme.email=${ACME_EMAIL:-admin@tum.de}"
+      - "--certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json"
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./letsencrypt:/letsencrypt
+
+  frontend:
+    image: ghcr.io/aet-devops26/team-panic-at-the-console/frontend:${IMAGE_TAG:-main}
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.frontend.rule=Host(`${APP_HOSTNAME}`)"
+      - "traefik.http.services.frontend.loadbalancer.server.port=3000"
+      - "traefik.http.routers.frontend.entrypoints=websecure"
+      - "traefik.http.routers.frontend.tls.certresolver=letsencrypt"
+
+  gateway:
+    image: ghcr.io/aet-devops26/team-panic-at-the-console/gateway:${IMAGE_TAG:-main}
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.gateway.rule=Host(`${APP_HOSTNAME}`) && PathPrefix(`/api`)"
+      - "traefik.http.services.gateway.loadbalancer.server.port=8080"
+      - "traefik.http.routers.gateway.entrypoints=websecure"
+      - "traefik.http.routers.gateway.tls.certresolver=letsencrypt"
+
+  incident-service:
+    image: ghcr.io/aet-devops26/team-panic-at-the-console/incident-service:${IMAGE_TAG:-main}
+    restart: unless-stopped
+
+  event-service:
+    image: ghcr.io/aet-devops26/team-panic-at-the-console/event-service:${IMAGE_TAG:-main}
+    restart: unless-stopped
+
+  rule-engine:
+    image: ghcr.io/aet-devops26/team-panic-at-the-console/rule-engine:${IMAGE_TAG:-main}
+    restart: unless-stopped
+
+  user-service:
+    image: ghcr.io/aet-devops26/team-panic-at-the-console/user-service:${IMAGE_TAG:-main}
+    restart: unless-stopped
+
+  notification-service:
+    image: ghcr.io/aet-devops26/team-panic-at-the-console/notification-service:${IMAGE_TAG:-main}
+    restart: unless-stopped
+
+  webhook-service:
+    image: ghcr.io/aet-devops26/team-panic-at-the-console/webhook-service:${IMAGE_TAG:-main}
+    restart: unless-stopped
+
+  genai-service:
+    image: ghcr.io/aet-devops26/team-panic-at-the-console/genai-service:${IMAGE_TAG:-main}
+    restart: unless-stopped

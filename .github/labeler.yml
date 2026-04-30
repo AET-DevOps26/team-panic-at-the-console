@@ -1,0 +1,89 @@
+ci:
+  - changed-files:
+      - any-glob-to-any-file:
+          - ".github/workflows/**"
+          - ".github/dependabot.yml"
+          - "lefthook.yml"
+          - "pixi.toml"
+          - "pixi.lock"
+
+api:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "api/**"
+
+# Per-service labels (coarse + fine-grained)
+services:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "services/**"
+
+frontend:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "services/frontend/**"
+
+gateway:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "services/gateway/**"
+
+incident-service:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "services/incident-service/**"
+
+event-service:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "services/event-service/**"
+
+rule-engine:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "services/rule-engine/**"
+
+user-service:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "services/user-service/**"
+
+notification-service:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "services/notification-service/**"
+
+webhook-service:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "services/webhook-service/**"
+
+genai-service:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "services/genai-service/**"
+
+infra:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "infra/**"
+          - "docker-compose*.yml"
+
+docs:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "docs/**"
+          - "README.md"
+          - "*.md"
+
+tests:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "tests/**"
+
+deps:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "pixi.toml"
+          - "pixi.lock"
+          - ".github/dependabot.yml"

@@ -1,0 +1,35 @@
+# CODEOWNERS
+#
+# Format: <path> <owner>
+# Owners can be GitHub users (@user) or teams (@org/team).
+#
+# Subsystem ownership:
+#   Frontend  → @LeonSpoerl
+#   Backend   → @florian-pesco
+#   GenAI     → @manuellerchner
+#   Infra/CI  → @manuellerchner (all team members required for review)
+#
+# Default: all three review anything not matched below
+* @manuellerchner @florian-pesco @LeonSpoerl
+
+# ── Frontend ──────────────────────────────────────────────────────────────────
+/services/frontend/    @LeonSpoerl
+
+# ── Backend Services ──────────────────────────────────────────────────────────
+/services/gateway/             @florian-pesco
+/services/incident-service/   @florian-pesco
+/services/event-service/       @florian-pesco
+/services/rule-engine/         @florian-pesco
+/services/user-service/        @florian-pesco
+/services/notification-service/ @LeonSpoerl
+/services/webhook-service/     @florian-pesco
+/api/                          @florian-pesco
+
+# ── GenAI Service ─────────────────────────────────────────────────────────────
+/services/genai-service/       @manuellerchner
+
+# ── Infrastructure & CI/CD ────────────────────────────────────────────────────
+# All team members review infra changes - affects everyone's deployments
+/infra/       @manuellerchner @florian-pesco @LeonSpoerl
+/.github/     @manuellerchner @florian-pesco @LeonSpoerl
+/scripts/     @manuellerchner
