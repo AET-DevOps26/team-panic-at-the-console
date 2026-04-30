@@ -7,17 +7,20 @@ This document defines team responsibilities for the initial deliverable. Subsyst
 ## Initial Deliverable (Problem Statement + System Overview — due 08.05.2026)
 
 ### Manuel
+
 - Problem Statement
 - High-level project description
 - Definition of main functionality
 - Repo structure setup
 
 ### Florian
+
 - First Product Backlog
 - User stories
 - Feature priorities
 
 ### Leon
+
 - UML Diagrams:
   - Analysis Object Model (UML Class Diagram)
   - Use Case Diagram
