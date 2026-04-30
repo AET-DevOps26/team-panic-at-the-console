@@ -22,7 +22,7 @@ The system will provide:
 - lifecycle management (open → investigating → resolved)
 - an immutable event log / timeline per incident
 - basic collaboration (comments, assignments, status updates)
-- AI-assisted incident analysis (summaries, severity suggestions, postmortem drafts)
+- AI-assisted incident analysis (summaries, severity suggestions, solution suggestions, postmortem drafts)
 
 ---
 
@@ -30,7 +30,7 @@ The system will provide:
 
 - Auto-create incidents from CI failures or external alerts
 - Immutable, append-only event log per incident for auditability
-- Concise AI-assisted summaries and severity suggestions
+- Concise AI-assisted summaries, severity suggestions, and actionable solution suggestions
 - Configurable automation for incident creation and routing
 - Lightweight microservice design with CI/webhook integration
 
@@ -53,7 +53,7 @@ A user reports a production problem → creates an incident → team members col
 
 ### Scenario 3: AI-Assisted Triage
 
-A user opens an active incident → the AI service reads the event log and metadata → generates a short summary, suggests severity, and drafts a postmortem outline.
+A user opens an active incident → the AI service reads the event log and metadata → generates a short summary, suggests severity, proposes concrete solution steps, and drafts a postmortem outline.
 
 ---
 
@@ -69,7 +69,7 @@ An automation layer evaluates the event and triggers incident creation when appr
 1. CI failure detected (e.g., GitHub Actions job fails).
 2. Incoming webhook is normalised and evaluated by an automation layer.
 3. Incident is created and timeline entries appended to the event log.
-4. AI component generates a short summary, suggested severity, and recommended actions (advisory only).
+4. AI component generates a short summary, suggested severity, solution suggestions (advisory only), and recommended next actions.
 5. Notifications are sent and the frontend displays the incident with AI summary.
 6. On-call triages, assigns, and updates the incident; each action is recorded.
 7. After resolution, an AI-generated postmortem outline is stored for the final report.
