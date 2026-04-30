@@ -21,7 +21,7 @@
 /services/event-service/       @florian-pesco
 /services/rule-engine/         @florian-pesco
 /services/user-service/        @florian-pesco
-/services/notification-service/ @LeonSpoerl 
+/services/notification-service/ @LeonSpoerl
 /services/webhook-service/     @florian-pesco
 /api/                          @florian-pesco
 
