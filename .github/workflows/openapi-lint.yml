@@ -49,22 +49,5 @@ jobs:
           distribution: temurin
           java-version: "21"
 
-      - name: Generate TypeScript SDK
-        run: |
-          npx --yes openapi-typescript@7.4.4 api/openapi.yaml \
-            -o /tmp/schema.d.ts
-
-      - name: Generate Python client
-        run: |
-          pixi run openapi-python-client generate \
-            --path api/openapi.yaml \
-            --output-path /tmp/genai-client \
-            --overwrite
-
-      - name: Generate Java Spring Boot stubs
-        run: |
-          npx --yes @openapitools/openapi-generator-cli@2.13.0 generate \
-            -i api/openapi.yaml \
-            -g spring \
-            --additional-properties=useSpringBoot3=true,interfaceOnly=true,useTags=true \
-            -o /tmp/java-generated
+      - name: Validate OpenAPI code generation via Pixi task
+        run: pixi run openapi-codegen-validate

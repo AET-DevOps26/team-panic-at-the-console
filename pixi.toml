@@ -21,6 +21,7 @@ click = ">=8.1,<8.2"
 [feature.lint.tasks]
 pre-commit-install = "lefthook install"
 lint = "lefthook run pre-commit --all-files"
+openapi-codegen-validate = "bash api/scripts/validate-codegen.sh"
 
 [feature.dev.tasks]
 compose-up = "docker compose --env-file .env.example up --build"

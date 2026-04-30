@@ -55,6 +55,7 @@ build/
 services/generated/
 services/genai-service/client/
 services/frontend/src/api/schema.d.ts
+openapitools.json
 
 # Monitoring
 infra/monitoring/grafana/data/
