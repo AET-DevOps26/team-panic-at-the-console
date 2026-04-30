@@ -47,3 +47,7 @@ pre-commit:
             glob: "**/*"
             file_types: text
             run: pixi {run} typos --force-exclude {staged_files}
+
+          - name: openapi-lint
+            glob: "api/openapi.yaml"
+            run: pixi {run} openapi-lint
