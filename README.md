@@ -68,6 +68,7 @@ pixi run pre-commit-install
 ├── infra/
 │   ├── helm/                   # Helm chart scaffold
 │   ├── compose/                # Compose overrides
+│   ├── monitoring/             # Prometheus + Grafana config (observe profile)
 │   └── postgres/               # Dev DB init scripts
 ├── docs/
 │   └── submissions/
@@ -111,6 +112,16 @@ docker compose up --build
 ```
 
 Starts all services plus shared infrastructure (Postgres, NATS). Service env vars (`DATABASE_URL`, `NATS_URL`) are pre-wired.
+
+Enable observability stack (opt-in):
+
+```bash
+docker compose --profile observe up
+```
+
+- Prometheus: `http://localhost:9090` — scrapes all 9 services + NATS
+- Grafana: `http://localhost:3001` — Prometheus pre-wired as default datasource; dashboards persist via `grafana_data` volume
+- Set `GRAFANA_PASSWORD` in `.env` (default: `admin`)
 
 - Production compose with Traefik + TLS: `docker-compose.prod.yml`
 - Override the image tag: `IMAGE_TAG=v0.1.0 docker compose up`
