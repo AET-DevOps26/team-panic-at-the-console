@@ -1,51 +1,80 @@
-# Agent Instructions
+# AGENTS.md
 
-This repository starts as a scaffold for the DevOps 2026 project. Keep changes small, explicit, and reproducible.
+This file provides guidance to AI assistants when working with code in this repository.
 
-## Core Principles
+## Project Overview
 
-- Prefer minimal, incremental changes over broad rewrites.
-- Keep docs and workflows aligned with the actual repository state.
-- Pin CI tooling versions where possible for deterministic runs.
-- Use `pixi` tasks for local and CI automation.
-- Preserve stable CI check names unless there is a deliberate migration plan.
+Lightweight incident management system — detect, track, and resolve incidents with an immutable event log and AI-assisted analysis.
 
-## Local Development
+TUM DevOps Project · Spring 2026 · Team Panic! At the Console
 
-Install tooling and hooks:
+## Package Management
 
-```bash
-pixi install
-pixi run pre-commit-install
-```
+This repository uses [pixi](https://pixi.sh) for tooling. All commands must be prefixed with `pixi run`. If you change `pixi.toml`, run `pixi lock` afterwards.
 
-Run checks:
+## Development Commands
 
 ```bash
-pixi run lint
+pixi install                   # Install tooling and git hooks
+pixi run pre-commit-install    # Register lefthook git hooks
+pixi run lint                  # Run all linters (same as CI)
+pixi run compose-up            # Start full stack locally (builds from source)
+pixi run compose-down          # Stop and remove containers
+pixi run compose-validate      # Validate docker-compose files
+pixi run openapi-lint          # Lint api/openapi.yaml if present
 ```
 
-## CI Expectations
+## Architecture
 
-- GitHub workflows should avoid mutable or floating dependencies.
-- CI should fail if the lockfile is outdated (`pixi install --frozen`).
-- Add new jobs only when they validate real repository behavior.
-- Keep required check contexts stable: `Lint`, `lint-openapi`, `semantic-pr`.
-- If any required-check job is renamed, update the branch ruleset required status checks in the same PR.
-- Keep merge-critical workflows compatible with merge queues (`pull_request` + `merge_group`).
-- Use `main` as default branch target in workflows and automation.
-- If CI job names change, update required-status-check rules in GitHub rulesets in the same change.
-- Keep `pull_request` and `merge_group` support for merge-queue compatibility.
+### Services
 
-## Repository Hygiene
+| Service                | Port | Description                             |
+| ---------------------- | ---- | --------------------------------------- |
+| `frontend`             | 3000 | Web dashboard                           |
+| `gateway`              | 8080 | Single API entry point                  |
+| `incident-service`     | 8081 | Core incident CRUD + lifecycle          |
+| `event-service`        | 8082 | Append-only event log                   |
+| `rule-engine`          | 8083 | Evaluates signals → incident decisions  |
+| `user-service`         | 8084 | Auth + role management                  |
+| `notification-service` | 8085 | Notifies users on incident events       |
+| `webhook-service`      | 8086 | Receives CI/CD webhook events           |
+| `genai-service`        | 8087 | AI summaries, triage, postmortem drafts |
 
-- Keep `README.md` realistic; avoid documenting services that do not exist yet.
-- Keep `pixi.toml` focused on currently used tools and tasks.
-- Extend Dependabot only after manifests are added in the referenced paths.
+### Infrastructure
 
-- Avoid root-level language/runtime toolchains until related service manifests and tasks exist.
-## Toolchain Policy
+- **Postgres** (`localhost:5432`) — one database per service (`incidents`, `events`, `users`), initialized by `infra/postgres/init-dbs.sh`
+- **NATS** (`localhost:4222`, monitoring: `localhost:8222`) — event bus with JetStream
 
-- Keep root Pixi minimal and split concerns by feature (`lint`, `deploy`, etc.).
-- Include deploy tooling (`helm`, `kubectl`, `sops`, `age`) in Pixi when used by project workflows.
-- Do not add root-level Java/JDK, Maven, npm, or framework-specific toolchains until corresponding service manifests/tasks are committed.
+### Key Paths
+
+```
+api/                  # OpenAPI specs
+services/             # Application services (one dir per service)
+infra/helm/           # Helm chart for Kubernetes deployment
+infra/postgres/       # Dev DB init scripts
+.github/workflows/    # CI/CD pipelines
+```
+
+## CI/CD
+
+- PRs run: lint, lockfile check, container build validation, semantic PR title check
+- Merges to `main` build and push all images to GHCR tagged `:main` and `:sha-<hash>`
+- Semantic tags (`v*`) trigger `release-deploy.yml`: builds versioned images + deploys via Helm to the `production` environment
+- Manual deploys: `deploy-helm-sops.yml` (workflow_dispatch, requires `KUBECONFIG_B64` and `SOPS_AGE_KEY` secrets)
+
+## Code Review
+
+When reviewing PRs, flag:
+
+- New services missing a `Dockerfile` or not added to the matrix in `container-ci.yml`
+- Workflows missing `merge_group` trigger (required for merge queue compatibility)
+- Services connecting to a database they don't own (each service has one DB: see Architecture table)
+- Secrets or credentials committed or hardcoded — use environment variables or SOPS
+- Changes to CI job names without a corresponding branch ruleset update
+
+## Code Standards
+
+- Commit messages follow [Conventional Commits](https://www.conventionalcommits.org/): `<type>(<scope>): <subject>`
+- Do not rename CI jobs without updating branch ruleset required status checks in the same PR
+- Do not add root-level language/runtime toolchains until corresponding service manifests exist
+- Keep `README.md` and docs aligned with actual repository state — no aspirational documentation
