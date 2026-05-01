@@ -10,12 +10,12 @@ TUM DevOps Project · Spring 2026 · Team Panic! At the Console
 
 ## Package Management
 
-This repository uses [pixi](https://pixi.sh) for tooling. All commands must be prefixed with `pixi run`. If you change `pixi.toml`, run `pixi lock` afterwards.
+This repository uses [pixi](https://pixi.sh) for tooling. Use `pixi run` for project tasks. If you change `pixi.toml`, run `pixi lock` afterwards.
 
 ## Development Commands
 
 ```bash
-pixi install                   # Install tooling and git hooks
+pixi install                   # Install tooling and set up the Pixi environment
 pixi run pre-commit-install    # Register lefthook git hooks
 pixi run lint                  # Run all linters (same as CI)
 pixi run compose-up            # Start full stack locally (builds from source)
@@ -58,7 +58,7 @@ infra/postgres/       # Dev DB init scripts
 ## CI/CD
 
 - PRs run: lint, lockfile check, container build validation, semantic PR title check
-- Merges to `main` build and push all images to GHCR tagged `:main` and `:sha-<hash>`
+- Merges to `main` build and push all images to GHCR tagged `:main` and `:<full-commit-sha>`
 - Semantic tags (`v*`) trigger `release-deploy.yml`: builds versioned images + deploys via Helm to the `production` environment
 - Manual deploys: `deploy-helm-sops.yml` (workflow_dispatch, requires `KUBECONFIG_B64` and `SOPS_AGE_KEY` secrets)
 
