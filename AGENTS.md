@@ -42,7 +42,7 @@ pixi run openapi-lint          # Lint api/openapi.yaml if present
 
 ### Infrastructure
 
-- **Postgres** (`localhost:5432`) — one database per service (`incidents`, `events`, `users`), initialized by `infra/postgres/init-dbs.sh`
+- **Postgres** (`localhost:5432`) — each stateful service owns one database; initialized by `infra/postgres/init-dbs.sh`
 - **NATS** (`localhost:4222`, monitoring: `localhost:8222`) — event bus with JetStream
 
 ### Key Paths
@@ -68,7 +68,7 @@ When reviewing PRs, flag:
 
 - New services missing a `Dockerfile` or not added to the matrix in `container-ci.yml`
 - Workflows missing `merge_group` trigger (required for merge queue compatibility)
-- Services connecting to a database they don't own (each service has one DB: see Architecture table)
+- Services reading/writing a database they don't own (each stateful service has one DB; check `infra/postgres/init-dbs.sh` for current list)
 - Secrets or credentials committed or hardcoded — use environment variables or SOPS
 - Changes to CI job names without a corresponding branch ruleset update
 
