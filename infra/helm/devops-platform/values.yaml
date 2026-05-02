@@ -4,6 +4,10 @@ global:
     tag: main
   namespace: default
 
+secrets:
+  databaseUrl: ""
+  apiToken: ""
+
 monitoring:
   serviceMonitor:
     # Keep disabled until services expose /metrics endpoints.

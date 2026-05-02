@@ -24,6 +24,15 @@ spec:
           imagePullPolicy: Always
           ports:
             - containerPort: {{ $svc.port }}
+          env:
+            {{- if $.Values.secrets.databaseUrl }}
+            - name: DATABASE_URL
+              value: {{ $.Values.secrets.databaseUrl | quote }}
+            {{- end }}
+            {{- if $.Values.secrets.apiToken }}
+            - name: API_TOKEN
+              value: {{ $.Values.secrets.apiToken | quote }}
+            {{- end }}
 ---
 {{- end }}
 {{- end }}
