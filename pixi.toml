@@ -35,7 +35,7 @@ age = "*"
 k9s = "*"
 
 [feature.deploy.tasks]
-deploy-tools-version = "helm version --short && kubectl version --client --short && sops --version"
+deploy-tools-version = "helm version --short && kubectl version --client --short && sops --version && k9s version"
 
 [environments]
 default = ["lint"]
