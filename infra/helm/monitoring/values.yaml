@@ -1,0 +1,37 @@
+kube-prometheus-stack:
+  namespaceOverride: monitoring
+
+  prometheus:
+    prometheusSpec:
+      retention: 15d
+      # Discover ServiceMonitors and PrometheusRules across all namespaces
+      serviceMonitorNamespaceSelector: {}
+      serviceMonitorSelector: {}
+      ruleNamespaceSelector: {}
+      ruleSelector: {}
+      storageSpec:
+        volumeClaimTemplate:
+          spec:
+            accessModes: ["ReadWriteOnce"]
+            resources:
+              requests:
+                storage: 10Gi
+
+  grafana:
+    # Override via SOPS: kube-prometheus-stack.grafana.adminPassword
+    adminPassword: admin
+    persistence:
+      enabled: true
+      size: 1Gi
+    sidecar:
+      dashboards:
+        enabled: true
+        searchNamespace: ALL
+        label: grafana_dashboard
+        labelValue: "1"
+
+  alertmanager:
+    enabled: true
+
+  defaultRules:
+    create: true

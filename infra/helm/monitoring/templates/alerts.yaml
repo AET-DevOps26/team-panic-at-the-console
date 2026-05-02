@@ -1,0 +1,38 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: platform-alerts
+  namespace: monitoring
+  labels:
+    app.kubernetes.io/name: platform-alerts
+spec:
+  groups:
+    - name: platform.availability
+      interval: 1m
+      rules:
+        - alert: ServiceDown
+          expr: up == 0
+          for: 2m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Service {{ "{{" }} $labels.job {{ "}}" }} is down"
+            description: "{{ "{{" }} $labels.job {{ "}}" }} has been unreachable for more than 2 minutes."
+
+        - alert: PodNotReady
+          expr: kube_pod_status_ready{condition="false", namespace="production"} == 1
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Pod {{ "{{" }} $labels.pod {{ "}}" }} not ready"
+            description: "Pod {{ "{{" }} $labels.pod {{ "}}" }} has been not ready for more than 5 minutes."
+
+        - alert: HighPodRestartRate
+          expr: increase(kube_pod_container_status_restarts_total{namespace="production"}[15m]) > 5
+          for: 0m
+          labels:
+            severity: warning
+          annotations:
+            summary: "High restart rate: {{ "{{" }} $labels.pod {{ "}}" }}/{{ "{{" }} $labels.container {{ "}}" }}"
+            description: "Container {{ "{{" }} $labels.container {{ "}}" }} in pod {{ "{{" }} $labels.pod {{ "}}" }} restarted more than 5 times in 15 minutes."

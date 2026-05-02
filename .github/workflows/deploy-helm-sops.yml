@@ -57,8 +57,24 @@ jobs:
           mkdir -p "$HOME/.config/sops/age"
           printf '%s' "${{ secrets.SOPS_AGE_KEY }}" > "$HOME/.config/sops/age/keys.txt"
           sops --decrypt infra/helm/secrets/values.prod.enc.yaml > infra/helm/secrets/values.prod.dec.yaml
+          if [ ! -f infra/helm/secrets/values.monitoring.enc.yaml ]; then
+            echo "::error title=Missing encrypted values::Expected infra/helm/secrets/values.monitoring.enc.yaml for production deploy."
+            exit 1
+          fi
+          sops --decrypt infra/helm/secrets/values.monitoring.enc.yaml > infra/helm/secrets/values.monitoring.dec.yaml
 
-      - name: Deploy chart
+      - name: Build monitoring chart dependencies
+        run: helm dependency build infra/helm/monitoring
+
+      - name: Deploy monitoring chart
+        run: |
+          set -euo pipefail
+          helm upgrade --install monitoring infra/helm/monitoring \
+            --namespace monitoring \
+            --create-namespace \
+            --values infra/helm/secrets/values.monitoring.dec.yaml
+
+      - name: Deploy app chart
         run: |
           set -euo pipefail
           helm upgrade --install devops-platform infra/helm/devops-platform \
