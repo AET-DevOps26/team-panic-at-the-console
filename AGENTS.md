@@ -4,7 +4,7 @@ This file provides guidance to AI assistants when working with code in this repo
 
 ## Project Overview
 
-Lightweight incident management system — detect, track, and resolve incidents with an immutable event log and AI-assisted analysis.
+Lightweight incident management system: detect, track, and resolve incidents with an immutable event log and AI-assisted analysis.
 
 TUM DevOps Project · Spring 2026 · Team Panic! At the Console
 
@@ -42,8 +42,8 @@ pixi run openapi-lint          # Lint api/openapi.yaml if present
 
 ### Infrastructure
 
-- **Postgres** (`localhost:5432`) — each stateful service owns one database; initialized by `infra/postgres/init-dbs.sh`
-- **NATS** (`localhost:4222`, monitoring: `localhost:8222`) — event bus with JetStream
+- **Postgres** (`localhost:5432`) - each stateful service owns one database; initialized by `infra/postgres/init-dbs.sh`
+- **NATS** (`localhost:4222`, monitoring: `localhost:8222`) - event bus with JetStream
 
 ### Key Paths
 
@@ -69,12 +69,13 @@ When reviewing PRs, flag:
 - New services missing a `Dockerfile` or not added to the matrix in `container-ci.yml`
 - Workflows missing `merge_group` trigger (required for merge queue compatibility)
 - Services reading/writing a database they don't own (each stateful service has one DB; check `infra/postgres/init-dbs.sh` for current list)
-- Secrets or credentials committed or hardcoded — use environment variables or SOPS
+- Secrets or credentials committed or hardcoded: use environment variables or SOPS
 - Changes to CI job names without a corresponding branch ruleset update
 
 ## Code Standards
 
 - Commit messages follow [Conventional Commits](https://www.conventionalcommits.org/): `<type>(<scope>): <subject>`
+- Avoid em dashes (U+2014) in docs and comments; prefer `:` or parentheses.
 - Do not rename CI jobs without updating branch ruleset required status checks in the same PR
 - Do not add root-level language/runtime toolchains until corresponding service manifests exist
-- Keep `README.md` and docs aligned with actual repository state — no aspirational documentation
+- Keep `README.md` and docs aligned with actual repository state: no aspirational documentation
