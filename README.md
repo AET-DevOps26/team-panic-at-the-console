@@ -92,9 +92,17 @@ Create a Git tag like `v0.1.0` (or publish a GitHub Release for that tag) to tri
 - SOPS policy file: `.sops.yaml`
 - Helm chart scaffold: `infra/helm/devops-platform`
 - Encrypted production values expected at: `infra/helm/secrets/values.prod.enc.yaml`
+- Deploy environment also includes `k9s` for cluster exploration/debugging.
 - Required secrets for deploy workflow:
   - `KUBECONFIG_B64` (base64 encoded kubeconfig)
   - `SOPS_AGE_KEY` (AGE private key content)
+
+Use deploy tooling from Pixi:
+
+```bash
+pixi run deploy-tools-version
+pixi run -e deploy k9s
+```
 
 ## Testing
 

@@ -59,5 +59,8 @@ client/src/api.ts
 infra/monitoring/grafana/data/
 infra/monitoring/prometheus/data/
 
+# Helm chart tarballs (fetched by helm dep update)
+infra/helm/monitoring/charts/*.tgz
+
 # Helm / SOPS decrypted secrets
 infra/helm/secrets/*.dec.yaml
