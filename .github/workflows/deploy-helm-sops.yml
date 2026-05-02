@@ -64,7 +64,9 @@ jobs:
           sops --decrypt infra/helm/secrets/values.monitoring.enc.yaml > infra/helm/secrets/values.monitoring.dec.yaml
 
       - name: Build monitoring chart dependencies
-        run: helm dependency build infra/helm/monitoring
+        run: |
+          helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+          helm dependency build infra/helm/monitoring
 
       - name: Deploy monitoring chart
         run: |

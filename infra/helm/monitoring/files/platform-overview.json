@@ -34,7 +34,7 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "${datasource}" },
-          "expr": "up",
+          "expr": "up{namespace=\"production\"}",
           "legendFormat": "{{job}}",
           "refId": "A"
         }
@@ -68,7 +68,7 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "${datasource}" },
-          "expr": "up",
+          "expr": "up{namespace=\"production\"}",
           "legendFormat": "{{job}}",
           "refId": "A"
         }

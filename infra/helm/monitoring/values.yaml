@@ -18,8 +18,7 @@ kube-prometheus-stack:
                 storage: 10Gi
 
   grafana:
-    # Override via SOPS: kube-prometheus-stack.grafana.adminPassword
-    adminPassword: admin
+    # Provide adminPassword via encrypted values.monitoring.enc.yaml.
     persistence:
       enabled: true
       size: 1Gi
