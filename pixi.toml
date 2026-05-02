@@ -2,6 +2,7 @@
 name = "devops-project-2026"
 description = "Tooling workspace for hooks and CI quality checks"
 channels = ["conda-forge"]
+exclude-newer = "14d"
 platforms = ["linux-64", "osx-arm64", "osx-64", "win-64"]
 
 [dependencies]
