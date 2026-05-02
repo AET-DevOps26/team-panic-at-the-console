@@ -1,8 +1,8 @@
-name: Weekly Pixi Dependency Refresh
+name: Monthly Pixi Dependency Refresh
 
 on:
   schedule:
-    - cron: "0 7 * * 1"
+    - cron: "0 0 1 * *"
   workflow_dispatch:
 
 permissions:
@@ -33,7 +33,7 @@ jobs:
         uses: peter-evans/create-pull-request@22a9089034f40e5a961c8808d113e2c98fb63676 # v7
         with:
           commit-message: "chore(deps): refresh pixi lockfile"
-          branch: "chore/weekly-pixi-lock-refresh"
+          branch: "chore/monthly-pixi-lock-refresh"
           title: "chore(deps): refresh pixi lockfile"
           body-path: diff.md
           add-paths: |
