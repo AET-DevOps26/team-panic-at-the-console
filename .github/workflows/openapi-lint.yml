@@ -11,6 +11,7 @@ on:
     paths:
       - api/**
       - .github/workflows/openapi-lint.yml
+  merge_group:
 
 jobs:
   lint-openapi:

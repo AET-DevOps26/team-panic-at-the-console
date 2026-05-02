@@ -5,6 +5,7 @@ on:
     paths:
       - .github/workflows/**
       - .github/dependabot.yml
+  merge_group:
   push:
     branches:
       - main
