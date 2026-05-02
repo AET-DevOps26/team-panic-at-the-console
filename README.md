@@ -115,6 +115,16 @@ Starts all services plus shared infrastructure (Postgres, NATS). Service env var
 - Production compose with Traefik + TLS: `docker-compose.prod.yml`
 - Override the image tag: `IMAGE_TAG=v0.1.0 docker compose up`
 
+## Mock API Server
+
+Spin up a local HTTP mock server driven by `api/openapi.yaml` using [Prism](https://stoplight.io/open-source/prism):
+
+```bash
+pixi run mock-api
+```
+
+Prism reads the spec and serves auto-generated responses on `http://localhost:4010`. No services need to be running — useful for frontend development and API exploration before backends exist.
+
 ## Student Responsibilities
 
 - **Frontend** (`/services/frontend`): @LeonSpoerl

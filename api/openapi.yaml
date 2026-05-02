@@ -24,6 +24,8 @@ paths:
             application/json:
               schema:
                 type: object
+                required: [status]
+                additionalProperties: false
                 properties:
                   status:
                     type: string

@@ -9,4 +9,4 @@ if [ ! -f "$SPEC" ]; then
   exit 1
 fi
 
-npx --yes @stoplight/prism-cli@4.10.5 mock "$SPEC" -d
+npx --yes @stoplight/prism-cli@4.10.5 mock "$SPEC"
