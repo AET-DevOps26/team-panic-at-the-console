@@ -112,7 +112,6 @@ docker compose up --build
 
 Starts all services plus shared infrastructure (Postgres, NATS). Service env vars (`DATABASE_URL`, `NATS_URL`) are pre-wired.
 
-- Production compose with Traefik + TLS: `docker-compose.prod.yml`
 - Override the image tag: `IMAGE_TAG=v0.1.0 docker compose up`
 
 ## Student Responsibilities
