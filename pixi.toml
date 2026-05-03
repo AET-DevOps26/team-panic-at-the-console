@@ -21,9 +21,9 @@ pre-commit-install = "lefthook install"
 lint = "lefthook run pre-commit --all-files"
 
 [feature.dev.tasks]
-compose-up = "docker compose --env-file .env.example -f infra/compose/docker-compose.yml up --build"
-compose-down = "docker compose -f infra/compose/docker-compose.yml down --remove-orphans"
-compose-validate = "docker compose --env-file .env.example -f infra/compose/docker-compose.yml config > /dev/null"
+compose-up = "docker compose --project-directory . --env-file .env.example -f infra/compose/docker-compose.yml up --build"
+compose-down = "docker compose --project-directory . -f infra/compose/docker-compose.yml down --remove-orphans"
+compose-validate = "docker compose --project-directory . --env-file .env.example -f infra/compose/docker-compose.yml config > /dev/null"
 openapi-lint = "bash -lc 'if [ -f api/openapi.yaml ]; then npx --yes @redocly/cli@1.19.0 lint api/openapi.yaml; else echo \"No api/openapi.yaml found, skipping OpenAPI lint\"; fi'"
 
 [feature.deploy.dependencies]
