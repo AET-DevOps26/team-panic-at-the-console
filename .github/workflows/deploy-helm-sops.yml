@@ -24,18 +24,14 @@ jobs:
       - name: Checkout branch
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
+      - name: Set up pixi
+        uses: prefix-dev/setup-pixi@1b2de7f3351f171c8b4dfeb558c639cb58ed4ec0 # v0.9.5
+        with:
+          environments: deploy
+
       - name: Resolve deployment tag
         id: tag
         run: echo "value=${{ github.event.inputs.tag }}" >> "$GITHUB_OUTPUT"
-
-      - name: Install Helm, kubectl, and sops
-        run: |
-          set -euo pipefail
-          curl -fsSL https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
-          curl -fsSL https://dl.k8s.io/release/v1.30.2/bin/linux/amd64/kubectl -o kubectl
-          sudo install -m 0755 kubectl /usr/local/bin/kubectl
-          curl -fsSL https://github.com/getsops/sops/releases/download/v3.9.0/sops-v3.9.0.linux.amd64 -o sops
-          sudo install -m 0755 sops /usr/local/bin/sops
 
       - name: Configure kubeconfig
         run: |
@@ -60,22 +56,22 @@ jobs:
             echo "::error title=Missing encrypted values::Expected infra/helm/secrets/values.prod.enc.yaml for production deploy."
             exit 1
           fi
-          sops --decrypt infra/helm/secrets/values.prod.enc.yaml > infra/helm/secrets/values.prod.dec.yaml
+          pixi run -e deploy sops --decrypt infra/helm/secrets/values.prod.enc.yaml > infra/helm/secrets/values.prod.dec.yaml
           if [ ! -f infra/helm/secrets/values.monitoring.enc.yaml ]; then
             echo "::error title=Missing encrypted values::Expected infra/helm/secrets/values.monitoring.enc.yaml for production deploy."
             exit 1
           fi
-          sops --decrypt infra/helm/secrets/values.monitoring.enc.yaml > infra/helm/secrets/values.monitoring.dec.yaml
+          pixi run -e deploy sops --decrypt infra/helm/secrets/values.monitoring.enc.yaml > infra/helm/secrets/values.monitoring.dec.yaml
 
       - name: Build monitoring chart dependencies
         run: |
-          helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
-          helm dependency build infra/helm/monitoring
+          pixi run -e deploy helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+          pixi run -e deploy helm dependency build infra/helm/monitoring
 
       - name: Deploy monitoring chart
         run: |
           set -euo pipefail
-          helm upgrade --install monitoring infra/helm/monitoring \
+          pixi run -e deploy helm upgrade --install monitoring infra/helm/monitoring \
             --namespace monitoring \
             --create-namespace \
             --values infra/helm/secrets/values.monitoring.dec.yaml \
@@ -84,7 +80,7 @@ jobs:
       - name: Deploy app chart
         run: |
           set -euo pipefail
-          helm upgrade --install devops-platform infra/helm/devops-platform \
+          pixi run -e deploy helm upgrade --install devops-platform infra/helm/devops-platform \
             --namespace production \
             --create-namespace \
             --set global.image.tag="${{ steps.tag.outputs.value }}" \

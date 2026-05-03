@@ -1,0 +1,138 @@
+name: Helm Diff Preview
+
+on:
+  pull_request:
+    paths:
+      - "infra/helm/**"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  diff:
+    name: Diff against production
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+
+      - name: Set up pixi
+        uses: prefix-dev/setup-pixi@1b2de7f3351f171c8b4dfeb558c639cb58ed4ec0 # v0.9.5
+        with:
+          environments: deploy
+
+      - name: Install helm-diff plugin
+        run: pixi run -e deploy helm-diff-install
+
+      - name: Configure kubeconfig
+        run: |
+          set -euo pipefail
+          if [ -z "${{ secrets.KUBECONFIG_B64 }}" ]; then
+            echo "::warning title=No kubeconfig::KUBECONFIG_B64 not set — skipping live diff."
+            echo "SKIP_DIFF=true" >> "$GITHUB_ENV"
+            exit 0
+          fi
+          mkdir -p "$HOME/.kube"
+          echo "${{ secrets.KUBECONFIG_B64 }}" | base64 --decode > "$HOME/.kube/config"
+
+      - name: Configure SOPS and decrypt values
+        if: env.SKIP_DIFF != 'true'
+        run: |
+          set -euo pipefail
+          if [ -z "${{ secrets.SOPS_AGE_KEY }}" ]; then
+            echo "::warning title=No SOPS key::SOPS_AGE_KEY not set — skipping live diff."
+            echo "SKIP_DIFF=true" >> "$GITHUB_ENV"
+            exit 0
+          fi
+          mkdir -p "$HOME/.config/sops/age"
+          printf '%s' "${{ secrets.SOPS_AGE_KEY }}" > "$HOME/.config/sops/age/keys.txt"
+          if [ ! -f infra/helm/secrets/values.prod.enc.yaml ]; then
+            echo "SKIP_DIFF=true" >> "$GITHUB_ENV"
+            exit 0
+          fi
+          pixi run -e deploy sops --decrypt infra/helm/secrets/values.prod.enc.yaml > infra/helm/secrets/values.prod.dec.yaml
+
+      - name: Build chart dependencies
+        if: env.SKIP_DIFF != 'true'
+        run: |
+          pixi run -e deploy helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+          pixi run -e deploy helm dependency build infra/helm/monitoring
+
+      - name: Run helm diff
+        if: env.SKIP_DIFF != 'true'
+        id: diff
+        run: |
+          set -euo pipefail
+
+          APP_DIFF=$(pixi run -e deploy helm diff upgrade devops-platform infra/helm/devops-platform \
+            --namespace production \
+            --values infra/helm/secrets/values.prod.dec.yaml \
+            --no-hooks 2>&1 || true)
+
+          MONITORING_DIFF=$(pixi run -e deploy helm diff upgrade monitoring infra/helm/monitoring \
+            --namespace monitoring \
+            --no-hooks 2>&1 || true)
+
+          {
+            echo "app_diff<<EOF_APP"
+            echo "$APP_DIFF"
+            echo "EOF_APP"
+            echo "monitoring_diff<<EOF_MON"
+            echo "$MONITORING_DIFF"
+            echo "EOF_MON"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Post diff as PR comment
+        if: env.SKIP_DIFF != 'true'
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1
+        with:
+          script: |
+            const appDiff = `${{ steps.diff.outputs.app_diff }}`.trim();
+            const monDiff = `${{ steps.diff.outputs.monitoring_diff }}`.trim();
+
+            const fmt = (label, diff) => {
+              if (!diff) return `### ${label}\n_No changes._`;
+              const preview = diff.length > 6000 ? diff.slice(0, 6000) + '\n…(truncated)' : diff;
+              return `### ${label}\n\`\`\`diff\n${preview}\n\`\`\``;
+            };
+
+            const body = [
+              '<!-- helm-diff-preview -->',
+              '## Helm Diff Preview',
+              `> Comparing PR chart changes against live cluster — commit \`${{ github.event.pull_request.head.sha }}\``,
+              '',
+              fmt('devops-platform', appDiff),
+              '',
+              fmt('monitoring', monDiff),
+            ].join('\n');
+
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+
+            const existing = comments.find(c => c.body.includes('<!-- helm-diff-preview -->'));
+
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existing.id,
+                body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body,
+              });
+            }
