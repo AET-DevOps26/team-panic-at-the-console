@@ -67,7 +67,6 @@ infra:
   - changed-files:
       - any-glob-to-any-file:
           - "infra/**"
-          - "docker-compose*.yml"
 
 docs:
   - changed-files:
