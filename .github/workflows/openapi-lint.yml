@@ -15,7 +15,6 @@ on:
 
 jobs:
   lint-openapi:
-    name: Lint OpenAPI spec
     runs-on: ubuntu-latest
 
     steps:

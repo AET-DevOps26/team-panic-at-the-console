@@ -124,7 +124,7 @@ Spin up a local HTTP mock server driven by `api/openapi.yaml` using [Prism](http
 pixi run mock-api
 ```
 
-Prism reads the spec and serves auto-generated responses on `http://localhost:4010`. No services need to be running — useful for frontend development and API exploration before backends exist.
+Prism reads the spec and serves auto-generated responses on `http://localhost:4010`. The spec declares `servers: /api/v1`, so endpoints are available under `http://localhost:4010/api/v1` (e.g. `http://localhost:4010/api/v1/health`). No services need to be running — useful for frontend development and API exploration before backends exist.
 
 ## Student Responsibilities
 

@@ -9,17 +9,18 @@ if [ ! -f "$SPEC" ]; then
   exit 0
 fi
 
+TMP_DIR=$(mktemp -d)
+trap 'rm -rf "$TMP_DIR"' EXIT
+
 echo "==> Generate TypeScript SDK (validation target)"
-npx --yes openapi-typescript@7.4.4 "$SPEC" -o /tmp/schema.d.ts
+npx --yes openapi-typescript@7.4.4 "$SPEC" -o "$TMP_DIR/schema.d.ts"
 
 echo "==> Generate Python client (validation target)"
-TMP_DIR=$(mktemp -d)
 (cd "$TMP_DIR" && openapi-python-client generate --path "$SPEC")
-rm -rf "$TMP_DIR"
 
 echo "==> Generate Java Spring Boot stubs (validation target)"
 npx --yes @openapitools/openapi-generator-cli@2.13.0 generate \
   -i "$SPEC" \
   -g spring \
   --additional-properties=useSpringBoot3=true,interfaceOnly=true,useTags=true \
-  -o /tmp/java-generated
+  -o "$TMP_DIR/java-generated"

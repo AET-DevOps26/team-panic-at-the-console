@@ -10,6 +10,7 @@ if [ ! -f "$SPEC" ]; then
 fi
 
 echo "==> Generating Java Spring Boot stubs"
+rm -rf "$REPO_ROOT/services/generated/java"
 npx --yes @openapitools/openapi-generator-cli@2.13.0 generate \
   -i "$SPEC" \
   -g spring \
@@ -24,6 +25,7 @@ rm -rf "$REPO_ROOT/services/genai-service/client"
 rm -f "$TMP_CONFIG"
 
 echo "==> Generating TypeScript SDK (frontend)"
+mkdir -p "$REPO_ROOT/services/frontend/src/api"
 npx --yes openapi-typescript@7.4.4 "$SPEC" \
   -o "$REPO_ROOT/services/frontend/src/api/schema.d.ts"
 
