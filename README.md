@@ -107,13 +107,14 @@ pixi run lint
 
 ```bash
 cp .env.example .env
-docker compose up --build
+pixi run compose-up
 ```
 
 Starts all services plus shared infrastructure (Postgres, NATS). Service env vars (`DATABASE_URL`, `NATS_URL`) are pre-wired.
 
-- Production compose with Traefik + TLS: `docker-compose.prod.yml`
-- Override the image tag: `IMAGE_TAG=v0.1.0 docker compose up`
+The compose file lives at `infra/compose/docker-compose.yml`. `pixi run compose-up` passes the correct `--project-directory`, `--env-file`, and `-f` flags automatically.
+
+- Override the image tag: `IMAGE_TAG=v0.1.0 pixi run compose-up`
 
 ## Student Responsibilities
 
