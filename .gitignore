@@ -51,9 +51,11 @@ build/
 # Docker
 *.override.yml
 
-# Generated API clients
-services/*/generated/
-client/src/api.ts
+# Generated API clients (regenerate with: pixi run gen-all)
+services/generated/
+services/genai-service/client/
+services/frontend/src/api/schema.d.ts
+openapitools.json
 
 # Monitoring
 infra/monitoring/grafana/data/

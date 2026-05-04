@@ -1,0 +1,42 @@
+openapi: 3.1.0
+
+info:
+  title: DevOps Incident Platform API
+  version: 0.0.1
+  description: REST API for the DevOps incident management platform.
+  license:
+    name: MIT
+    url: https://opensource.org/license/mit
+
+tags:
+  - name: health
+    description: Service health and readiness.
+
+servers:
+  - url: /api/v1
+    description: API gateway (relative)
+
+paths:
+  /health:
+    get:
+      operationId: healthCheck
+      summary: Health check
+      tags: [health]
+      security: []
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status]
+                additionalProperties: false
+                properties:
+                  status:
+                    type: string
+                    example: ok
+        "503":
+          description: Service unavailable
+        "400":
+          description: Bad request

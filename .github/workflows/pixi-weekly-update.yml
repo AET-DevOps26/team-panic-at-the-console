@@ -1,0 +1,40 @@
+name: Monthly Pixi Dependency Refresh
+
+on:
+  schedule:
+    - cron: "0 0 1 * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  update-pixi-lock:
+    name: Refresh pixi.lock and open PR
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+
+      - name: Set up pixi
+        uses: prefix-dev/setup-pixi@1b2de7f3351f171c8b4dfeb558c639cb58ed4ec0 # v0.9.5
+        with:
+          run-install: false
+
+      - name: Update lockfile and generate summary
+        run: |
+          set -o pipefail
+          pixi update --json | pixi exec pixi-diff-to-markdown > diff.md
+
+      - name: Create pull request
+        uses: peter-evans/create-pull-request@22a9089034f40e5a961c8808d113e2c98fb63676 # v7
+        with:
+          commit-message: "chore(deps): refresh pixi lockfile"
+          branch: "chore/monthly-pixi-lock-refresh"
+          title: "chore(deps): refresh pixi lockfile"
+          body-path: diff.md
+          add-paths: |
+            pixi.lock
