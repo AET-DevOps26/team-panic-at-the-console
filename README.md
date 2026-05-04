@@ -116,6 +116,16 @@ The compose file lives at `infra/compose/docker-compose.yml`. `pixi run compose-
 
 - Override the image tag: `IMAGE_TAG=v0.1.0 pixi run compose-up`
 
+## Mock API Server
+
+Spin up a local HTTP mock server driven by `api/openapi.yaml` using [Prism](https://stoplight.io/open-source/prism):
+
+```bash
+pixi run mock-api
+```
+
+Prism reads the spec and serves auto-generated responses on `http://localhost:4010`. The spec declares `servers: /api/v1`, so endpoints are available under `http://localhost:4010/api/v1` (e.g. `http://localhost:4010/api/v1/health`). No services need to be running — useful for frontend development and API exploration before backends exist.
+
 ## Student Responsibilities
 
 - **Frontend** (`/services/frontend`): @LeonSpoerl
