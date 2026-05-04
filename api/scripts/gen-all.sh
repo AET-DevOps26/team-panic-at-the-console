@@ -17,10 +17,11 @@ npx --yes @openapitools/openapi-generator-cli@2.13.0 generate \
   -o "$REPO_ROOT/services/generated/java"
 
 echo "==> Generating Python client (genai-service)"
-pixi run openapi-python-client generate \
-  --path "$SPEC" \
-  --output-path "$REPO_ROOT/services/genai-service/client" \
-  --overwrite
+TMP_CONFIG=$(mktemp)
+printf 'project_name_override = "client"\n' > "$TMP_CONFIG"
+rm -rf "$REPO_ROOT/services/genai-service/client"
+(cd "$REPO_ROOT/services/genai-service" && openapi-python-client generate --path "$SPEC" --config "$TMP_CONFIG")
+rm -f "$TMP_CONFIG"
 
 echo "==> Generating TypeScript SDK (frontend)"
 npx --yes openapi-typescript@7.4.4 "$SPEC" \
