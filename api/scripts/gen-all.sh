@@ -19,10 +19,10 @@ npx --yes @openapitools/openapi-generator-cli@2.13.0 generate \
 
 echo "==> Generating Python client (genai-service)"
 TMP_CONFIG_DIR=$(mktemp -d)
+trap 'rm -rf "$TMP_CONFIG_DIR"' EXIT
 printf 'project_name_override: client\n' > "$TMP_CONFIG_DIR/config.yaml"
 rm -rf "$REPO_ROOT/services/genai-service/client"
 (cd "$REPO_ROOT/services/genai-service" && openapi-python-client generate --path "$SPEC" --config "$TMP_CONFIG_DIR/config.yaml")
-rm -rf "$TMP_CONFIG_DIR"
 
 echo "==> Generating TypeScript SDK (frontend)"
 mkdir -p "$REPO_ROOT/services/frontend/src/api"

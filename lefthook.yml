@@ -57,11 +57,11 @@ post-checkout:
     - name: regen-stubs
       run: >-
         if [ "{3}" = "1" ] && git diff --name-only {1} {2} -- api/openapi.yaml | grep -q .; then
-        pixi run gen-all; fi
+        pixi {run} gen-all; fi
 
 post-merge:
   jobs:
     - name: regen-stubs
       run: >-
         if git diff --name-only ORIG_HEAD HEAD -- api/openapi.yaml | grep -q .; then
-        pixi run gen-all; fi
+        pixi {run} gen-all; fi
