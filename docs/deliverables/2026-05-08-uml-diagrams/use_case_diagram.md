@@ -20,6 +20,7 @@ graph LR
     viewPostmortem["View Postmortem<br/>Draft"]
 
     %% Commander Specific
+    createIncident2["Create Incident"]
     updateStatus["Update Status"]
     assignUser["Assign User"]
     viewSummary["View Incident<br/>Summary"]
@@ -52,7 +53,7 @@ graph LR
     commander --> assignUser
     commander --> configSource
     commander --> escalateSeverity
-commander --> createIncident
+    commander --> createIncident2
     classDef actor fill:#e3f2fd,stroke:#1976d2,stroke-width:2px,color:#000
     classDef shared fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px,color:#000
     classDef responderOnly fill:#e8f5e9,stroke:#388e3c,stroke-width:2px,color:#000
@@ -61,5 +62,5 @@ commander --> createIncident
     class responder,member,commander actor
     class viewList,viewDetails,viewTimeline,addComment shared
     class createIncident,viewSeverity,viewSolutions,viewPostmortem responderOnly
-    class updateStatus,assignUser,viewSummary,configSource,escalateSeverity commanderOnly
+    class createIncident2,updateStatus,assignUser,viewSummary,configSource,escalateSeverity commanderOnly
 ```
