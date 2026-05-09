@@ -78,9 +78,6 @@ classDiagram
         -List~User~ assignedTo
         +addComment(comment)* Comment
         +getComments()* List~Comment~
-        +getSummary()* Summary
-        +getSolutions()* List~Solution~
-        +getPostmortemDraft()* Postmortem
     }
 
 
