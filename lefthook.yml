@@ -51,3 +51,17 @@ pre-commit:
           - name: openapi-lint
             glob: "api/openapi.yaml"
             run: pixi {run} openapi-lint
+
+post-checkout:
+  jobs:
+    - name: regen-stubs
+      run: >-
+        if [ "{3}" = "1" ] && git diff --name-only {1} {2} -- api/openapi.yaml | grep -q .; then
+        pixi {run} gen-all; fi
+
+post-merge:
+  jobs:
+    - name: regen-stubs
+      run: >-
+        if git diff --name-only ORIG_HEAD HEAD -- api/openapi.yaml | grep -q .; then
+        pixi {run} gen-all; fi
