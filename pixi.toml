@@ -41,7 +41,9 @@ age = "*"
 k9s = "*"
 
 [feature.deploy.tasks]
-deploy-tools-version = "helm version --short && kubectl version --client && sops --version && k9s version"
+helm-deploy = "helm upgrade --install devops-platform infra/helm/devops-platform --namespace production --create-namespace"
+helm-delete = "helm uninstall devops-platform --namespace production"
+helm-diff = "helm upgrade --install devops-platform infra/helm/devops-platform --namespace production --create-namespace --dry-run"
 
 [environments]
 default = ["lint"]
