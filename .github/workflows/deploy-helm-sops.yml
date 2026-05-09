@@ -57,6 +57,25 @@ jobs:
             exit 1
           fi
           pixi run -e deploy sops --decrypt infra/helm/secrets/values.prod.enc.yaml > infra/helm/secrets/values.prod.dec.yaml
+          if [ ! -f infra/helm/secrets/values.monitoring.enc.yaml ]; then
+            echo "::error title=Missing encrypted values::Expected infra/helm/secrets/values.monitoring.enc.yaml for production deploy."
+            exit 1
+          fi
+          pixi run -e deploy sops --decrypt infra/helm/secrets/values.monitoring.enc.yaml > infra/helm/secrets/values.monitoring.dec.yaml
+
+      - name: Build monitoring chart dependencies
+        run: |
+          pixi run -e deploy helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+          pixi run -e deploy helm dependency build infra/helm/monitoring
+
+      - name: Deploy monitoring chart
+        run: |
+          set -euo pipefail
+          pixi run -e deploy helm upgrade --install monitoring infra/helm/monitoring \
+            --namespace monitoring \
+            --create-namespace \
+            --values infra/helm/secrets/values.monitoring.dec.yaml \
+            --wait --timeout 5m
 
       - name: Deploy app chart
         run: |
