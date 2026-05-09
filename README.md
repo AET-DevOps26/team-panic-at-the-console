@@ -100,8 +100,10 @@ Create a Git tag like `v0.1.0` (or publish a GitHub Release for that tag) to tri
 Use deploy tooling from Pixi:
 
 ```bash
-pixi run deploy-tools-version
-pixi run -e deploy k9s
+pixi run -e deploy helm-diff    # dry-run, preview changes
+pixi run -e deploy helm-deploy  # deploy / upgrade
+pixi run -e deploy helm-delete  # uninstall
+pixi run -e deploy k9s          # cluster exploration
 ```
 
 ## Testing
