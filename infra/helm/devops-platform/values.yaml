@@ -4,11 +4,6 @@ global:
     tag: main
   namespace: default
 
-monitoring:
-  serviceMonitor:
-    # Keep disabled until services expose /metrics endpoints.
-    enabled: false
-
 services:
   frontend:
     enabled: true
