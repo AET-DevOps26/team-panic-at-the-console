@@ -64,8 +64,5 @@ infra/monitoring/prometheus/data/
 # Helm chart tarballs (fetched by helm dep update)
 infra/helm/monitoring/charts/*.tgz
 
-# Helm chart tarballs (fetched by helm dep update)
-infra/helm/monitoring/charts/*.tgz
-
 # Helm / SOPS decrypted secrets
 infra/helm/secrets/*.dec.yaml
