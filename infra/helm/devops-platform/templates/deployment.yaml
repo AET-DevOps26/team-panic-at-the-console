@@ -21,9 +21,18 @@ spec:
       containers:
         - name: {{ $name }}
           image: "{{ $.Values.global.image.registry }}/{{ $svc.image.repository }}:{{ $.Values.global.image.tag }}"
-          imagePullPolicy: IfNotPresent
+          imagePullPolicy: Always
           ports:
             - containerPort: {{ $svc.port }}
+          env:
+            {{- if $.Values.secrets.databaseUrl }}
+            - name: DATABASE_URL
+              value: {{ $.Values.secrets.databaseUrl | quote }}
+            {{- end }}
+            {{- if $.Values.secrets.apiToken }}
+            - name: API_TOKEN
+              value: {{ $.Values.secrets.apiToken | quote }}
+            {{- end }}
 ---
 {{- end }}
 {{- end }}
