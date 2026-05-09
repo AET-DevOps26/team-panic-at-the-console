@@ -111,6 +111,12 @@ pixi run -e deploy k9s
 pixi run lint
 ```
 
+## Kubernetes Guide
+
+If you are new to this setup, start with the basic walkthrough:
+
+- `docs/kubernetes-helm-monitoring-guide.md`
+
 ## Local Runtime
 
 ```bash
