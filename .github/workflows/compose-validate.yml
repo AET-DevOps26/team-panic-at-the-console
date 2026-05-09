@@ -3,7 +3,7 @@ name: Compose Validate
 on:
   pull_request:
     paths:
-      - "docker-compose*.yml"
+      - "infra/compose/docker-compose.yml"
       - ".env.example"
       - "pixi.toml"
       - ".github/workflows/compose-validate.yml"
@@ -12,7 +12,7 @@ on:
     branches:
       - main
     paths:
-      - "docker-compose*.yml"
+      - "infra/compose/docker-compose.yml"
       - ".env.example"
       - "pixi.toml"
       - ".github/workflows/compose-validate.yml"

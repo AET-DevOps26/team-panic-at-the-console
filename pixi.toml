@@ -2,6 +2,7 @@
 name = "devops-project-2026"
 description = "Tooling workspace for hooks and CI quality checks"
 channels = ["conda-forge"]
+exclude-newer = "14d"
 platforms = ["linux-64", "osx-arm64", "osx-64", "win-64"]
 
 [dependencies]
@@ -15,17 +16,22 @@ prettier = "*"
 taplo = "*"
 pre-commit-hooks = "*"
 typos = "*"
+openapi-python-client = "*"
+click = ">=8.1,<8.2"
+vacuum = "*"
 
 [feature.lint.tasks]
 pre-commit-install = "lefthook install"
 lint = "lefthook run pre-commit --all-files"
+openapi-lint = "test ! -f api/openapi.yaml || vacuum lint api/openapi.yaml"
+openapi-codegen-validate = "bash api/scripts/validate-codegen.sh"
 
 [feature.dev.tasks]
-compose-up = "docker compose --env-file .env.example up --build"
-compose-down = "docker compose down --remove-orphans"
-compose-up-prod = "docker compose --env-file .env.example -f docker-compose.prod.yml up -d"
-compose-validate = "docker compose --env-file .env.example -f docker-compose.yml config > /dev/null && docker compose --env-file .env.example -f docker-compose.prod.yml config > /dev/null"
-openapi-lint = "bash -lc 'if [ -f api/openapi.yaml ]; then npx --yes @redocly/cli@1.19.0 lint api/openapi.yaml; else echo \"No api/openapi.yaml found, skipping OpenAPI lint\"; fi'"
+compose-up = "docker compose --project-directory . --env-file .env.example -f infra/compose/docker-compose.yml up --build"
+compose-down = "docker compose --project-directory . -f infra/compose/docker-compose.yml down --remove-orphans"
+compose-validate = "docker compose --project-directory . --env-file .env.example -f infra/compose/docker-compose.yml config > /dev/null"
+gen-all = "bash api/scripts/gen-all.sh"
+mock-api = "npx --yes @stoplight/prism-cli@4.10.5 mock api/openapi.yaml"
 
 [feature.deploy.dependencies]
 kubernetes-helm = "*"

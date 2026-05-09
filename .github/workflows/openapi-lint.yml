@@ -26,5 +26,28 @@ jobs:
       - name: Set up pixi
         uses: prefix-dev/setup-pixi@1b2de7f3351f171c8b4dfeb558c639cb58ed4ec0 # v0.9.5
 
-      - name: Lint OpenAPI spec via Pixi task
+      - name: Lint OpenAPI spec
         run: pixi run openapi-lint
+
+  codegen-validate:
+    name: Validate codegen (TypeScript + Python + Java)
+    runs-on: ubuntu-latest
+    needs: lint-openapi
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+
+      - name: Set up pixi
+        uses: prefix-dev/setup-pixi@1b2de7f3351f171c8b4dfeb558c639cb58ed4ec0 # v0.9.5
+
+      - name: Set up Java
+        uses: actions/setup-java@c1e323688fd81a25caa38c78aa6df2d33d3e20d9 # v4.8.0
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Validate OpenAPI code generation via Pixi task
+        run: pixi run openapi-codegen-validate
