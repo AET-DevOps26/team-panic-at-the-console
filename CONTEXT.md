@@ -57,15 +57,14 @@ _Avoid_: Post-incident report, retrospective
 
 **Rule condition format**: Fixed JSON field-matcher schema. Each Rule has `conditions` (list of `{field, operator, value}`) ANDed together, and an `action` (`{createIncident: true, severity: "SEV2"}`). Rule engine evaluates conditions against normalized External Event fields. No expression language.
 
-**Notifications**: In-app only. `notific
-
-ation-service` stores notifications in its own DB. No email. Frontend fetches via REST or receives via SSE.
+**Notifications**: In-app only. `notification-service` stores notifications in its own DB. No email. Frontend fetches via REST or receives via SSE.
 
 **NATS subjects**:
 | Publisher          | Subject                     | Subscribers                                                                    |
 | ------------------ | --------------------------- | ------------------------------------------------------------------------------ |
 | `incident-service` | `incident.created`          | event-service, genai-service, notification-service, gateway (SSE)              |
 | `incident-service` | `incident.updated`          | event-service, gateway (SSE)                                                   |
+| `incident-service` | `incident.severity.escalated` | event-service, notification-service, gateway (SSE)                          |
 | `incident-service` | `incident.resolved`         | event-service, genai-service (postmortem), notification-service, gateway (SSE) |
 | `incident-service` | `incident.comment.added`    | event-service, notification-service                                            |
 | `incident-service` | `incident.assigned`         | event-service, notification-service                                            |
