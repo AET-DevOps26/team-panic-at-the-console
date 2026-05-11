@@ -38,19 +38,31 @@ stateDiagram-v2
 
 ## Severity (independent of status)
 
-Severity is an attribute of the Incident, not a status. It can change in any state:
+Severity is an attribute of the Incident, not a status. It can change in any state.
+
+**Two sources of severity change:**
+
+- **Automatic (rule-engine)**: detects repeated `external.event.received` events from the same source within a time window → publishes `incident.severity.escalate.requested` to NATS → incident-service raises severity one level
+- **Manual (Commander)**: overrides severity directly via REST
+
+**Note:** genai-service also suggests a severity level (displayed as advisory in the UI) but does NOT change the actual severity — that is rule-engine or Commander only.
 
 ```mermaid
 stateDiagram-v2
     direction LR
 
-    [*] --> SEV4: incident created (default)
+    [*] --> SEV_RULE: incident created\n(severity set by matching rule action)
 
-    SEV4 --> SEV3: rule-engine escalates
-    SEV3 --> SEV2: rule-engine escalates
-    SEV2 --> SEV1: rule-engine escalates
+    SEV_RULE --> SEV4 : rule action = SEV4
+    SEV_RULE --> SEV3 : rule action = SEV3
+    SEV_RULE --> SEV2 : rule action = SEV2
+    SEV_RULE --> SEV1 : rule action = SEV1
 
-    SEV3 --> SEV4: Commander de-escalates
-    SEV2 --> SEV3: Commander de-escalates
-    SEV1 --> SEV2: Commander de-escalates
+    SEV4 --> SEV3: AUTO: rule-engine detects repeated\nevents from same source
+    SEV3 --> SEV2: AUTO: rule-engine detects repeated\nevents from same source
+    SEV2 --> SEV1: AUTO: rule-engine detects repeated\nevents from same source
+
+    SEV3 --> SEV4: MANUAL: Commander de-escalates
+    SEV2 --> SEV3: MANUAL: Commander de-escalates
+    SEV1 --> SEV2: MANUAL: Commander de-escalates
 ```
