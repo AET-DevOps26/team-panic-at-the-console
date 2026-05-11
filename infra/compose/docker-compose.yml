@@ -27,6 +27,14 @@ services:
       - "8222:8222" # monitoring / metrics
     restart: unless-stopped
 
+  ollama:
+    image: ollama/ollama:latest
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    restart: unless-stopped
+
   # ── Application Services ──────────────────────────────────────────────────
 
   frontend:
@@ -87,10 +95,13 @@ services:
       context: ./services/rule-engine
       dockerfile: Dockerfile
     environment:
+      DATABASE_URL: postgres://${POSTGRES_USER:-devops}:${POSTGRES_PASSWORD:-devops}@postgres:5432/rules
       NATS_URL: nats://nats:4222
     ports:
       - "8083:8083"
     depends_on:
+      postgres:
+        condition: service_healthy
       nats:
         condition: service_started
     restart: unless-stopped
@@ -115,10 +126,13 @@ services:
       context: ./services/notification-service
       dockerfile: Dockerfile
     environment:
+      DATABASE_URL: postgres://${POSTGRES_USER:-devops}:${POSTGRES_PASSWORD:-devops}@postgres:5432/notifications
       NATS_URL: nats://nats:4222
     ports:
       - "8085:8085"
     depends_on:
+      postgres:
+        condition: service_healthy
       nats:
         condition: service_started
     restart: unless-stopped
@@ -144,13 +158,17 @@ services:
       dockerfile: Dockerfile
     environment:
       NATS_URL: nats://nats:4222
-      LLM_API_KEY: ${LLM_API_KEY:-}
+      OLLAMA_URL: http://ollama:11434
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-qwen2.5:3b}
     ports:
       - "8087:8087"
     depends_on:
       nats:
         condition: service_started
+      ollama:
+        condition: service_started
     restart: unless-stopped
 
 volumes:
   postgres_data:
+  ollama_data:
