@@ -53,7 +53,7 @@ _Avoid_: Post-incident report, retrospective
 
 **Real-time updates**: SSE. Gateway subscribes to NATS incident events and fans out to connected frontend clients via Server-Sent Events (`SseEmitter` in Spring Boot). Frontend uses a single `EventSource` connection.
 
-**Authentication**: JWT in `httpOnly` cookie (`SameSite=Strict`). `user-service` issues tokens on login; browser stores them as httpOnly cookies (not accessible to JS). Gateway reads the cookie, validates signature, injects `X-User-Id` / `X-User-Role` headers. Downstream services trust injected headers — no per-request call to user-service.
+**Authentication**: JWT in `httpOnly` cookie (`SameSite=Strict`). `user-service` issues tokens on login; browser stores them as httpOnly cookies (not accessible to JS). Gateway reads the cookie, validates signature, injects `X-User-Id` / `X-User-Role` headers. Downstream services trust injected headers — no per-request call to user-service. **Security invariant**: downstream services must only be reachable via the gateway (cluster-internal networking only); they must reject requests that include `X-User-*` headers not originating from the gateway to prevent header spoofing.
 
 **Rule condition format**: Fixed JSON field-matcher schema. Each Rule has `conditions` (list of `{field, operator, value}`) ANDed together, and an `action` (`{createIncident: true, severity: "SEV2"}`). Rule engine evaluates conditions against normalized External Event fields. No expression language.
 
