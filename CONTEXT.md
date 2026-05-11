@@ -123,8 +123,8 @@ ation-service` stores notifications in its own DB. No email. Frontend fetches vi
 | `incident-service` | `incidents` | yes |
 | `event-service` | `events` | yes |
 | `user-service` | `users` | yes |
-| `notification-service` | `notifications` | yes — missing from init-dbs.sh, needs adding |
-| `rule-engine` | `rules` | yes — missing from init-dbs.sh, needs adding |
+| `notification-service` | `notifications` | yes |
+| `rule-engine` | `rules` | yes |
 | `gateway` | — | no |
 | `webhook-service` | — | no |
 | `genai-service` | — | no |

@@ -6,7 +6,7 @@ C4Container
   Person(users, "Users", "Incident Responders, Commanders, Team Members")
 
   Container_Boundary(system, "Incident Management System") {
-    Container(frontend, "Frontend Dashboard", "Vue.js", "Web UI for incident management, real-time updates, timeline view, collaboration features")
+    Container(frontend, "Frontend Dashboard", "React + Vite + TypeScript", "Web UI for incident management, real-time updates via SSE, timeline view, collaboration features")
     Container(notification, "Notification Service", "Event Handler", "Sends alerts for incident creation, status changes, severity escalation")
 
 
@@ -18,11 +18,12 @@ C4Container
       Container(rule_engine, "Rule Engine", "REST API", "Incident auto-creation rules, severity escalation logic")
 
 
-      Container(genai_service, "GenAI Service", "Python/LLM", "Incident summaries, severity suggestions, solution proposals, postmortem drafts")
-      Container(event_log, "Event Log Service", "REST API", "Append-only audit log, immutable event storage, timeline data")
+      Container(genai_service, "GenAI Service", "Python + FastAPI", "Stateless: subscribes to NATS events, calls Ollama, patches AI results back to incident-service")
+      Container(event_log, "Event Log Service", "Spring Boot", "Append-only audit log, immutable event storage, timeline data")
+      Container(nats, "NATS JetStream", "Message Bus", "Async event bus for side effects: event log writes, notifications, genai triggers, SSE fan-out")
 
-      ContainerDb(database, "PostgreSQL Database", "Relational DB", "Incident data, user accounts, configuration, event log storage")
-      Container(webhook, "Webhook Service", "REST API", "Receives and normalizes data from external sources")
+      ContainerDb(database, "PostgreSQL Database", "Relational DB", "Shared instance: one database per stateful service (incidents, events, users, notifications, rules)")
+      Container(webhook, "Webhook Service", "Spring Boot", "Receives and normalizes data from external sources")
     }
   }
 
@@ -30,24 +31,29 @@ C4Container
     System_Ext(external_systems, "External Systems", "GitHub Actions pipelines, logging services, other webhook sources")
   }
 
-  Rel(users, frontend, "Interacts with", "HTTPS")
+  Rel(users, frontend, "Interacts with", "HTTPS + SSE")
   Rel(frontend, gateway, "All incident operations", "REST API")
   Rel(gateway, incident_service, "Validated incident requests", "REST API")
-  Rel(gateway, user_service, "Auth validation", "REST API")
+  Rel(gateway, user_service, "JWT validation on login", "REST API")
+  Rel(gateway, nats, "Subscribes for SSE fan-out", "NATS")
 
-  Rel(external_systems, webhook, "Sends event logs", "JSON/HTTPS")
-  Rel(rule_engine, incident_service, "Auto-creates incidents", "REST API")
+  Rel(external_systems, webhook, "Sends webhook events", "JSON/HTTPS")
+  Rel(webhook, nats, "Publishes external.event.received", "NATS")
 
-  Rel(webhook, rule_engine, "Triggers analysis of new events", "REST API")
-  Rel(webhook, event_log, "Forwards events", "REST API")
+  Rel(nats, rule_engine, "external.event.received", "NATS")
+  Rel(nats, event_log, "incident.* events", "NATS")
+  Rel(nats, notification, "incident.* events", "NATS")
+  Rel(nats, genai_service, "incident.created / incident.resolved", "NATS")
 
-  Rel(incident_service, event_log, "Records events", "REST API")
-  Rel(incident_service, genai_service, "Requests analysis", "REST API")
-  Rel(incident_service, notification, "Triggers notifications", "REST API")
+  Rel(rule_engine, nats, "Publishes incident.create.requested / severity.escalate.requested", "NATS")
+  Rel(nats, incident_service, "incident.create.requested / severity.escalate.requested", "NATS")
+  Rel(incident_service, nats, "Publishes incident.* events", "NATS")
+
+  Rel(genai_service, incident_service, "PATCHes AI results", "REST API")
 
   Rel(event_log, database, "Reads/Writes", "JDBC")
-  Rel(notification, user_service, "User contact info", "REST API")
-  Rel(notification, users, "Sends alerts", "Email/Push")
+  Rel(incident_service, database, "Reads/Writes", "JDBC")
+  Rel(notification, users, "In-app notifications", "REST/SSE")
 
   UpdateRelStyle(gateway, incident_service, $offsetX="-50",$offsetY="-20")
   UpdateRelStyle(gateway, user_service, $offsetX="-40",$offsetY="-40")
