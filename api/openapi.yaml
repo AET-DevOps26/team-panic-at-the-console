@@ -15,8 +15,8 @@ tags:
     description: AI-assisted incident analysis (on-demand regeneration triggers).
 
 servers:
-  - url: http://localhost:8080/api/v1
-    description: Local development gateway
+  - url: http://localhost:4010
+    description: Local mock server (pixi run mock-api)
   - url: /api/v1
     description: API gateway (relative, in-cluster)
 
