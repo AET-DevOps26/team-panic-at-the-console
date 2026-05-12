@@ -1,5 +1,6 @@
-# Pin aligns with pixi-build preview support; bump when upgrading Pixi lock formats.
-FROM ghcr.io/prefix-dev/pixi:0.41.4 AS build
+# Match a Pixi release that supports workspace `exclude-newer`, lockfile v7, and `pixi-build`
+# (see services/genai-service/pixi.toml). Bump when the lockfile format or preview features require it.
+FROM ghcr.io/prefix-dev/pixi:0.68.1-jammy AS build
 
 WORKDIR /app
 
