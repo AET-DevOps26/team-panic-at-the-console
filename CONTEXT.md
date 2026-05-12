@@ -32,6 +32,20 @@ _Avoid_: AI summary (redundant), description (that's user-authored)
 An AI-generated document produced after Incident resolution, containing root cause analysis, timeline, and action items.
 _Avoid_: Post-incident report, retrospective
 
+**RuleEvaluator**:
+The deep module in `rule-engine` that tests a single Rule's conditions against a single External Event and returns a `MatchResult`. All condition-matching logic (field extraction, operator dispatch, AND-ing) lives here. Interface: `evaluate(rule, externalEvent) → MatchResult`.
+_Avoid_: rule checker, rule processor, condition evaluator
+
+**MatchResult**:
+The output of `RuleEvaluator.evaluate()` — whether the Rule matched and, if so, what action to take (`createIncident`, `severity`). A non-match carries no action.
+
+**PromptBuilder**:
+The deep module in `genai-service` that constructs a fully-formed Ollama prompt from an Incident, its Event Log, and a `PromptTask`. All context-length management, formatting, and structured output schema specification lives here. Interface: `build(incident, events, task) → Prompt`.
+_Avoid_: prompt generator, prompt factory, LLM formatter
+
+**PromptTask**:
+An enumeration of what the `PromptBuilder` is asked to produce: `SUMMARY`, `SEVERITY_SUGGESTION`, `SOLUTION_SUGGESTIONS`, `POSTMORTEM`. Each task maps to a different system prompt and response schema.
+
 ## Relationships
 
 - An **Incident** has exactly one current **IncidentStatus** and one current **Severity**
@@ -49,7 +63,7 @@ _Avoid_: Post-incident report, retrospective
 
 **Data aggregation**: None needed. `incident-service` owns all incident data including AI results. Frontend makes a single REST call to get a complete incident view.
 
-**NATS event shape**: Thin events. `incident.created` (and similar) carry only `{incidentId, timestamp}`. Consumers fetch full data via REST if needed.
+**NATS event shape**: Events are thin by default — `{incidentId, timestamp}` only. Exceptions carry one additional identifier where a REST callback would be ambiguous: `incident.comment.added` adds `commentId`, `incident.assigned` adds `userId`, `incident.severity.escalated` adds `newSeverity`, rule-engine events add the minimal fields needed to act (`sourceId`, `severity`, `requestedSeverity`). Full schemas in `api/specs/nats/*.schema.json`.
 
 **Real-time updates**: SSE. Gateway subscribes to NATS incident events and fans out to connected frontend clients via Server-Sent Events (`SseEmitter` in Spring Boot). Frontend uses a single `EventSource` connection.
 

@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema",
+  "$id": "incident.severity.escalated",
+  "description": "Carries newSeverity so notification-service can include the updated level in the alert without an extra REST call.",
+  "type": "object",
+  "required": ["incidentId", "newSeverity", "timestamp"],
+  "additionalProperties": false,
+  "properties": {
+    "incidentId": { "type": "string", "format": "uuid" },
+    "newSeverity": { "type": "string", "enum": ["SEV1", "SEV2", "SEV3", "SEV4"] },
+    "timestamp": { "type": "string", "format": "date-time" }
+  }
+}

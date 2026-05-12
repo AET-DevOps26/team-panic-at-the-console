@@ -1,0 +1,12 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema",
+  "$id": "incident.create.requested",
+  "type": "object",
+  "required": ["sourceId", "severity", "timestamp"],
+  "additionalProperties": false,
+  "properties": {
+    "sourceId": { "type": "string", "format": "uuid" },
+    "severity": { "type": "string", "enum": ["SEV1", "SEV2", "SEV3", "SEV4"] },
+    "timestamp": { "type": "string", "format": "date-time" }
+  }
+}

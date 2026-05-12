@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema",
+  "$id": "external.event.received",
+  "type": "object",
+  "required": ["sourceId", "eventType", "timestamp", "rawPayload"],
+  "additionalProperties": false,
+  "properties": {
+    "sourceId": { "type": "string", "format": "uuid" },
+    "eventType": { "type": "string", "description": "Normalised event type string, e.g. ci_failure, alert_fired" },
+    "timestamp": { "type": "string", "format": "date-time" },
+    "rawPayload": { "type": "object", "description": "The original webhook payload, preserved verbatim for rule evaluation" }
+  }
+}
