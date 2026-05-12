@@ -16,8 +16,8 @@ prettier = "*"
 taplo = "*"
 pre-commit-hooks = "*"
 typos = "*"
-openapi-python-client = "*"
-click = ">=8.1,<8.2"
+openapi-python-client = ">=0.28.3"
+typer = ">=0.16,<0.25"
 vacuum = "*"
 
 [feature.lint.tasks]
