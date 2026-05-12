@@ -43,3 +43,6 @@ jobs:
 
       - name: Verify lockfile is up to date
         run: pixi install --frozen
+
+      - name: Verify genai-service lockfile
+        run: pixi install --frozen --manifest-path services/genai-service/pixi.toml

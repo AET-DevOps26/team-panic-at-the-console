@@ -1,0 +1,41 @@
+# Pixi + pixi-build for genai-service (not covered by root `lefthook` lint alone).
+name: python-tests
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "services/genai-service/**"
+  pull_request:
+    paths:
+      - "services/genai-service/**"
+  merge_group:
+
+jobs:
+  test:
+    name: genai-service
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+
+      - name: Set up pixi
+        uses: prefix-dev/setup-pixi@1b2de7f3351f171c8b4dfeb558c639cb58ed4ec0 # v0.9.5
+        with:
+          manifest-path: services/genai-service/pixi.toml
+          cache: true
+
+      - name: Verify Pixi lockfile
+        run: pixi install --frozen --manifest-path services/genai-service/pixi.toml
+
+      - name: Lint
+        run: pixi run --manifest-path services/genai-service/pixi.toml lint
+
+      - name: Type check
+        run: pixi run --manifest-path services/genai-service/pixi.toml typecheck
+
+      - name: Run tests
+        run: pixi run --manifest-path services/genai-service/pixi.toml test

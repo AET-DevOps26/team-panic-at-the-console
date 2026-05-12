@@ -1,0 +1,57 @@
+[workspace]
+name = "genai-service"
+channels = ["conda-forge"]
+exclude-newer = "7d"
+platforms = ["osx-arm64", "osx-64", "linux-64", "win-64"]
+preview = ["pixi-build"]
+
+[package]
+name = "genai-service"
+
+[package.build.backend]
+name = "pixi-build-python"
+version = "*"
+
+[package.host-dependencies]
+python = ">=3.12,<3.14"
+hatchling = "*"
+
+[dependencies]
+"genai-service" = { path = "." }
+python = ">=3.12,<3.14"
+fastapi = ">=0.136.1,<0.137"
+uvicorn-standard = ">=0.46.0,<0.47"
+httpx = ">=0.28.1,<0.29"
+pydantic = ">=2,<3"
+pydantic-settings = "*"
+structlog = ">=25.5.0,<26"
+
+[feature.test.dependencies]
+pytest = "*"
+pytest-asyncio = "*"
+pytest-cov = "*"
+mypy = "*"
+
+[feature.test.tasks]
+test = "pytest -q"
+test-cov = "pytest --cov=genai_service --cov-report=term-missing"
+typecheck = "mypy src/genai_service"
+
+[feature.lint.dependencies]
+ruff = "*"
+
+[feature.lint.tasks]
+lint = "ruff check src tests && ruff format --check src tests"
+format = "ruff format src tests"
+lint-fix = "ruff check --fix src tests"
+
+[tasks]
+start = "uvicorn genai_service.main:app --host 0.0.0.0 --port 8087"
+
+[feature.dev.tasks]
+start = "uvicorn genai_service.main:app --reload --host 0.0.0.0 --port 8087"
+
+[environments]
+default = ["test", "lint"]
+dev = ["test", "lint", "dev"]
+prod = []

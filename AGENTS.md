@@ -18,6 +18,7 @@ This repository uses [pixi](https://pixi.sh) for tooling. Use `pixi run` for pro
 pixi install                   # Install tooling and set up the Pixi environment
 pixi run pre-commit-install    # Register lefthook git hooks
 pixi run lint                  # Run all linters (same as CI)
+pixi run test-genai            # Run genai-service tests (manifest in services/genai-service/)
 pixi run compose-up            # Start full stack locally (builds from source)
 pixi run compose-down          # Stop and remove containers
 pixi run compose-validate      # Validate docker-compose files
