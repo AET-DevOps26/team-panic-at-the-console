@@ -15,8 +15,10 @@ tags:
     description: AI-assisted incident analysis (on-demand regeneration triggers).
 
 servers:
+  - url: http://localhost:8080/api/v1
+    description: Local development gateway
   - url: /api/v1
-    description: API gateway (relative)
+    description: API gateway (relative, in-cluster)
 
 paths:
   /health:
