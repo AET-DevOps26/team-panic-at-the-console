@@ -11,6 +11,8 @@ info:
 tags:
   - name: health
     description: Service health and readiness.
+  - name: genai
+    description: AI-assisted incident analysis (on-demand regeneration triggers).
 
 servers:
   - url: /api/v1
@@ -40,3 +42,132 @@ paths:
           description: Service unavailable
         "400":
           description: Bad request
+
+  /genai/health:
+    get:
+      operationId: genaiHealth
+      summary: GenAI service health check
+      tags: [genai]
+      security: []
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GenaiHealthResponse"
+        "503":
+          description: Ollama unreachable
+
+  /incidents/{incidentId}/genai/summary:
+    post:
+      operationId: regenerateSummary
+      summary: Trigger summary regeneration for an incident
+      tags: [genai]
+      parameters:
+        - $ref: "#/components/parameters/IncidentIdParam"
+      responses:
+        "202":
+          description: Accepted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RegenAccepted"
+        "404":
+          description: Incident not found
+
+  /incidents/{incidentId}/genai/severity:
+    post:
+      operationId: regenerateSeverity
+      summary: Trigger severity suggestion regeneration for an incident
+      tags: [genai]
+      parameters:
+        - $ref: "#/components/parameters/IncidentIdParam"
+      responses:
+        "202":
+          description: Accepted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RegenAccepted"
+        "404":
+          description: Incident not found
+
+  /incidents/{incidentId}/genai/solutions:
+    post:
+      operationId: regenerateSolutions
+      summary: Trigger solution suggestions regeneration for an incident
+      tags: [genai]
+      parameters:
+        - $ref: "#/components/parameters/IncidentIdParam"
+      responses:
+        "202":
+          description: Accepted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RegenAccepted"
+        "404":
+          description: Incident not found
+
+  /incidents/{incidentId}/genai/postmortem:
+    post:
+      operationId: regeneratePostmortem
+      summary: Trigger postmortem regeneration for a resolved incident
+      tags: [genai]
+      parameters:
+        - $ref: "#/components/parameters/IncidentIdParam"
+      responses:
+        "202":
+          description: Accepted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RegenAccepted"
+        "404":
+          description: Incident not found
+        "409":
+          description: Incident not in resolved state
+
+components:
+  parameters:
+    IncidentIdParam:
+      name: incidentId
+      in: path
+      required: true
+      description: UUID of the target incident.
+      schema:
+        type: string
+        format: uuid
+        example: 018e2c5f-1234-7abc-8def-000000000001
+
+  schemas:
+    GenaiHealthResponse:
+      type: object
+      description: GenAI service health status including Ollama reachability.
+      required: [status, ollamaReachable, model]
+      additionalProperties: false
+      properties:
+        status:
+          type: string
+          example: ok
+        ollamaReachable:
+          type: boolean
+          example: true
+        model:
+          type: string
+          example: qwen2.5:3b
+
+    RegenAccepted:
+      type: object
+      description: Confirmation that an AI generation task was accepted for async processing.
+      required: [accepted, task]
+      additionalProperties: false
+      properties:
+        accepted:
+          type: boolean
+          example: true
+        task:
+          type: string
+          example: SUMMARY
+          enum: [SUMMARY, SEVERITY_SUGGESTION, SOLUTION_SUGGESTIONS, POSTMORTEM]
