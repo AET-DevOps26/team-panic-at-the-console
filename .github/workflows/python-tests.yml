@@ -26,7 +26,6 @@ jobs:
         uses: prefix-dev/setup-pixi@1b2de7f3351f171c8b4dfeb558c639cb58ed4ec0 # v0.9.5
         with:
           manifest-path: services/genai-service/pixi.toml
-          pixi-version: "0.68.1"
           frozen: true
           cache: true
 

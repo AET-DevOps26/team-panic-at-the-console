@@ -2,7 +2,7 @@
 name = "genai-service"
 channels = ["conda-forge"]
 exclude-newer = "7d"
-platforms = ["osx-arm64", "osx-64", "linux-64", "win-64"]
+platforms = ["osx-arm64", "osx-64", "linux-64", "linux-aarch64", "win-64"]
 preview = ["pixi-build"]
 
 [package]
