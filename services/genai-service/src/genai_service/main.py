@@ -45,8 +45,8 @@ async def lifespan(app: FastAPI):
 app = FastAPI(title="GenAI Service", version="0.1.0", lifespan=lifespan)
 
 
-@app.get("/health/live")
-async def health_live() -> dict[str, str]:
+@app.get("/health")
+async def health() -> dict[str, str]:
     """Process is up; does not call Ollama (for Docker / Kubernetes probes)."""
     return {"status": "ok"}
 
