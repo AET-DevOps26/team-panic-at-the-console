@@ -147,6 +147,16 @@ services:
       LLM_API_KEY: ${LLM_API_KEY:-}
     ports:
       - "8087:8087"
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "python -c \"import urllib.request as u; r=u.urlopen('http://127.0.0.1:8087/health/live', timeout=2); exit(0 if r.getcode()==200 else 1)\"",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
     depends_on:
       nats:
         condition: service_started

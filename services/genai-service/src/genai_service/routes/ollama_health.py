@@ -4,8 +4,9 @@ from fastapi.responses import JSONResponse
 router = APIRouter()
 
 
-@router.get("/genai/health")
-async def genai_health(request: Request) -> JSONResponse:
+@router.get("/genai/ollama/health")
+async def genai_ollama_health(request: Request) -> JSONResponse:
+    """Ollama reachability; 503 when Ollama is down (not for liveness probes)."""
     ollama = request.app.state.ollama_client
     reachable = await ollama.reachable()
     body = {"status": "ok", "ollamaReachable": reachable, "model": ollama.model}

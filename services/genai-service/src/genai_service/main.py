@@ -6,7 +6,7 @@ from fastapi import FastAPI
 
 from genai_service.config import settings
 from genai_service.ollama_client import OllamaClient
-from genai_service.routes.health import router as health_router
+from genai_service.routes.ollama_health import router as ollama_health_router
 
 _log_processors: list = [
     structlog.processors.TimeStamper(fmt="iso"),
@@ -44,4 +44,11 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="GenAI Service", version="0.1.0", lifespan=lifespan)
 
-app.include_router(health_router, prefix="/api/v1")
+
+@app.get("/health/live")
+async def health_live() -> dict[str, str]:
+    """Process is up; does not call Ollama (for Docker / Kubernetes probes)."""
+    return {"status": "ok"}
+
+
+app.include_router(ollama_health_router, prefix="/api/v1")
