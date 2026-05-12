@@ -3,7 +3,7 @@
 FastAPI scaffold:
 
 - **`GET /health`**: process is up; **no Ollama call** (use this for Docker / Kubernetes probes when Ollama is optional).
-- **`GET /api/v1/genai/ollama/health`**: checks a local [Ollama](https://ollama.com) instance (`GENAI_OLLAMA_URL`, default `http://localhost:11434`); returns **503** if Ollama is unreachable (for monitoring, not for liveness).
+- **`GET /api/v1/genai/ollama/health`**: checks a local [Ollama](https://ollama.com) instance (`GENAI_OLLAMA_URL`, default `http://localhost:11434`); JSON **`status`: `"ok"`** when Ollama answers, **`"degraded"`** with **503** when it does not (for monitoring, not for liveness).
 
 ## Local dev
 

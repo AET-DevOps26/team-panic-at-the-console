@@ -1,6 +1,13 @@
 # Pixi + pixi-build for genai-service (not covered by root `lefthook` lint alone).
 name: python-tests
 
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 on:
   push:
     branches: [main]
