@@ -4,7 +4,8 @@ FROM ghcr.io/prefix-dev/pixi:0.68.1-jammy AS build
 
 WORKDIR /app
 
-COPY pixi.toml pixi.lock pyproject.toml README.md ./
+COPY pixi.toml pixi.lock pyproject.toml ./
+COPY README.md ./
 COPY src/ ./src/
 
 RUN pixi install --frozen -e prod
