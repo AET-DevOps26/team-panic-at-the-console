@@ -1,3 +1,6 @@
 * text=auto eol=lf
 
 pixi.lock merge=binary linguist-language=YAML linguist-generated=true
+services/*/pixi.lock merge=binary linguist-language=YAML linguist-generated=true
+
+services/generated/** linguist-generated=true
