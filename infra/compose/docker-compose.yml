@@ -43,8 +43,13 @@ services:
     build:
       context: ./services/gateway
       dockerfile: Dockerfile
+    environment:
+      NATS_URL: nats://nats:4222
     ports:
       - "8080:8080"
+    depends_on:
+      nats:
+        condition: service_started
     restart: unless-stopped
 
   incident-service:
@@ -87,10 +92,13 @@ services:
       context: ./services/rule-engine
       dockerfile: Dockerfile
     environment:
+      DATABASE_URL: postgres://${POSTGRES_USER:-devops}:${POSTGRES_PASSWORD:-devops}@postgres:5432/rules
       NATS_URL: nats://nats:4222
     ports:
       - "8083:8083"
     depends_on:
+      postgres:
+        condition: service_healthy
       nats:
         condition: service_started
     restart: unless-stopped
@@ -115,10 +123,13 @@ services:
       context: ./services/notification-service
       dockerfile: Dockerfile
     environment:
+      DATABASE_URL: postgres://${POSTGRES_USER:-devops}:${POSTGRES_PASSWORD:-devops}@postgres:5432/notifications
       NATS_URL: nats://nats:4222
     ports:
       - "8085:8085"
     depends_on:
+      postgres:
+        condition: service_healthy
       nats:
         condition: service_started
     restart: unless-stopped
