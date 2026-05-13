@@ -59,6 +59,10 @@ jobs:
           - notification-service
           - webhook-service
           - genai-service
+        include:
+          - service: incident-service
+            build_context: ./services
+            build_dockerfile: ./services/incident-service/Dockerfile
 
     steps:
       - name: Checkout branch
@@ -84,8 +88,8 @@ jobs:
       - name: Build (and optionally push) image
         uses: docker/build-push-action@bcafcacb16a39f128d818304e6c9c0c18556b85f # v7.1.0
         with:
-          context: ./services/${{ matrix.service }}
-          file: ./services/${{ matrix.service }}/Dockerfile
+          context: ${{ matrix.build_context || format('./services/{0}', matrix.service) }}
+          file: ${{ matrix.build_dockerfile || format('./services/{0}/Dockerfile', matrix.service) }}
           push: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
           tags: |
             ghcr.io/${{ steps.repo.outputs.lower }}/${{ matrix.service }}:${{ github.sha }}
