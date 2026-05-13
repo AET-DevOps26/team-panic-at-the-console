@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft-07/schema",
-  "$id": "incident.severity.escalated",
+  "$id": "https://github.com/aet-devops26/team-panic-at-the-console/api/specs/nats/incident.severity.escalated.schema.json",
   "description": "Carries newSeverity so notification-service can include the updated level in the alert without an extra REST call.",
   "type": "object",
   "required": ["incidentId", "newSeverity", "timestamp"],

@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft-07/schema",
-  "$id": "external.event.received",
+  "$id": "https://github.com/aet-devops26/team-panic-at-the-console/api/specs/nats/external.event.received.schema.json",
   "type": "object",
   "required": ["sourceId", "eventType", "timestamp", "rawPayload"],
   "additionalProperties": false,
