@@ -39,7 +39,8 @@ C4Deployment
     System_Ext(ci, "GitHub Actions", "Sends CI failure webhooks")
   }
 
-  Rel(users, gateway, "HTTPS + SSE", "httpOnly JWT cookie")
+  Rel(users, frontend, "HTTPS", "httpOnly JWT cookie")
+  Rel(frontend, gateway, "HTTP + SSE", "internal JWT (from cookie)")
   Rel(ci, webhook_svc, "POST /webhooks/{sourceId}", "JSON/HTTPS")
   Rel(prometheus, grafana, "PromQL queries", "HTTP")
   Rel(alertmanager, grafana, "Alert state", "HTTP")
