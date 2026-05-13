@@ -107,8 +107,14 @@ pixi run -e deploy k9s
 ## Testing
 
 ```bash
-# Current scaffold test target (same command as CI)
+# Lint (all services, same as CI)
 pixi run lint
+
+# incident-service unit tests
+pixi run --manifest-path services/incident-service/pixi.toml test
+
+# genai-service unit tests
+pixi run --manifest-path services/genai-service/pixi.toml test
 ```
 
 ## Local Runtime
