@@ -18,10 +18,38 @@ spec:
     spec:
       containers:
         - name: {{ $name }}
+          {{- if $svc.image.override }}
+          image: "{{ $svc.image.override }}"
+          {{- else }}
           image: "{{ $.Values.global.image.registry }}/{{ $svc.image.repository }}:{{ $.Values.global.image.tag }}"
+          {{- end }}
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: {{ $svc.port }}
+          {{- if $svc.env }}
+          env:
+            {{- range $key, $val := $svc.env }}
+            - name: {{ $key }}
+              value: {{ $val | quote }}
+            {{- end }}
+          {{- end }}
+          {{- if $svc.command }}
+          command: {{ $svc.command | toJson }}
+          {{- end }}
+          {{- if $svc.args }}
+          args: {{ $svc.args | toJson }}
+          {{- end }}
+          {{- if $svc.persistence }}
+          volumeMounts:
+            - name: data
+              mountPath: {{ $svc.persistence.mountPath }}
+          {{- end }}
+      {{- if $svc.persistence }}
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: {{ $name }}-data
+      {{- end }}
 ---
 {{- end }}
 {{- end }}

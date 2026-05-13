@@ -16,45 +16,65 @@ services:
     port: 8080
     image:
       repository: gateway
+    env:
+      NATS_URL: nats://nats:4222
 
   incident-service:
     enabled: true
     port: 8081
     image:
       repository: incident-service
+    env:
+      DATABASE_URL: "postgres://devops:devops@postgres:5432/incidents"
+      NATS_URL: nats://nats:4222
 
   event-service:
     enabled: true
     port: 8082
     image:
       repository: event-service
+    env:
+      DATABASE_URL: "postgres://devops:devops@postgres:5432/events"
+      NATS_URL: nats://nats:4222
 
   rule-engine:
     enabled: true
     port: 8083
     image:
       repository: rule-engine
+    env:
+      DATABASE_URL: "postgres://devops:devops@postgres:5432/rules"
+      NATS_URL: nats://nats:4222
 
   user-service:
     enabled: true
     port: 8084
     image:
       repository: user-service
+    env:
+      DATABASE_URL: "postgres://devops:devops@postgres:5432/users"
 
   notification-service:
     enabled: true
     port: 8085
     image:
       repository: notification-service
+    env:
+      DATABASE_URL: "postgres://devops:devops@postgres:5432/notifications"
+      NATS_URL: nats://nats:4222
 
   webhook-service:
     enabled: true
     port: 8086
     image:
       repository: webhook-service
+    env:
+      NATS_URL: nats://nats:4222
 
   genai-service:
     enabled: true
     port: 8087
     image:
       repository: genai-service
+    env:
+      NATS_URL: nats://nats:4222
