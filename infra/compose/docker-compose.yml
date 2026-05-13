@@ -179,16 +179,6 @@ services:
       SWAGGER_JSON: /openapi.yaml
     restart: unless-stopped
 
-  swagger-ui:
-    image: swaggerapi/swagger-ui:v5.32.6
-    ports:
-      - "8090:8080"
-    volumes:
-      - ./api/openapi.yaml:/openapi.yaml:ro
-    environment:
-      SWAGGER_JSON: /openapi.yaml
-    restart: unless-stopped
-
 volumes:
   postgres_data:
   ollama_data:
