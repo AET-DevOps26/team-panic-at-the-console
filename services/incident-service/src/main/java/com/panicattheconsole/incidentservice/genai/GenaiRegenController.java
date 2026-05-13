@@ -20,25 +20,25 @@ class GenaiRegenController {
     record RegenAccepted(boolean accepted, String task) {}
 
     @PostMapping("/summary")
-    ResponseEntity<RegenAccepted> regenerateSummary(@PathVariable UUID incidentId) {
+    ResponseEntity<RegenAccepted> regenerateSummary(@PathVariable("incidentId") UUID incidentId) {
         log.info("TODO: publish incident.regen.requested [task=SUMMARY, incidentId={}]", incidentId);
         return ResponseEntity.status(HttpStatus.ACCEPTED).body(new RegenAccepted(true, "SUMMARY"));
     }
 
     @PostMapping("/severity")
-    ResponseEntity<RegenAccepted> regenerateSeverity(@PathVariable UUID incidentId) {
+    ResponseEntity<RegenAccepted> regenerateSeverity(@PathVariable("incidentId") UUID incidentId) {
         log.info("TODO: publish incident.regen.requested [task=SEVERITY_SUGGESTION, incidentId={}]", incidentId);
         return ResponseEntity.status(HttpStatus.ACCEPTED).body(new RegenAccepted(true, "SEVERITY_SUGGESTION"));
     }
 
     @PostMapping("/solutions")
-    ResponseEntity<RegenAccepted> regenerateSolutions(@PathVariable UUID incidentId) {
+    ResponseEntity<RegenAccepted> regenerateSolutions(@PathVariable("incidentId") UUID incidentId) {
         log.info("TODO: publish incident.regen.requested [task=SOLUTION_SUGGESTIONS, incidentId={}]", incidentId);
         return ResponseEntity.status(HttpStatus.ACCEPTED).body(new RegenAccepted(true, "SOLUTION_SUGGESTIONS"));
     }
 
     @PostMapping("/postmortem")
-    ResponseEntity<RegenAccepted> regeneratePostmortem(@PathVariable UUID incidentId) {
+    ResponseEntity<RegenAccepted> regeneratePostmortem(@PathVariable("incidentId") UUID incidentId) {
         log.info("TODO: publish incident.regen.requested [task=POSTMORTEM, incidentId={}]", incidentId);
         return ResponseEntity.status(HttpStatus.ACCEPTED).body(new RegenAccepted(true, "POSTMORTEM"));
     }

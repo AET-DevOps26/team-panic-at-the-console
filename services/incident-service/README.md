@@ -13,7 +13,7 @@ Port: **8081**
 | `POST` | `/incidents/{id}/genai/solutions`  | Trigger solution suggestions regeneration                 |
 | `POST` | `/incidents/{id}/genai/postmortem` | Trigger postmortem regeneration (resolved incidents only) |
 
-All regen endpoints return `202 Accepted` and publish `incident.regen.requested` to NATS. `genai-service` subscribes and PATCHes results back asynchronously.
+All regen endpoints return `202 Accepted`. NATS publishing (`incident.regen.requested`) and state validation (e.g. postmortem requires resolved status) are not yet implemented.
 
 ## Local dev
 
