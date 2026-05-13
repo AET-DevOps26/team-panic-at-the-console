@@ -53,9 +53,7 @@ services:
       context: ./services/incident-service
       dockerfile: Dockerfile
     environment:
-      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/incidents
-      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-devops}
-      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-devops}
+      DATABASE_URL: postgres://${POSTGRES_USER:-devops}:${POSTGRES_PASSWORD:-devops}@postgres:5432/incidents
       NATS_URL: nats://nats:4222
     ports:
       - "8081:8081"
