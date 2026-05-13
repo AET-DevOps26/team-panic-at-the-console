@@ -18,11 +18,14 @@ C4Container
 
       Container(genai_service, "GenAI Service", "Python + FastAPI", "Stateless: subscribes to NATS events, calls Ollama, patches AI results back to incident-service")
       Container(event_log, "Event Log Service", "Spring Boot", "Append-only audit log, immutable event storage, timeline data")
+      Container(webhook, "Webhook Service", "Spring Boot", "Receives and normalizes data from external sources")
+    }
+
+    Container_Boundary(infra, "Infrastructure") {
       Container(nats, "NATS JetStream", "Message Bus", "Async event bus for side effects: event log writes, notifications, genai triggers, SSE fan-out")
       Container(ollama, "Ollama", "qwen2.5:3b", "Local LLM inference, no cloud dependency")
 
       ContainerDb(database, "PostgreSQL Database", "Relational DB", "Shared instance: one database per stateful service (incidents, events, users, notifications, rules)")
-      Container(webhook, "Webhook Service", "Spring Boot", "Receives and normalizes data from external sources")
     }
   }
 
