@@ -39,6 +39,7 @@ pixi run openapi-lint          # Lint api/openapi.yaml if present
 | `notification-service` | 8085 | Notifies users on incident events       |
 | `webhook-service`      | 8086 | Receives CI/CD webhook events           |
 | `genai-service`        | 8087 | AI summaries, triage, postmortem drafts |
+| `swagger-ui`           | 8090 | Swagger UI serving `api/openapi.yaml`   |
 
 ### Infrastructure
 
