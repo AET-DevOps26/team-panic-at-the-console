@@ -28,31 +28,32 @@ pixi run openapi-lint          # Lint api/openapi.yaml if present
 
 ### Tech Stack
 
-| Layer | Technology |
-| ----- | ---------- |
-| Frontend | React + Vite + TypeScript + shadcn/ui + tanstack-query |
-| Backend services | Java Spring Boot (latest) |
-| GenAI service | Python + FastAPI + nats.py |
-| LLM | Ollama `qwen2.5:3b` (runs in cluster, no cloud LLM) |
-| Database | PostgreSQL (shared instance, one DB per stateful service) |
-| Event bus | NATS JetStream (side effects: event log, notifications, genai, SSE) |
-| Observability | kube-prometheus-stack + loki-stack |
+| Layer            | Technology                                                          |
+| ---------------- | ------------------------------------------------------------------- |
+| Frontend         | React + Vite + TypeScript + shadcn/ui + tanstack-query              |
+| Backend services | Java Spring Boot (latest)                                           |
+| GenAI service    | Python + FastAPI + nats.py                                          |
+| LLM              | Ollama `qwen2.5:3b` (runs in cluster, no cloud LLM)                 |
+| Database         | PostgreSQL (shared instance, one DB per stateful service)           |
+| Event bus        | NATS JetStream (side effects: event log, notifications, genai, SSE) |
+| Observability    | kube-prometheus-stack + loki-stack                                  |
 
 See `CONTEXT.md` for full architectural decisions and `docs/adr/` for key trade-off records.
 
 ### Services
 
-| Service                | Port | Stack       | Description                             |
-| ---------------------- | ---- | ----------- | --------------------------------------- |
-| `frontend`             | 3000 | React       | Web dashboard, SSE real-time updates    |
-| `gateway`              | 8080 | Spring Boot | Single API entry point, JWT validation, SSE fan-out |
-| `incident-service`     | 8081 | Spring Boot | Core incident CRUD + lifecycle + AI results |
-| `event-service`        | 8082 | Spring Boot | Append-only event log (NATS subscriber) |
-| `rule-engine`          | 8083 | Spring Boot | Evaluates external events → incident decisions |
-| `user-service`         | 8084 | Spring Boot | Auth + JWT issuance                     |
-| `notification-service` | 8085 | Spring Boot | In-app notifications (NATS subscriber)  |
-| `webhook-service`      | 8086 | Spring Boot | Receives + normalizes CI/CD webhook events |
-| `genai-service`        | 8087 | Python      | Stateless: NATS subscriber, calls Ollama, PATCHes results to incident-service |
+| Service                | Port | Description                             |
+| ---------------------- | ---- | --------------------------------------- |
+| `frontend`             | 3000 | Web dashboard                           |
+| `gateway`              | 8080 | Single API entry point                  |
+| `incident-service`     | 8081 | Core incident CRUD + lifecycle          |
+| `event-service`        | 8082 | Append-only event log                   |
+| `rule-engine`          | 8083 | Evaluates signals → incident decisions  |
+| `user-service`         | 8084 | Auth + role management                  |
+| `notification-service` | 8085 | Notifies users on incident events       |
+| `webhook-service`      | 8086 | Receives CI/CD webhook events           |
+| `genai-service`        | 8087 | AI summaries, triage, postmortem drafts |
+| `swagger-ui`           | 8090 | Swagger UI serving `api/openapi.yaml`   |
 
 ### Infrastructure
 
