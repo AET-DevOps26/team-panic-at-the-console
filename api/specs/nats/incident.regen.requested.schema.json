@@ -1,0 +1,12 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema",
+  "$id": "incident.regen.requested",
+  "description": "Published by incident-service when a user requests on-demand AI regeneration. genai-service subscribes and regenerates the Summary (and Solutions) for the incident.",
+  "type": "object",
+  "required": ["incidentId", "timestamp"],
+  "additionalProperties": false,
+  "properties": {
+    "incidentId": { "type": "string", "format": "uuid" },
+    "timestamp": { "type": "string", "format": "date-time" }
+  }
+}

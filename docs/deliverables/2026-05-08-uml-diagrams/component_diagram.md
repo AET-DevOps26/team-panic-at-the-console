@@ -42,7 +42,7 @@ C4Container
   Rel(nats, rule_engine, "external.event.received", "NATS")
   Rel(nats, event_log, "incident.* events", "NATS")
   Rel(nats, notification, "incident.* events", "NATS")
-  Rel(nats, genai_service, "incident.created / incident.resolved", "NATS")
+  Rel(nats, genai_service, "incident.created / incident.resolved / incident.regen.requested", "NATS")
 
   Rel(rule_engine, nats, "Publishes incident.create.requested / incident.severity.escalate.requested", "NATS")
   Rel(nats, incident_service, "incident.create.requested / incident.severity.escalate.requested", "NATS")

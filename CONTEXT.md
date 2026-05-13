@@ -59,7 +59,7 @@ An enumeration of what the `PromptBuilder` is asked to produce: `SUMMARY`, `SEVE
 
 **Event Log role**: Secondary append-only audit trail. `incident-service` owns Incident state in its own Postgres DB and publishes NATS events on every state change. `event-service` subscribes and appends Incident Events to the Event Log. The Event Log is NOT the primary write model.
 
-**GenAI triggering and ownership**: `genai-service` is stateless (no DB). It subscribes to NATS `incident.created` and `incident.resolved`, fetches incident data from `incident-service` via REST, calls Ollama, then PATCHes results (Summary, Solutions, Postmortem) back to `incident-service`. `incident-service` owns and stores all AI-generated results alongside incident data. Frontend can also call genai-service via REST (through gateway) to trigger on-demand regeneration.
+**GenAI triggering and ownership**: `genai-service` is stateless (no DB) and purely NATS-driven — it exposes no user-facing HTTP endpoints. It subscribes to `incident.created`, `incident.resolved`, and `incident.regen.requested`; fetches incident data from `incident-service` via REST; calls Ollama; then PATCHes results (Summary, Solutions, Postmortem) back to `incident-service`. `incident-service` owns and stores all AI-generated results alongside incident data. For on-demand regeneration, the frontend calls `POST /incidents/{id}/regen` on `incident-service` (through gateway); `incident-service` publishes `incident.regen.requested` to NATS and genai-service handles it like any other trigger. `genai-service` does retain a minimal HTTP server (FastAPI) for `/health` and `/metrics` endpoints only.
 
 **Data aggregation**: None needed. `incident-service` owns all incident data including AI results. Frontend makes a single REST call to get a complete incident view.
 
@@ -85,6 +85,7 @@ An enumeration of what the `PromptBuilder` is asked to produce: `SUMMARY`, `SEVE
 | `webhook-service`  | `external.event.received`   | rule-engine                                                                    |
 | `rule-engine`      | `incident.create.requested`            | incident-service                                                               |
 | `rule-engine`      | `incident.severity.escalate.requested` | incident-service                                                               |
+| `incident-service` | `incident.regen.requested`             | genai-service                                                                  |
 
 **Tech stack**:
 - Frontend: React + Vite + TypeScript + shadcn/ui + tanstack-query
