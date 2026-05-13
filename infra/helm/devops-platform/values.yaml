@@ -17,7 +17,8 @@ services:
     image:
       repository: gateway
     env:
-      NATS_URL: nats://nats:4222
+      - name: NATS_URL
+        value: nats://nats:4222
 
   incident-service:
     enabled: true
@@ -25,8 +26,10 @@ services:
     image:
       repository: incident-service
     env:
-      DATABASE_URL: "postgres://devops:devops@postgres:5432/incidents"
-      NATS_URL: nats://nats:4222
+      - name: DATABASE_URL
+        value: "postgres://devops:devops@postgres:5432/incidents"
+      - name: NATS_URL
+        value: nats://nats:4222
 
   event-service:
     enabled: true
@@ -34,8 +37,10 @@ services:
     image:
       repository: event-service
     env:
-      DATABASE_URL: "postgres://devops:devops@postgres:5432/events"
-      NATS_URL: nats://nats:4222
+      - name: DATABASE_URL
+        value: "postgres://devops:devops@postgres:5432/events"
+      - name: NATS_URL
+        value: nats://nats:4222
 
   rule-engine:
     enabled: true
@@ -43,8 +48,10 @@ services:
     image:
       repository: rule-engine
     env:
-      DATABASE_URL: "postgres://devops:devops@postgres:5432/rules"
-      NATS_URL: nats://nats:4222
+      - name: DATABASE_URL
+        value: "postgres://devops:devops@postgres:5432/rules"
+      - name: NATS_URL
+        value: nats://nats:4222
 
   user-service:
     enabled: true
@@ -52,7 +59,8 @@ services:
     image:
       repository: user-service
     env:
-      DATABASE_URL: "postgres://devops:devops@postgres:5432/users"
+      - name: DATABASE_URL
+        value: "postgres://devops:devops@postgres:5432/users"
 
   notification-service:
     enabled: true
@@ -60,8 +68,10 @@ services:
     image:
       repository: notification-service
     env:
-      DATABASE_URL: "postgres://devops:devops@postgres:5432/notifications"
-      NATS_URL: nats://nats:4222
+      - name: DATABASE_URL
+        value: "postgres://devops:devops@postgres:5432/notifications"
+      - name: NATS_URL
+        value: nats://nats:4222
 
   webhook-service:
     enabled: true
@@ -69,7 +79,8 @@ services:
     image:
       repository: webhook-service
     env:
-      NATS_URL: nats://nats:4222
+      - name: NATS_URL
+        value: nats://nats:4222
 
   genai-service:
     enabled: true
@@ -77,4 +88,5 @@ services:
     image:
       repository: genai-service
     env:
-      NATS_URL: nats://nats:4222
+      - name: NATS_URL
+        value: nats://nats:4222

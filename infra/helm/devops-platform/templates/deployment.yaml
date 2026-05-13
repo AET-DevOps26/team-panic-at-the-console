@@ -28,10 +28,7 @@ spec:
             - containerPort: {{ $svc.port }}
           {{- if $svc.env }}
           env:
-            {{- range $key, $val := $svc.env }}
-            - name: {{ $key }}
-              value: {{ $val | quote }}
-            {{- end }}
+            {{- toYaml $svc.env | nindent 12 }}
           {{- end }}
           {{- if $svc.command }}
           command: {{ $svc.command | toJson }}
@@ -39,12 +36,12 @@ spec:
           {{- if $svc.args }}
           args: {{ $svc.args | toJson }}
           {{- end }}
-          {{- if $svc.persistence }}
+          {{- with $svc.persistence }}
           volumeMounts:
             - name: data
-              mountPath: {{ $svc.persistence.mountPath }}
+              mountPath: {{ required "persistence.mountPath is required" .mountPath }}
           {{- end }}
-      {{- if $svc.persistence }}
+      {{- with $svc.persistence }}
       volumes:
         - name: data
           persistentVolumeClaim:
