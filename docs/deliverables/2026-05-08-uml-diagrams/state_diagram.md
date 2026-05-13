@@ -58,11 +58,11 @@ stateDiagram-v2
     SEV_RULE --> SEV2 : rule action = SEV2
     SEV_RULE --> SEV1 : rule action = SEV1
 
-    SEV4 --> SEV3: AUTO: rule-engine detects repeated\nevents from same source
-    SEV3 --> SEV2: AUTO: rule-engine detects repeated\nevents from same source
-    SEV2 --> SEV1: AUTO: rule-engine detects repeated\nevents from same source
+    SEV4 --> SEV3: escalate (rule-engine auto or Commander)
+    SEV3 --> SEV2: escalate (rule-engine auto or Commander)
+    SEV2 --> SEV1: escalate (rule-engine auto or Commander)
 
-    SEV3 --> SEV4: MANUAL: Commander de-escalates
-    SEV2 --> SEV3: MANUAL: Commander de-escalates
-    SEV1 --> SEV2: MANUAL: Commander de-escalates
+    SEV3 --> SEV4: de-escalate (Commander)
+    SEV2 --> SEV3: de-escalate (Commander)
+    SEV1 --> SEV2: de-escalate (Commander)
 ```
