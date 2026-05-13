@@ -30,7 +30,7 @@ spec:
           env:
             {{- range $key, $val := $svc.env }}
             - name: {{ $key }}
-              value: {{ $val | quote }}
+              value: {{ tpl $val $ | quote }}
             {{- end }}
           {{- end }}
           {{- if $svc.command }}
@@ -38,6 +38,10 @@ spec:
           {{- end }}
           {{- if $svc.args }}
           args: {{ $svc.args | toJson }}
+          {{- end }}
+          {{- if $svc.lifecycle }}
+          lifecycle:
+            {{- toYaml $svc.lifecycle | nindent 12 }}
           {{- end }}
           {{- if $svc.persistence }}
           volumeMounts:

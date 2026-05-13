@@ -28,13 +28,13 @@ services:
     restart: unless-stopped
 
   ollama:
-    image: ollama/ollama:latest
+    image: ollama/ollama:0.9.0
     ports:
       - "11434:11434"
     volumes:
       - ollama_data:/root/.ollama
     healthcheck:
-      test: ["CMD-SHELL", "ollama list 2>/dev/null | grep -q 'qwen2.5'"]
+      test: ["CMD-SHELL", "ollama list 2>/dev/null | grep -q '${OLLAMA_MODEL:-qwen2.5}'"]
       interval: 30s
       timeout: 10s
       retries: 20
@@ -42,7 +42,7 @@ services:
     restart: unless-stopped
 
   ollama-init:
-    image: ollama/ollama:latest
+    image: ollama/ollama:0.9.0
     volumes:
       - ollama_data:/root/.ollama
     environment:
