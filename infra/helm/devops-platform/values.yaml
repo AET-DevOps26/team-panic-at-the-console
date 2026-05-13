@@ -78,3 +78,22 @@ services:
       repository: genai-service
     env:
       NATS_URL: nats://nats:4222
+      OLLAMA_URL: http://ollama:11434
+      OLLAMA_MODEL: qwen2.5:3b
+      INCIDENT_SERVICE_URL: http://incident-service:8081
+
+  ollama:
+    enabled: true
+    port: 11434
+    image:
+      override: "ollama/ollama:latest"
+    command:
+      - "/bin/sh"
+      - "-c"
+    args:
+      - "ollama serve & until ollama list >/dev/null 2>&1; do sleep 2; done; ollama pull ${OLLAMA_MODEL:-qwen2.5:3b}; wait"
+    env:
+      OLLAMA_MODEL: qwen2.5:3b
+    persistence:
+      size: 10Gi
+      mountPath: /root/.ollama

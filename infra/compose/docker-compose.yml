@@ -27,6 +27,33 @@ services:
       - "8222:8222" # monitoring / metrics
     restart: unless-stopped
 
+  ollama:
+    image: ollama/ollama:latest
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    healthcheck:
+      test: ["CMD-SHELL", "ollama list 2>/dev/null | grep -q 'qwen2.5'"]
+      interval: 30s
+      timeout: 10s
+      retries: 20
+      start_period: 30s
+    restart: unless-stopped
+
+  ollama-init:
+    image: ollama/ollama:latest
+    volumes:
+      - ollama_data:/root/.ollama
+    environment:
+      OLLAMA_HOST: http://ollama:11434
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-qwen2.5:3b}
+    entrypoint: ["/bin/sh", "-c", "until ollama list >/dev/null 2>&1; do sleep 2; done; ollama pull ${OLLAMA_MODEL:-qwen2.5:3b}"]
+    depends_on:
+      ollama:
+        condition: service_started
+    restart: on-failure
+
   # ── Application Services ──────────────────────────────────────────────────
 
   frontend:
@@ -155,13 +182,20 @@ services:
       dockerfile: Dockerfile
     environment:
       NATS_URL: nats://nats:4222
-      LLM_API_KEY: ${LLM_API_KEY:-}
+      OLLAMA_URL: http://ollama:11434
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-qwen2.5:3b}
+      INCIDENT_SERVICE_URL: http://incident-service:8081
     ports:
       - "8087:8087"
     depends_on:
       nats:
         condition: service_started
+      ollama:
+        condition: service_healthy
+      incident-service:
+        condition: service_started
     restart: unless-stopped
 
 volumes:
   postgres_data:
+  ollama_data:
