@@ -26,8 +26,12 @@ services:
     image:
       repository: incident-service
     env:
-      - name: DATABASE_URL
-        value: "postgres://devops:devops@postgres:5432/incidents"
+      - name: SPRING_DATASOURCE_URL
+        value: "jdbc:postgresql://postgres:5432/incidents"
+      - name: SPRING_DATASOURCE_USERNAME
+        value: devops
+      - name: SPRING_DATASOURCE_PASSWORD
+        value: devops
       - name: NATS_URL
         value: nats://nats:4222
 
