@@ -77,7 +77,9 @@ services:
       context: ./services/event-service
       dockerfile: Dockerfile
     environment:
-      DATABASE_URL: postgres://${POSTGRES_USER:-devops}:${POSTGRES_PASSWORD:-devops}@postgres:5432/events
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/events
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-devops}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-devops}
       NATS_URL: nats://nats:4222
     ports:
       - "8082:8082"
@@ -94,7 +96,9 @@ services:
       context: ./services/rule-engine
       dockerfile: Dockerfile
     environment:
-      DATABASE_URL: postgres://${POSTGRES_USER:-devops}:${POSTGRES_PASSWORD:-devops}@postgres:5432/rules
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/rules
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-devops}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-devops}
       NATS_URL: nats://nats:4222
     ports:
       - "8083:8083"
@@ -111,7 +115,9 @@ services:
       context: ./services/user-service
       dockerfile: Dockerfile
     environment:
-      DATABASE_URL: postgres://${POSTGRES_USER:-devops}:${POSTGRES_PASSWORD:-devops}@postgres:5432/users
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/users
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-devops}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-devops}
     ports:
       - "8084:8084"
     depends_on:
@@ -125,7 +131,9 @@ services:
       context: ./services/notification-service
       dockerfile: Dockerfile
     environment:
-      DATABASE_URL: postgres://${POSTGRES_USER:-devops}:${POSTGRES_PASSWORD:-devops}@postgres:5432/notifications
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/notifications
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-devops}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-devops}
       NATS_URL: nats://nats:4222
     ports:
       - "8085:8085"

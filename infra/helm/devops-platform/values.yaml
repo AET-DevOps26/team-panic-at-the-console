@@ -41,8 +41,12 @@ services:
     image:
       repository: event-service
     env:
-      - name: DATABASE_URL
-        value: "postgres://devops:devops@postgres:5432/events"
+      - name: SPRING_DATASOURCE_URL
+        value: "jdbc:postgresql://postgres:5432/events"
+      - name: SPRING_DATASOURCE_USERNAME
+        value: devops
+      - name: SPRING_DATASOURCE_PASSWORD
+        value: devops
       - name: NATS_URL
         value: nats://nats:4222
 
@@ -52,8 +56,12 @@ services:
     image:
       repository: rule-engine
     env:
-      - name: DATABASE_URL
-        value: "postgres://devops:devops@postgres:5432/rules"
+      - name: SPRING_DATASOURCE_URL
+        value: "jdbc:postgresql://postgres:5432/rules"
+      - name: SPRING_DATASOURCE_USERNAME
+        value: devops
+      - name: SPRING_DATASOURCE_PASSWORD
+        value: devops
       - name: NATS_URL
         value: nats://nats:4222
 
@@ -63,8 +71,12 @@ services:
     image:
       repository: user-service
     env:
-      - name: DATABASE_URL
-        value: "postgres://devops:devops@postgres:5432/users"
+      - name: SPRING_DATASOURCE_URL
+        value: "jdbc:postgresql://postgres:5432/users"
+      - name: SPRING_DATASOURCE_USERNAME
+        value: devops
+      - name: SPRING_DATASOURCE_PASSWORD
+        value: devops
 
   notification-service:
     enabled: true
@@ -72,8 +84,12 @@ services:
     image:
       repository: notification-service
     env:
-      - name: DATABASE_URL
-        value: "postgres://devops:devops@postgres:5432/notifications"
+      - name: SPRING_DATASOURCE_URL
+        value: "jdbc:postgresql://postgres:5432/notifications"
+      - name: SPRING_DATASOURCE_USERNAME
+        value: devops
+      - name: SPRING_DATASOURCE_PASSWORD
+        value: devops
       - name: NATS_URL
         value: nats://nats:4222
 
