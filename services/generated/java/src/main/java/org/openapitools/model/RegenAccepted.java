@@ -21,7 +21,7 @@ import jakarta.annotation.Generated;
  */
 
 @Schema(name = "RegenAccepted", description = "Confirmation that an AI generation task was accepted for async processing.")
-@Generated(value = "org.openapitools.codegen.languages.SpringCodegen", date = "2026-05-14T00:22:34.877985+02:00[Europe/Berlin]", comments = "Generator version: 7.14.0")
+@Generated(value = "org.openapitools.codegen.languages.SpringCodegen", date = "2026-05-15T11:58:05.771897+02:00[Europe/Berlin]", comments = "Generator version: 7.14.0")
 public class RegenAccepted {
 
   private Boolean accepted;
