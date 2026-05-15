@@ -6,5 +6,5 @@ from fastapi.testclient import TestClient
 def client():
     from genai_service.main import app
 
-    with TestClient(app, raise_server_exceptions=True) as c:
+    with TestClient(app) as c:
         yield c

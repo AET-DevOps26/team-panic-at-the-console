@@ -36,9 +36,6 @@ jobs:
           frozen: true
           cache: true
 
-      - name: Verify Pixi lockfile
-        run: pixi install --frozen --manifest-path services/genai-service/pixi.toml
-
       - name: Lint
         run: pixi run --manifest-path services/genai-service/pixi.toml lint
 

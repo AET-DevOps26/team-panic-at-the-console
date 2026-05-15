@@ -8,7 +8,7 @@ from genai_service.config import settings
 from genai_service.ollama_client import OllamaClient
 from genai_service.routes.ollama_health import router as ollama_health_router
 
-_log_processors: list = [
+_log_processors: list[structlog.typing.Processor] = [
     structlog.processors.TimeStamper(fmt="iso"),
     structlog.processors.add_log_level,
 ]
