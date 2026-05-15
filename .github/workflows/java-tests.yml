@@ -12,9 +12,13 @@ on:
     branches: [main]
     paths:
       - "services/incident-service/**"
+      - "services/generated/java/**"
+      - "api/openapi.yaml"
   pull_request:
     paths:
       - "services/incident-service/**"
+      - "services/generated/java/**"
+      - "api/openapi.yaml"
   merge_group:
 
 jobs:

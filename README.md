@@ -113,8 +113,8 @@ pixi run lint
 # incident-service unit tests
 pixi run --manifest-path services/incident-service/pixi.toml test
 
-# genai-service unit tests
-pixi run --manifest-path services/genai-service/pixi.toml test
+# genai-service currently does not provide a Pixi manifest/test task
+# (services/genai-service contains a Dockerfile only)
 ```
 
 ## Local Runtime

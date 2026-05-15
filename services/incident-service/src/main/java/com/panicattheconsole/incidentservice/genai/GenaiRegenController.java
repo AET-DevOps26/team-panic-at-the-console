@@ -16,6 +16,12 @@ class GenaiRegenController implements GenaiApi {
     private static final Logger log = LoggerFactory.getLogger(GenaiRegenController.class);
 
     @Override
+    public ResponseEntity genaiHealth() {
+        log.info("GenAI health endpoint is not implemented by incident-service");
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).build();
+    }
+
+    @Override
     public ResponseEntity<RegenAccepted> regenerateSummary(UUID incidentId) {
         log.info("TODO: publish incident.regen.requested [task=SUMMARY, incidentId={}]", incidentId);
         return ResponseEntity.status(HttpStatus.ACCEPTED)
