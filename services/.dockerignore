@@ -1,0 +1,12 @@
+# Default-deny: only the incident-service build needs these paths.
+# Other service builds use their own per-service context.
+*
+!incident-service/
+!generated/
+
+# Within the allowed dirs, prune dev artifacts
+**/target/
+**/.pixi/
+**/node_modules/
+**/.git
+**/.gitignore

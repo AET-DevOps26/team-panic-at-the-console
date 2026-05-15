@@ -15,7 +15,9 @@ npx --yes @openapitools/openapi-generator-cli@2.13.0 generate \
   -i "$SPEC" \
   -g spring \
   --additional-properties=useSpringBoot3=true,interfaceOnly=true,useTags=true \
-  --global-property=apis,models,supportingFiles=ApiUtil.java \
+  --global-property=apis \
+  --global-property=models \
+  --global-property=supportingFiles=ApiUtil.java \
   -o "$REPO_ROOT/services/generated/java"
 
 echo "==> Generating Python client (genai-service)"
