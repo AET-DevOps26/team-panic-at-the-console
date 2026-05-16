@@ -1,0 +1,52 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "genai-service"
+version = "0.0.0"
+requires-python = ">=3.12"
+readme = "README.md"
+dependencies = [
+  "fastapi",
+  "uvicorn",
+  "httpx",
+  "pydantic>=2",
+  "pydantic-settings",
+  "structlog",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/genai_service"]
+
+[tool.ruff]
+line-length = 88
+
+[tool.ruff.lint]
+ignore = [
+  "N803", # invalid-argument-name
+  "N806", # non-lowercase-variable-in-function
+  "E501", # line-too-long (handled by formatter)
+]
+select = [
+  "F",  # pyflakes
+  "E",  # pycodestyle errors
+  "W",  # pycodestyle warnings
+  "I",  # isort
+  "N",  # pep8-naming
+  "UP", # pyupgrade
+]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+[tool.mypy]
+python_version = "3.12"
+no_implicit_optional = true
+check_untyped_defs = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+pythonpath = ["src"]
