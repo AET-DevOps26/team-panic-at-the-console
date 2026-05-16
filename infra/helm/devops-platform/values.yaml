@@ -4,6 +4,9 @@ global:
     tag: main
   namespace: default
   ollamaModel: &ollamaModel qwen2.5:3b
+  env:
+    - name: NATS_URL
+      value: nats://nats:4222
 
 services:
   frontend:
@@ -14,15 +17,14 @@ services:
 
   gateway:
     enabled: true
+    inheritGlobalEnv: true
     port: 8080
     image:
       repository: gateway
-    env:
-      - name: NATS_URL
-        value: nats://nats:4222
 
   incident-service:
     enabled: true
+    inheritGlobalEnv: true
     port: 8081
     image:
       repository: incident-service
@@ -33,11 +35,10 @@ services:
         value: devops
       - name: SPRING_DATASOURCE_PASSWORD
         value: devops
-      - name: NATS_URL
-        value: nats://nats:4222
 
   event-service:
     enabled: true
+    inheritGlobalEnv: true
     port: 8082
     image:
       repository: event-service
@@ -48,11 +49,10 @@ services:
         value: devops
       - name: SPRING_DATASOURCE_PASSWORD
         value: devops
-      - name: NATS_URL
-        value: nats://nats:4222
 
   rule-engine:
     enabled: true
+    inheritGlobalEnv: true
     port: 8083
     image:
       repository: rule-engine
@@ -63,8 +63,6 @@ services:
         value: devops
       - name: SPRING_DATASOURCE_PASSWORD
         value: devops
-      - name: NATS_URL
-        value: nats://nats:4222
 
   user-service:
     enabled: true
@@ -81,6 +79,7 @@ services:
 
   notification-service:
     enabled: true
+    inheritGlobalEnv: true
     port: 8085
     image:
       repository: notification-service
@@ -91,26 +90,21 @@ services:
         value: devops
       - name: SPRING_DATASOURCE_PASSWORD
         value: devops
-      - name: NATS_URL
-        value: nats://nats:4222
 
   webhook-service:
     enabled: true
+    inheritGlobalEnv: true
     port: 8086
     image:
       repository: webhook-service
-    env:
-      - name: NATS_URL
-        value: nats://nats:4222
 
   genai-service:
     enabled: true
+    inheritGlobalEnv: true
     port: 8087
     image:
       repository: genai-service
     env:
-      - name: NATS_URL
-        value: nats://nats:4222
       - name: OLLAMA_URL
         value: http://ollama:11434
       - name: OLLAMA_MODEL
