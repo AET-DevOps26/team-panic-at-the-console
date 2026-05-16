@@ -71,7 +71,7 @@ services:
       context: ./services/gateway
       dockerfile: Dockerfile
     environment:
-      NATS_URL: nats://nats:4222
+      NATS_URL: ${NATS_URL:-nats://nats:4222}
     ports:
       - "8080:8080"
     depends_on:
@@ -88,7 +88,7 @@ services:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/incidents
       SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-devops}
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-devops}
-      NATS_URL: nats://nats:4222
+      NATS_URL: ${NATS_URL:-nats://nats:4222}
     ports:
       - "8081:8081"
     depends_on:
@@ -107,7 +107,7 @@ services:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/events
       SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-devops}
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-devops}
-      NATS_URL: nats://nats:4222
+      NATS_URL: ${NATS_URL:-nats://nats:4222}
     ports:
       - "8082:8082"
     depends_on:
@@ -126,7 +126,7 @@ services:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/rules
       SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-devops}
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-devops}
-      NATS_URL: nats://nats:4222
+      NATS_URL: ${NATS_URL:-nats://nats:4222}
     ports:
       - "8083:8083"
     depends_on:
@@ -161,7 +161,7 @@ services:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/notifications
       SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-devops}
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-devops}
-      NATS_URL: nats://nats:4222
+      NATS_URL: ${NATS_URL:-nats://nats:4222}
     ports:
       - "8085:8085"
     depends_on:
@@ -177,7 +177,7 @@ services:
       context: ./services/webhook-service
       dockerfile: Dockerfile
     environment:
-      NATS_URL: nats://nats:4222
+      NATS_URL: ${NATS_URL:-nats://nats:4222}
     ports:
       - "8086:8086"
     depends_on:
@@ -191,7 +191,7 @@ services:
       context: ./services/genai-service
       dockerfile: Dockerfile
     environment:
-      NATS_URL: nats://nats:4222
+      NATS_URL: ${NATS_URL:-nats://nats:4222}
       OLLAMA_URL: http://ollama:11434
       OLLAMA_MODEL: ${OLLAMA_MODEL:-qwen2.5:3b}
       INCIDENT_SERVICE_URL: http://incident-service:8081

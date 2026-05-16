@@ -26,9 +26,25 @@ spec:
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: {{ $svc.port }}
-          {{- if $svc.env }}
+          {{- $globalEnv := list }}
+          {{- if $svc.inheritGlobalEnv }}
+          {{- $globalEnv = $.Values.global.env | default list }}
+          {{- end }}
+          {{- $serviceEnv := $svc.env | default list }}
+          {{- $serviceEnvNames := dict }}
+          {{- range $serviceEnv }}
+          {{- $_ := set $serviceEnvNames .name true }}
+          {{- end }}
+          {{- $mergedEnv := list }}
+          {{- range $globalEnv }}
+          {{- if not (hasKey $serviceEnvNames .name) }}
+          {{- $mergedEnv = append $mergedEnv . }}
+          {{- end }}
+          {{- end }}
+          {{- $mergedEnv = concat $mergedEnv $serviceEnv }}
+          {{- if $mergedEnv }}
           env:
-            {{- toYaml $svc.env | nindent 12 }}
+            {{- toYaml $mergedEnv | nindent 12 }}
           {{- end }}
           {{- if $svc.command }}
           command: {{ $svc.command | toJson }}
