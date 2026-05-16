@@ -27,6 +27,20 @@ pixi run openapi-lint          # Lint api/openapi.yaml if present
 
 ## Architecture
 
+### Tech Stack
+
+| Layer            | Technology                                                          |
+| ---------------- | ------------------------------------------------------------------- |
+| Frontend         | React + Vite + TypeScript + shadcn/ui + tanstack-query              |
+| Backend services | Java Spring Boot (latest)                                           |
+| GenAI service    | Python + FastAPI + nats.py                                          |
+| LLM              | Ollama `qwen2.5:3b` (runs in cluster, no cloud LLM)                 |
+| Database         | PostgreSQL (shared instance, one DB per stateful service)           |
+| Event bus        | NATS JetStream (side effects: event log, notifications, genai, SSE) |
+| Observability    | kube-prometheus-stack + loki-stack                                  |
+
+See `CONTEXT.md` for full architectural decisions and `docs/adr/` for key trade-off records.
+
 ### Services
 
 | Service                | Port | Description                             |
@@ -44,8 +58,9 @@ pixi run openapi-lint          # Lint api/openapi.yaml if present
 
 ### Infrastructure
 
-- **Postgres** (`localhost:5432`) - each stateful service owns one database; initialized by `infra/postgres/init-dbs.sh`
-- **NATS** (`localhost:4222`, monitoring: `localhost:8222`) - event bus with JetStream
+- **Postgres** (`localhost:5432`) - shared instance; one database per stateful service (`incidents`, `events`, `users`, `notifications`, `rules`); initialized by `infra/postgres/init-dbs.sh`
+- **NATS** (`localhost:4222`, monitoring: `localhost:8222`) - event bus with JetStream; used for all side effects between services
+- **Ollama** (`localhost:11434`) - local LLM inference; model `qwen2.5:3b` pulled on startup
 
 ### Key Paths
 

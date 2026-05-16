@@ -1,0 +1,7 @@
+# genai-service is stateless: owns no database
+
+`genai-service` does not have its own database. It is purely NATS-driven: it subscribes to `incident.created`, `incident.resolved`, and `incident.regen.requested`; fetches incident data from `incident-service` via REST; calls Ollama; and PATCHes the results (Summary, Solutions, Postmortem) back to `incident-service`. `incident-service` owns and persists all AI-generated content. The only HTTP surface on `genai-service` is `/health` and `/metrics` (observability only — not routed through the gateway).
+
+The natural alternative was for `genai-service` to own a `genai` database and store results there, with the frontend making a separate REST call to fetch AI data alongside incident data. We rejected this because AI-generated content is semantically part of the Incident: it answers questions about that specific Incident and has no value without it. Storing it separately forces client-side aggregation, adds a database to operate and back up, and complicates incident data completeness checks. Making `genai-service` stateless reduces it to a pure compute service with no persistence concerns.
+
+For on-demand regeneration, the frontend calls `POST /incidents/{id}/regen` on `incident-service` (through the gateway). `incident-service` publishes `incident.regen.requested` to NATS. This keeps `genai-service` off the gateway routing table and avoids a long-lived HTTP connection to a service that may take up to 60 s to respond (Ollama inference time).

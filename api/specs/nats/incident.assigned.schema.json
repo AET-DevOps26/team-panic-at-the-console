@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema",
+  "$id": "https://github.com/aet-devops26/team-panic-at-the-console/api/specs/nats/incident.assigned.schema.json",
+  "description": "Carries userId so notification-service can target the assigned user without fetching the full incident.",
+  "type": "object",
+  "required": ["incidentId", "userId", "timestamp"],
+  "additionalProperties": false,
+  "properties": {
+    "incidentId": { "type": "string", "format": "uuid" },
+    "userId": { "type": "string", "format": "uuid" },
+    "timestamp": { "type": "string", "format": "date-time" }
+  }
+}

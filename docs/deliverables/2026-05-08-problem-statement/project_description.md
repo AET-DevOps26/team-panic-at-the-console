@@ -79,8 +79,7 @@ An automation layer evaluates the event and triggers incident creation when appr
 The system consists of **loosely coupled microservices**:
 
 - a **frontend** dashboard for incident management
-- **backend services** handling incidents, event logging, and rule evaluation
-- **backend services** handling incidents, event logging, and automation
+- **backend services** handling incidents, event logging, rule evaluation, and automation
 - an **AI component** for AI-assisted analysis, running as an independent component
 - an **event log** as the source of truth for all state changes
 
@@ -103,12 +102,12 @@ The focus is on **system structure, integration, and operational visibility**, n
 
 ### First-draft solution and next steps
 
-- Proposal (MVP): three core services — `incident-service` (CRUD + lifecycle), `event-log` (append-only audit), and a minimal `frontend` — plus a small `genai-service` that returns structured summaries. Use webhooks → rule engine → incident flow and PostgreSQL for state.
+- Proposal (MVP): three core services — `incident-service` (CRUD + lifecycle), `event-service` (append-only audit), and a minimal `frontend` — plus a small `genai-service` that returns structured summaries. Use webhooks → rule engine → incident flow and PostgreSQL for state.
 
 - Next steps (first draft):
   1.  Finalize scope with the tutor.
   2.  Create repo skeleton (`/services`, `/infra`) and minimal READMEs.
-  3.  Implement `incident-service` + `event-log` API and a basic frontend view.
+  3.  Implement `incident-service` + `event-service` API and a basic frontend view.
   4.  Add a `genai-service` stub and a CI webhook demo.
 
 Note: this is a short first draft — trim or expand before sharing with the tutor.
