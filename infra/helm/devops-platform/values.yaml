@@ -3,6 +3,10 @@ global:
     registry: ghcr.io/aet-devops26/team-panic-at-the-console
     tag: main
   namespace: default
+  ollamaModel: &ollamaModel qwen2.5:3b
+  env:
+    - name: NATS_URL
+      value: nats://nats:4222
 
 services:
   frontend:
@@ -13,48 +17,117 @@ services:
 
   gateway:
     enabled: true
+    inheritGlobalEnv: true
     port: 8080
     image:
       repository: gateway
 
   incident-service:
     enabled: true
+    inheritGlobalEnv: true
     port: 8081
     image:
       repository: incident-service
+    env:
+      - name: SPRING_DATASOURCE_URL
+        value: "jdbc:postgresql://postgres:5432/incidents"
+      - name: SPRING_DATASOURCE_USERNAME
+        value: devops
+      - name: SPRING_DATASOURCE_PASSWORD
+        value: devops
 
   event-service:
     enabled: true
+    inheritGlobalEnv: true
     port: 8082
     image:
       repository: event-service
+    env:
+      - name: SPRING_DATASOURCE_URL
+        value: "jdbc:postgresql://postgres:5432/events"
+      - name: SPRING_DATASOURCE_USERNAME
+        value: devops
+      - name: SPRING_DATASOURCE_PASSWORD
+        value: devops
 
   rule-engine:
     enabled: true
+    inheritGlobalEnv: true
     port: 8083
     image:
       repository: rule-engine
+    env:
+      - name: SPRING_DATASOURCE_URL
+        value: "jdbc:postgresql://postgres:5432/rules"
+      - name: SPRING_DATASOURCE_USERNAME
+        value: devops
+      - name: SPRING_DATASOURCE_PASSWORD
+        value: devops
 
   user-service:
     enabled: true
     port: 8084
     image:
       repository: user-service
+    env:
+      - name: SPRING_DATASOURCE_URL
+        value: "jdbc:postgresql://postgres:5432/users"
+      - name: SPRING_DATASOURCE_USERNAME
+        value: devops
+      - name: SPRING_DATASOURCE_PASSWORD
+        value: devops
 
   notification-service:
     enabled: true
+    inheritGlobalEnv: true
     port: 8085
     image:
       repository: notification-service
+    env:
+      - name: SPRING_DATASOURCE_URL
+        value: "jdbc:postgresql://postgres:5432/notifications"
+      - name: SPRING_DATASOURCE_USERNAME
+        value: devops
+      - name: SPRING_DATASOURCE_PASSWORD
+        value: devops
 
   webhook-service:
     enabled: true
+    inheritGlobalEnv: true
     port: 8086
     image:
       repository: webhook-service
 
   genai-service:
     enabled: true
+    inheritGlobalEnv: true
     port: 8087
     image:
       repository: genai-service
+    env:
+      - name: OLLAMA_URL
+        value: http://ollama:11434
+      - name: OLLAMA_MODEL
+        value: *ollamaModel
+      - name: INCIDENT_SERVICE_URL
+        value: http://incident-service:8081
+
+  ollama:
+    enabled: true
+    port: 11434
+    image:
+      override: "ollama/ollama:0.9.0"
+    command: ["ollama", "serve"]
+    env:
+      - name: OLLAMA_MODEL
+        value: *ollamaModel
+    lifecycle:
+      postStart:
+        exec:
+          command:
+            - "/bin/sh"
+            - "-c"
+            - "until ollama list >/dev/null 2>&1; do sleep 2; done; ollama pull ${OLLAMA_MODEL:-qwen2.5:3b}"
+    persistence:
+      size: 10Gi
+      mountPath: /root/.ollama

@@ -27,6 +27,33 @@ services:
       - "8222:8222" # monitoring / metrics
     restart: unless-stopped
 
+  ollama:
+    image: ollama/ollama:0.9.0
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    healthcheck:
+      test: ["CMD-SHELL", "ollama list 2>/dev/null | grep -q '${OLLAMA_MODEL:-qwen2.5}'"]
+      interval: 30s
+      timeout: 10s
+      retries: 20
+      start_period: 30s
+    restart: unless-stopped
+
+  ollama-init:
+    image: ollama/ollama:0.9.0
+    volumes:
+      - ollama_data:/root/.ollama
+    environment:
+      OLLAMA_HOST: http://ollama:11434
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-qwen2.5:3b}
+    entrypoint: ["/bin/sh", "-c", "until ollama list >/dev/null 2>&1; do sleep 2; done; ollama pull ${OLLAMA_MODEL:-qwen2.5:3b}"]
+    depends_on:
+      ollama:
+        condition: service_started
+    restart: on-failure
+
   # ── Application Services ──────────────────────────────────────────────────
 
   frontend:
@@ -43,8 +70,13 @@ services:
     build:
       context: ./services/gateway
       dockerfile: Dockerfile
+    environment:
+      NATS_URL: ${NATS_URL:-nats://nats:4222}
     ports:
       - "8080:8080"
+    depends_on:
+      nats:
+        condition: service_started
     restart: unless-stopped
 
   incident-service:
@@ -53,8 +85,10 @@ services:
       context: ./services
       dockerfile: incident-service/Dockerfile
     environment:
-      DATABASE_URL: postgres://${POSTGRES_USER:-devops}:${POSTGRES_PASSWORD:-devops}@postgres:5432/incidents
-      NATS_URL: nats://nats:4222
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/incidents
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-devops}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-devops}
+      NATS_URL: ${NATS_URL:-nats://nats:4222}
     ports:
       - "8081:8081"
     depends_on:
@@ -70,8 +104,10 @@ services:
       context: ./services/event-service
       dockerfile: Dockerfile
     environment:
-      DATABASE_URL: postgres://${POSTGRES_USER:-devops}:${POSTGRES_PASSWORD:-devops}@postgres:5432/events
-      NATS_URL: nats://nats:4222
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/events
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-devops}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-devops}
+      NATS_URL: ${NATS_URL:-nats://nats:4222}
     ports:
       - "8082:8082"
     depends_on:
@@ -87,10 +123,15 @@ services:
       context: ./services/rule-engine
       dockerfile: Dockerfile
     environment:
-      NATS_URL: nats://nats:4222
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/rules
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-devops}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-devops}
+      NATS_URL: ${NATS_URL:-nats://nats:4222}
     ports:
       - "8083:8083"
     depends_on:
+      postgres:
+        condition: service_healthy
       nats:
         condition: service_started
     restart: unless-stopped
@@ -101,7 +142,9 @@ services:
       context: ./services/user-service
       dockerfile: Dockerfile
     environment:
-      DATABASE_URL: postgres://${POSTGRES_USER:-devops}:${POSTGRES_PASSWORD:-devops}@postgres:5432/users
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/users
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-devops}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-devops}
     ports:
       - "8084:8084"
     depends_on:
@@ -115,10 +158,15 @@ services:
       context: ./services/notification-service
       dockerfile: Dockerfile
     environment:
-      NATS_URL: nats://nats:4222
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/notifications
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-devops}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-devops}
+      NATS_URL: ${NATS_URL:-nats://nats:4222}
     ports:
       - "8085:8085"
     depends_on:
+      postgres:
+        condition: service_healthy
       nats:
         condition: service_started
     restart: unless-stopped
@@ -129,7 +177,7 @@ services:
       context: ./services/webhook-service
       dockerfile: Dockerfile
     environment:
-      NATS_URL: nats://nats:4222
+      NATS_URL: ${NATS_URL:-nats://nats:4222}
     ports:
       - "8086:8086"
     depends_on:
@@ -143,8 +191,10 @@ services:
       context: ./services/genai-service
       dockerfile: Dockerfile
     environment:
-      NATS_URL: nats://nats:4222
-      LLM_API_KEY: ${LLM_API_KEY:-}
+      NATS_URL: ${NATS_URL:-nats://nats:4222}
+      OLLAMA_URL: http://ollama:11434
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-qwen2.5:3b}
+      INCIDENT_SERVICE_URL: http://incident-service:8081
     ports:
       - "8087:8087"
     healthcheck:
@@ -155,6 +205,10 @@ services:
       start_period: 15s
     depends_on:
       nats:
+        condition: service_started
+      ollama:
+        condition: service_healthy
+      incident-service:
         condition: service_started
     restart: unless-stopped
 
@@ -170,3 +224,4 @@ services:
 
 volumes:
   postgres_data:
+  ollama_data:

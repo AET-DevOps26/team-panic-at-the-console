@@ -18,10 +18,55 @@ spec:
     spec:
       containers:
         - name: {{ $name }}
+          {{- if $svc.image.override }}
+          image: "{{ $svc.image.override }}"
+          {{- else }}
           image: "{{ $.Values.global.image.registry }}/{{ $svc.image.repository }}:{{ $.Values.global.image.tag }}"
+          {{- end }}
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: {{ $svc.port }}
+          {{- $globalEnv := list }}
+          {{- if $svc.inheritGlobalEnv }}
+          {{- $globalEnv = $.Values.global.env | default list }}
+          {{- end }}
+          {{- $serviceEnv := $svc.env | default list }}
+          {{- $serviceEnvNames := dict }}
+          {{- range $serviceEnv }}
+          {{- $_ := set $serviceEnvNames .name true }}
+          {{- end }}
+          {{- $mergedEnv := list }}
+          {{- range $globalEnv }}
+          {{- if not (hasKey $serviceEnvNames .name) }}
+          {{- $mergedEnv = append $mergedEnv . }}
+          {{- end }}
+          {{- end }}
+          {{- $mergedEnv = concat $mergedEnv $serviceEnv }}
+          {{- if $mergedEnv }}
+          env:
+            {{- toYaml $mergedEnv | nindent 12 }}
+          {{- end }}
+          {{- if $svc.command }}
+          command: {{ $svc.command | toJson }}
+          {{- end }}
+          {{- if $svc.args }}
+          args: {{ $svc.args | toJson }}
+          {{- end }}
+          {{- if $svc.lifecycle }}
+          lifecycle:
+            {{- toYaml $svc.lifecycle | nindent 12 }}
+          {{- end }}
+          {{- with $svc.persistence }}
+          volumeMounts:
+            - name: data
+              mountPath: {{ required "persistence.mountPath is required" .mountPath }}
+          {{- end }}
+      {{- with $svc.persistence }}
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: {{ $name }}-data
+      {{- end }}
 ---
 {{- end }}
 {{- end }}

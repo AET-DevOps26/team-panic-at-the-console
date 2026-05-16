@@ -93,6 +93,7 @@ Create a Git tag like `v0.1.0` (or publish a GitHub Release for that tag) to tri
 - Helm chart scaffold: `infra/helm/devops-platform`
 - Encrypted production values expected at: `infra/helm/secrets/values.prod.enc.yaml`
 - Deploy environment also includes `k9s` for cluster exploration/debugging.
+- Shared chart environment defaults are configured in `infra/helm/devops-platform/values.yaml` under `global.env` and injected into services that set `inheritGlobalEnv: true` (service-specific env entries still stay local).
 - Required secrets for deploy workflow:
   - `KUBECONFIG_B64` (base64 encoded kubeconfig)
   - `SOPS_AGE_KEY` (AGE private key content)
@@ -127,6 +128,8 @@ pixi run compose-up
 Starts all services plus shared infrastructure (Postgres, NATS). Service env vars (`DATABASE_URL`, `NATS_URL`) are pre-wired.
 
 The compose file lives at `infra/compose/docker-compose.yml`. `pixi run compose-up` passes the correct `--project-directory`, `--env-file`, and `-f` flags automatically.
+
+Shared non-secret defaults (for example `NATS_URL`) are defined once in `.env.example` and referenced from service-specific environment sections.
 
 - Override the image tag: `IMAGE_TAG=v0.1.0 pixi run compose-up`
 
