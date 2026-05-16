@@ -3,6 +3,7 @@ global:
     registry: ghcr.io/aet-devops26/team-panic-at-the-console
     tag: main
   namespace: default
+  ollamaModel: &ollamaModel qwen2.5:3b
 
 services:
   frontend:
@@ -110,3 +111,29 @@ services:
     env:
       - name: NATS_URL
         value: nats://nats:4222
+      - name: OLLAMA_URL
+        value: http://ollama:11434
+      - name: OLLAMA_MODEL
+        value: *ollamaModel
+      - name: INCIDENT_SERVICE_URL
+        value: http://incident-service:8081
+
+  ollama:
+    enabled: true
+    port: 11434
+    image:
+      override: "ollama/ollama:0.9.0"
+    command: ["ollama", "serve"]
+    env:
+      - name: OLLAMA_MODEL
+        value: *ollamaModel
+    lifecycle:
+      postStart:
+        exec:
+          command:
+            - "/bin/sh"
+            - "-c"
+            - "until ollama list >/dev/null 2>&1; do sleep 2; done; ollama pull ${OLLAMA_MODEL:-qwen2.5:3b}"
+    persistence:
+      size: 10Gi
+      mountPath: /root/.ollama
