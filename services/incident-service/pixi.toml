@@ -1,0 +1,14 @@
+[workspace]
+name = "incident-service"
+channels = ["conda-forge"]
+exclude-newer = "7d"
+platforms = ["osx-arm64", "osx-64", "linux-64", "linux-aarch64", "win-64"]
+
+[dependencies]
+openjdk = "=25"
+maven = ">=3.9"
+
+[tasks]
+build = "mvn -B package -DskipTests"
+test = "mvn -B verify"
+start = "mvn spring-boot:run"

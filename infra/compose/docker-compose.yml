@@ -50,8 +50,8 @@ services:
   incident-service:
     image: ghcr.io/aet-devops26/team-panic-at-the-console/incident-service:${IMAGE_TAG:-main}
     build:
-      context: ./services/incident-service
-      dockerfile: Dockerfile
+      context: ./services
+      dockerfile: incident-service/Dockerfile
     environment:
       DATABASE_URL: postgres://${POSTGRES_USER:-devops}:${POSTGRES_PASSWORD:-devops}@postgres:5432/incidents
       NATS_URL: nats://nats:4222
