@@ -1,6 +1,6 @@
 # Project Meeting
 
-**2026-05-15, 15:30 – 18:30**  
+**2026-05-15, 15:30 – 18:30**
 **Participants:** Manuel, Florian, Leon
 
 ---
