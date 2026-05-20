@@ -6,6 +6,7 @@ from fastapi import FastAPI
 
 from genai_service.config import settings
 from genai_service.ollama_client import OllamaClient
+from genai_service.routes.debug_generate import router as debug_generate_router
 from genai_service.routes.ollama_health import router as ollama_health_router
 
 _log_processors: list[structlog.typing.Processor] = [
@@ -25,7 +26,12 @@ logger = structlog.get_logger(__name__)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     http = httpx.AsyncClient()
-    ollama = OllamaClient(http, settings.ollama_url, settings.ollama_model)
+    ollama = OllamaClient(
+        http,
+        settings.ollama_url,
+        settings.ollama_model,
+        generate_timeout_seconds=settings.ollama_generate_timeout_seconds,
+    )
 
     app.state.http = http
     app.state.ollama_client = ollama
@@ -52,3 +58,7 @@ async def health() -> dict[str, str]:
 
 
 app.include_router(ollama_health_router, prefix="/api/v1")
+
+if settings.debug_endpoints:
+    app.include_router(debug_generate_router, prefix="/api/v1")
+    logger.warning("debug_endpoints_enabled", path="/api/v1/genai/_debug/generate")
