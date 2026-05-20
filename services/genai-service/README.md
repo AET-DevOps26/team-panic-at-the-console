@@ -78,10 +78,29 @@ Override with `OLLAMA_URL` / `OLLAMA_MODEL` to point at a different Ollama.
 
 ### Input
 
-The script hard-codes one open incident, one resolved incident (for the postmortem), and a four-entry event log:
+The script hard-codes a single fixture: one open incident plus a resolved variant (used only for the postmortem run), and a four-entry event log shared by all tasks.
 
-- **Incident**: title "Checkout service 5xx spike", severity `SEV2`, status `open` (or `resolved` for the postmortem run).
-- **Event log**: status change → comment naming a recent deploy → comment about rollback → status change to `resolved`.
+**Open incident** (`summary`, `severity_suggestion`, `solution_suggestions`):
+
+| Field       | Value                                             |
+| ----------- | ------------------------------------------------- |
+| id          | `018e2c5f-1234-7abc-8def-000000000001`            |
+| title       | `Checkout service 5xx spike`                      |
+| description | `Errors on /checkout up sharply since 09:00 UTC.` |
+| status      | `open`                                            |
+| severity    | `SEV2`                                            |
+| createdAt   | `2026-05-20T09:00:00+00:00`                       |
+
+**Resolved incident** (`postmortem`): same as above with `id` ending `…002`, `status=resolved`, and `resolvedAt=2026-05-20T10:30:00+00:00`.
+
+**Event log** (chronological, shared by all tasks):
+
+| Timestamp (UTC)       | Type             | Description                                                      |
+| --------------------- | ---------------- | ---------------------------------------------------------------- |
+| `2026-05-20T09:02:00` | `status_changed` | `status: open -> investigating`                                  |
+| `2026-05-20T09:05:00` | `comment_added`  | `Recent deploy to checkout-service at 08:55 UTC may be related.` |
+| `2026-05-20T09:20:00` | `comment_added`  | `Rolled back checkout-service; error rate dropping.`             |
+| `2026-05-20T10:30:00` | `status_changed` | `status: investigating -> resolved`                              |
 
 ### Expected output
 
@@ -120,10 +139,10 @@ OLLAMA_INTEGRATION_MODEL=qwen2.5:3b \
   pixi run test-integration
 ```
 
-In CI they run nightly (and on demand) via `.github/workflows/ollama-integration.yml`. Regular PR CI skips them — they're slow (~10–30 s per call on CPU) and the smaller test model occasionally produces JSON that fails strict validation. `test-integration` retries each failing test up to five times (`pytest-rerunfailures`) to absorb that baseline flakiness; unit `test` stays retry-free.
+In CI they run nightly (and on demand) via `.github/workflows/ollama-integration.yml`. Regular PR CI skips them — they're slow (~10–30 s per call on CPU) and the smaller test model occasionally produces JSON that fails strict validation. Each integration test carries `@pytest.mark.flaky(reruns=3)` (via `pytest-rerunfailures`) to absorb that baseline flakiness; unit `test` stays retry-free.
 
 ## Logging
 
 **Uvicorn** uses Python’s standard **`logging`** module and prints lines like `INFO: Started server process ...`.
 
-**This service** uses **structlog**. By default it uses a **console** renderer (key=value style). Set **`GENAI_LOG_JSON=true`** for one JSON line per event (typical in production log collectors).
+**This service** uses **structlog**. By default it uses a **console** renderer (key=value style). Set **`LOG_JSON=true`** for one JSON line per event (typical in production log collectors).
