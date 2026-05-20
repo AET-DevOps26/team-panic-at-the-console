@@ -14,7 +14,7 @@ rm -rf "$REPO_ROOT/services/generated/java"
 npx --yes @openapitools/openapi-generator-cli@2.13.0 generate \
   -i "$SPEC" \
   -g spring \
-  --additional-properties=useSpringBoot3=true,interfaceOnly=true,useTags=true \
+  --additional-properties=useSpringBoot3=true,interfaceOnly=true,useTags=true,hideGenerationTimestamp=true \
   --global-property=apis \
   --global-property=models \
   --global-property=supportingFiles=ApiUtil.java \
