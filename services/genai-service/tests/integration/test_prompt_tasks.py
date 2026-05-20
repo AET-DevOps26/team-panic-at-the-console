@@ -24,8 +24,6 @@ from genai_service.prompts import (
     SummaryResponse,
 )
 
-pytestmark = pytest.mark.integration
-
 
 def _open_incident() -> Incident:
     return Incident(
@@ -82,6 +80,7 @@ async def _run(ollama_client: OllamaClient, incident: Incident, task: PromptTask
     )
 
 
+@pytest.mark.integration
 @pytest.mark.flaky(reruns=3)
 async def test_summary_end_to_end(ollama_client: OllamaClient):
     result = await _run(ollama_client, _open_incident(), PromptTask.SUMMARY)
@@ -89,6 +88,7 @@ async def test_summary_end_to_end(ollama_client: OllamaClient):
     assert result.summary.strip() != ""
 
 
+@pytest.mark.integration
 @pytest.mark.flaky(reruns=3)
 async def test_severity_suggestion_end_to_end(ollama_client: OllamaClient):
     result = await _run(ollama_client, _open_incident(), PromptTask.SEVERITY_SUGGESTION)
@@ -97,6 +97,7 @@ async def test_severity_suggestion_end_to_end(ollama_client: OllamaClient):
     assert result.reason.strip() != ""
 
 
+@pytest.mark.integration
 @pytest.mark.flaky(reruns=3)
 async def test_solution_suggestions_end_to_end(ollama_client: OllamaClient):
     result = await _run(
@@ -107,6 +108,7 @@ async def test_solution_suggestions_end_to_end(ollama_client: OllamaClient):
     assert all(s.strip() != "" for s in result.solutions)
 
 
+@pytest.mark.integration
 @pytest.mark.flaky(reruns=3)
 async def test_postmortem_end_to_end(ollama_client: OllamaClient):
     result = await _run(ollama_client, _resolved_incident(), PromptTask.POSTMORTEM)

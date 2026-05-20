@@ -10,14 +10,13 @@ from pydantic import BaseModel, Field
 
 from genai_service.ollama_client import OllamaClient
 
-pytestmark = pytest.mark.integration
-
 
 class CityInfo(BaseModel):
     city: str = Field(min_length=1)
     country: str = Field(min_length=1)
 
 
+@pytest.mark.integration
 @pytest.mark.flaky(reruns=3)
 async def test_generate_returns_text(ollama_client: OllamaClient):
     text = await ollama_client.generate(
@@ -28,6 +27,7 @@ async def test_generate_returns_text(ollama_client: OllamaClient):
     assert text.strip() != ""
 
 
+@pytest.mark.integration
 @pytest.mark.flaky(reruns=3)
 async def test_generate_with_response_model_returns_typed_instance(
     ollama_client: OllamaClient,
