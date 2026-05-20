@@ -20,7 +20,7 @@ import jakarta.annotation.Generated;
  */
 
 @Schema(name = "GenaiHealthResponse", description = "GenAI service health status including Ollama reachability.")
-@Generated(value = "org.openapitools.codegen.languages.SpringCodegen", date = "2026-05-15T12:25:43.829156+02:00[Europe/Berlin]", comments = "Generator version: 7.14.0")
+@Generated(value = "org.openapitools.codegen.languages.SpringCodegen", comments = "Generator version: 7.14.0")
 public class GenaiHealthResponse {
 
   private String status;
