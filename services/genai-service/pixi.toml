@@ -40,8 +40,8 @@ mypy = "*"
 test = "pytest -q"
 test-cov = "pytest --cov=genai_service --cov-report=term-missing"
 # Hits a real Ollama; set OLLAMA_INTEGRATION_URL (and optionally OLLAMA_INTEGRATION_MODEL).
-# Reruns absorb the LLM-flakiness baseline (occasional schema-violating JSON); unit `test` stays retry-free.
-test-integration = "pytest -m integration -v --reruns 5 --reruns-delay 3"
+# Per-test retries (@pytest.mark.flaky) absorb the LLM-flakiness baseline.
+test-integration = "pytest -m integration -v"
 typecheck = "mypy src/genai_service"
 
 [feature.lint.dependencies]

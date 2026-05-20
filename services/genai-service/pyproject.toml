@@ -55,5 +55,6 @@ pythonpath = ["src"]
 # (see tests/integration/conftest.py) and gated by `-m integration` / `not integration`.
 markers = [
   "integration: hits a real Ollama instance (slow, opt-in via OLLAMA_INTEGRATION_URL)",
+  "flaky: registered by pytest-rerunfailures; declared here to silence the unknown-marker warning",
 ]
 addopts = "-m 'not integration'"

@@ -18,6 +18,7 @@ class CityInfo(BaseModel):
     country: str = Field(min_length=1)
 
 
+@pytest.mark.flaky(reruns=3)
 async def test_generate_returns_text(ollama_client: OllamaClient):
     text = await ollama_client.generate(
         "Reply with a single short greeting and nothing else.",
@@ -27,6 +28,7 @@ async def test_generate_returns_text(ollama_client: OllamaClient):
     assert text.strip() != ""
 
 
+@pytest.mark.flaky(reruns=3)
 async def test_generate_with_response_model_returns_typed_instance(
     ollama_client: OllamaClient,
 ):
