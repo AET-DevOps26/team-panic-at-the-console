@@ -5,6 +5,7 @@ FastAPI scaffold:
 - **`GET /health`**: process is up; **no Ollama call** (use this for Docker / Kubernetes probes when Ollama is optional).
 - **`GET /api/v1/genai/ollama/health`**: checks a local [Ollama](https://ollama.com) instance (`OLLAMA_URL`, default `http://localhost:11434`); JSON **`status`: `"ok"`** when Ollama answers, **`"degraded"`** with **503** when it does not (for monitoring, not for liveness).
 - **`POST /api/v1/genai/_debug/generate`** _(opt-in)_: manual smoke test that calls Ollama with a free-form prompt. Mounted only when `DEBUG_ENDPOINTS=true`. Never enable in production — the service's real surface is NATS (see [ADR-0002](../../docs/adr/0002-genai-service-stateless.md)).
+- **`GET /metrics`**: Prometheus scrape endpoint (see [Metrics](#metrics)).
 
 ## NATS consumer
 
@@ -144,6 +145,33 @@ OLLAMA_INTEGRATION_MODEL=qwen2.5:3b \
 ```
 
 In CI they run nightly (and on demand) via `.github/workflows/ollama-integration.yml`. Regular PR CI skips them — they're slow (~10–30 s per call on CPU) and the smaller test model occasionally produces JSON that fails strict validation. Each integration test carries `@pytest.mark.flaky(reruns=3)` (via `pytest-rerunfailures`) to absorb that baseline flakiness; unit `test` stays retry-free.
+
+## Metrics
+
+`GET /metrics` exposes Prometheus scrape data. Default HTTP histograms (`http_requests_total`, `http_request_duration_seconds`, `http_request_duration_highr_seconds`) come from [`prometheus-fastapi-instrumentator`](https://github.com/trallnag/prometheus-fastapi-instrumentator) — no extra wiring needed.
+
+On top of that we record one application-level signal per Ollama call (`CONTEXT.md` custom metrics):
+
+| Metric                  | Type      | Labels                                                                | Notes                                                                                            |
+| ----------------------- | --------- | --------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| `ai_generation_seconds` | histogram | `type=summary\|severity_suggestion\|solution_suggestions\|postmortem` | Wall time of one `OllamaClient.generate`. Buckets tuned for CPU inference (0.5s up to 120s).     |
+| `ai_generations_total`  | counter   | `type` (as above), `outcome=success\|error`                           | Number of generations completed. Lets you alert on `ai_generations_total{outcome="error"}` rate. |
+
+Both are recorded by `IncidentHandlers` via the `time_generation(task)` context manager in `genai_service.metrics`; nothing else needs to call it directly. Mocked unit tests assert the counter bumps; the integration tests exercise the real timing path.
+
+Example scrape:
+
+```text
+# HELP ai_generation_seconds Wall time of one Ollama generation, by PromptTask.
+# TYPE ai_generation_seconds histogram
+ai_generation_seconds_bucket{type="summary",le="5"} 12
+ai_generation_seconds_bucket{type="summary",le="10"} 18
+...
+ai_generations_total{type="summary",outcome="success"} 18
+ai_generations_total{type="summary",outcome="error"} 1
+```
+
+The endpoint is excluded from the OpenAPI surface (it's observability, not part of the public contract).
 
 ## Logging
 

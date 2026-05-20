@@ -147,6 +147,59 @@ async def test_on_created_aborts_when_ollama_fails(deps):
     incidents.patch_solutions.assert_not_awaited()
 
 
+async def test_on_created_records_generation_metrics(deps):
+    """Each ollama.generate call should bump the ai_generations_total counter."""
+    from genai_service.metrics import ai_generations_total
+
+    incidents, ollama, handlers = deps
+    incidents.get_incident.return_value = _incident()
+    incidents.get_events.return_value = _events()
+    ollama.generate.side_effect = [
+        SummaryResponse(summary="ok"),
+        SolutionsResponse(solutions=["restart"]),
+    ]
+
+    before_summary = ai_generations_total.labels(
+        type="summary", outcome="success"
+    )._value.get()
+    before_solutions = ai_generations_total.labels(
+        type="solution_suggestions", outcome="success"
+    )._value.get()
+
+    await handlers.on_incident_created(INCIDENT_ID)
+
+    assert (
+        ai_generations_total.labels(type="summary", outcome="success")._value.get()
+        == before_summary + 1
+    )
+    assert (
+        ai_generations_total.labels(
+            type="solution_suggestions", outcome="success"
+        )._value.get()
+        == before_solutions + 1
+    )
+
+
+async def test_on_created_records_error_outcome_when_ollama_fails(deps):
+    """A failing generation must be reflected in the error-outcome counter."""
+    from genai_service.metrics import ai_generations_total
+    from genai_service.ollama_client import OllamaError
+
+    incidents, ollama, handlers = deps
+    incidents.get_incident.return_value = _incident()
+    incidents.get_events.return_value = _events()
+    ollama.generate.side_effect = OllamaError("ollama down")
+
+    before = ai_generations_total.labels(type="summary", outcome="error")._value.get()
+
+    await handlers.on_incident_created(INCIDENT_ID)
+
+    assert (
+        ai_generations_total.labels(type="summary", outcome="error")._value.get()
+        == before + 1
+    )
+
+
 async def test_on_created_does_not_patch_solutions_when_summary_patch_fails(deps):
     """Pins the current behavior: a PATCH failure aborts the rest of the handler."""
     incidents, ollama, handlers = deps
