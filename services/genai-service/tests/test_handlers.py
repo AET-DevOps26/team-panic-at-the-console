@@ -117,3 +117,48 @@ async def test_on_resolved_skips_when_incident_not_resolved(deps):
 
     ollama.generate.assert_not_awaited()
     incidents.patch_postmortem.assert_not_awaited()
+
+
+async def test_on_created_aborts_when_get_events_fails(deps):
+    """If the event log fetch fails after the incident fetch succeeds, no PATCH happens."""
+    incidents, ollama, handlers = deps
+    incidents.get_incident.return_value = _incident()
+    incidents.get_events.side_effect = RuntimeError("event-service down")
+
+    await handlers.on_incident_created(INCIDENT_ID)
+
+    ollama.generate.assert_not_awaited()
+    incidents.patch_summary.assert_not_awaited()
+    incidents.patch_solutions.assert_not_awaited()
+
+
+async def test_on_created_aborts_when_ollama_fails(deps):
+    """An Ollama failure mid-handler must not leave half-written results on incident-service."""
+    from genai_service.ollama_client import OllamaError
+
+    incidents, ollama, handlers = deps
+    incidents.get_incident.return_value = _incident()
+    incidents.get_events.return_value = _events()
+    ollama.generate.side_effect = OllamaError("ollama down")
+
+    await handlers.on_incident_created(INCIDENT_ID)
+
+    incidents.patch_summary.assert_not_awaited()
+    incidents.patch_solutions.assert_not_awaited()
+
+
+async def test_on_created_does_not_patch_solutions_when_summary_patch_fails(deps):
+    """Pins the current behavior: a PATCH failure aborts the rest of the handler."""
+    incidents, ollama, handlers = deps
+    incidents.get_incident.return_value = _incident()
+    incidents.get_events.return_value = _events()
+    ollama.generate.side_effect = [
+        SummaryResponse(summary="ok"),
+        SolutionsResponse(solutions=["restart"]),
+    ]
+    incidents.patch_summary.side_effect = RuntimeError("incident-service 500")
+
+    await handlers.on_incident_created(INCIDENT_ID)
+
+    incidents.patch_summary.assert_awaited_once()
+    incidents.patch_solutions.assert_not_awaited()
