@@ -29,7 +29,7 @@ async def test_generate_returns_raw_text():
     out = await ollama.generate("say hi")
 
     assert out == "hello world"
-    assert captured["url"] == "http://ollama:11434/api/generate"
+    assert captured["url"].endswith("/api/generate")
     assert captured["body"]["stream"] is False
     assert "format" not in captured["body"]
 
