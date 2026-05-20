@@ -14,7 +14,7 @@ rm -rf "$REPO_ROOT/services/generated/java"
 npx --yes @openapitools/openapi-generator-cli@2.13.0 generate \
   -i "$SPEC" \
   -g spring \
-  --additional-properties=useSpringBoot3=true,interfaceOnly=true,useTags=true \
+  --additional-properties=useSpringBoot3=true,interfaceOnly=true,useTags=true,hideGenerationTimestamp=true \
   --global-property=apis \
   --global-property=models \
   --global-property=supportingFiles=ApiUtil.java \
@@ -31,5 +31,17 @@ echo "==> Generating TypeScript SDK (frontend)"
 mkdir -p "$REPO_ROOT/services/frontend/src/api"
 npx --yes openapi-typescript@7.4.4 "$SPEC" \
   -o "$REPO_ROOT/services/frontend/src/api/schema.d.ts"
+
+echo "==> Formatting generated files via pre-commit hooks"
+find \
+  "$REPO_ROOT/services/generated" \
+  "$REPO_ROOT/services/genai-service/client" \
+  "$REPO_ROOT/services/frontend/src/api" \
+  \( -type d \( -name target -o -name .ruff_cache -o -name __pycache__ -o -name node_modules \) -prune \) \
+  -o -type f ! -name '*.class' -print0 2>/dev/null \
+  | pixi run lefthook run pre-commit \
+      --files-from-stdin \
+      --no-stage-fixed \
+      --no-fail-on-changes
 
 echo "==> Done. Never edit generated files by hand."
