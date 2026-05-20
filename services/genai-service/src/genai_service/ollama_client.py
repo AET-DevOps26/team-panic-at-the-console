@@ -7,7 +7,7 @@ T = TypeVar("T", bound=BaseModel)
 
 
 class OllamaError(RuntimeError):
-    """Raised when Ollama returns a non-2xx status or unparsable response."""
+    """Raised when Ollama returns a non-200 status or unparsable response."""
 
 
 class OllamaClient:
@@ -89,8 +89,14 @@ class OllamaClient:
             )
 
         try:
-            text = resp.json()["response"]
-        except (KeyError, ValueError) as exc:
+            payload = resp.json()
+        except ValueError as exc:
+            raise OllamaError(
+                f"Ollama returned invalid JSON: {resp.text[:200]}"
+            ) from exc
+        try:
+            text = payload["response"]
+        except KeyError as exc:
             raise OllamaError(
                 f"Ollama response missing 'response' field: {exc}"
             ) from exc

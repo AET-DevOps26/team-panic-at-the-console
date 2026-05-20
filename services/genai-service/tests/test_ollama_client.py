@@ -1,3 +1,5 @@
+import json
+
 import httpx
 import pytest
 from pydantic import BaseModel
@@ -20,7 +22,7 @@ async def test_generate_returns_raw_text():
 
     def handler(request: httpx.Request) -> httpx.Response:
         captured["url"] = str(request.url)
-        captured["body"] = request.content
+        captured["body"] = json.loads(request.content)
         return httpx.Response(200, json={"response": "hello world"})
 
     ollama = _client_with(httpx.MockTransport(handler))
@@ -28,15 +30,16 @@ async def test_generate_returns_raw_text():
 
     assert out == "hello world"
     assert captured["url"] == "http://ollama:11434/api/generate"
-    assert b'"stream":false' in captured["body"]
-    assert b'"format"' not in captured["body"]
+    assert captured["body"]["stream"] is False
+    assert "format" not in captured["body"]
 
 
 async def test_generate_with_pydantic_model_parses_response():
     def handler(request: httpx.Request) -> httpx.Response:
         # Schema is forwarded as `format` so Ollama produces matching JSON.
-        assert b'"format"' in request.content
-        assert b'"title"' in request.content
+        body = json.loads(request.content)
+        assert "format" in body
+        assert "title" in body["format"]["properties"]
         return httpx.Response(
             200, json={"response": '{"title": "DB down", "severity": "SEV1"}'}
         )
@@ -53,13 +56,13 @@ async def test_generate_with_system_prompt_forwards_field():
     captured: dict = {}
 
     def handler(request: httpx.Request) -> httpx.Response:
-        captured["body"] = request.content
+        captured["body"] = json.loads(request.content)
         return httpx.Response(200, json={"response": "ok"})
 
     ollama = _client_with(httpx.MockTransport(handler))
     await ollama.generate("hi", system="you are concise")
 
-    assert b'"system":"you are concise"' in captured["body"]
+    assert captured["body"]["system"] == "you are concise"
 
 
 async def test_generate_raises_on_non_200():
