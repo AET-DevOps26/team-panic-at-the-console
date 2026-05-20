@@ -76,6 +76,37 @@ pixi run --manifest-path services/genai-service/pixi.toml demo
 
 Override with `OLLAMA_URL` / `OLLAMA_MODEL` to point at a different Ollama.
 
+### Input
+
+The script hard-codes one open incident, one resolved incident (for the postmortem), and a four-entry event log:
+
+- **Incident**: title "Checkout service 5xx spike", severity `SEV2`, status `open` (or `resolved` for the postmortem run).
+- **Event log**: status change → comment naming a recent deploy → comment about rollback → status change to `resolved`.
+
+### Expected output
+
+One JSON block per `PromptTask` (`summary`, `severity_suggestion`, `solution_suggestions`, `postmortem`), each validated against the corresponding response model. Exact text varies by model and run; shape is fixed. Example (`qwen2.5:3b`, trimmed):
+
+```text
+## summary
+{ "summary": "The checkout service is experiencing a spike in 5xx errors..." }
+
+## severity_suggestion
+{ "severity": "SEV3", "reason": "Significant but not catastrophic spike..." }
+
+## solution_suggestions
+{ "solutions": ["Verify the rollback...", "Check application logs...", ...] }
+
+## postmortem
+{
+  "root_cause": "A recent deployment introduced an error in checkout-service...",
+  "timeline": ["09:02 UTC status changed to investigating", ...],
+  "action_items": ["Tighten pre-deploy validation", ...]
+}
+```
+
+If a generation fails Pydantic validation (small models occasionally produce malformed JSON), the script raises `OllamaError`; rerun. The integration tests below cover the same path with retries.
+
 ## Integration tests against a real Ollama
 
 `tests/integration/` exercises `OllamaClient.generate` and the full `PromptBuilder → Ollama` round-trip against a live Ollama. They are skipped unless `OLLAMA_INTEGRATION_URL` is set.
