@@ -3,6 +3,7 @@ from contextlib import asynccontextmanager
 import httpx
 import structlog
 from fastapi import FastAPI
+from prometheus_fastapi_instrumentator import Instrumentator
 
 from genai_service.config import settings
 from genai_service.handlers import IncidentHandlers
@@ -82,6 +83,13 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="GenAI Service", version="0.1.0", lifespan=lifespan)
+
+# /metrics exposes Prometheus scrape data. HTTP histograms come from the instrumentator;
+# custom metrics (ai_generation_seconds, ai_generations_total) live in genai_service.metrics
+# and are recorded by IncidentHandlers as it processes each NATS event.
+Instrumentator(excluded_handlers=["/metrics"]).instrument(app).expose(
+    app, endpoint="/metrics", include_in_schema=False
+)
 
 
 @app.get("/health")

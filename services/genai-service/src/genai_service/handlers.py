@@ -1,6 +1,7 @@
 import structlog
 
 from genai_service.incident_client import IncidentServiceClient
+from genai_service.metrics import time_generation
 from genai_service.ollama_client import OllamaClient
 from genai_service.prompts import (
     PostmortemResponse,
@@ -40,9 +41,12 @@ class IncidentHandlers:
             incident = await self._incidents.get_incident(incident_id)
             events = await self._incidents.get_events(incident_id)
             prompt = self._prompts.build(incident, events, PromptTask.POSTMORTEM)
-            result = await self._ollama.generate(
-                prompt.user, system=prompt.system, response_model=PostmortemResponse
-            )
+            with time_generation(PromptTask.POSTMORTEM.value):
+                result = await self._ollama.generate(
+                    prompt.user,
+                    system=prompt.system,
+                    response_model=PostmortemResponse,
+                )
             await self._incidents.patch_postmortem(
                 incident_id,
                 root_cause=result.root_cause,
@@ -65,21 +69,23 @@ class IncidentHandlers:
             events = await self._incidents.get_events(incident_id)
 
             summary_prompt = self._prompts.build(incident, events, PromptTask.SUMMARY)
-            summary = await self._ollama.generate(
-                summary_prompt.user,
-                system=summary_prompt.system,
-                response_model=SummaryResponse,
-            )
+            with time_generation(PromptTask.SUMMARY.value):
+                summary = await self._ollama.generate(
+                    summary_prompt.user,
+                    system=summary_prompt.system,
+                    response_model=SummaryResponse,
+                )
             await self._incidents.patch_summary(incident_id, summary.summary)
 
             solutions_prompt = self._prompts.build(
                 incident, events, PromptTask.SOLUTION_SUGGESTIONS
             )
-            solutions = await self._ollama.generate(
-                solutions_prompt.user,
-                system=solutions_prompt.system,
-                response_model=SolutionsResponse,
-            )
+            with time_generation(PromptTask.SOLUTION_SUGGESTIONS.value):
+                solutions = await self._ollama.generate(
+                    solutions_prompt.user,
+                    system=solutions_prompt.system,
+                    response_model=SolutionsResponse,
+                )
             await self._incidents.patch_solutions(incident_id, solutions.solutions)
 
             log.info("summary_and_solutions_generated")
