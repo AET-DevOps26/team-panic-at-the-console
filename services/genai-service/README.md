@@ -65,8 +65,84 @@ From the repository root (uses the workspace Pixi manifest):
 pixi run test-genai
 ```
 
+## Manual end-to-end smoke
+
+`scripts/demo_generate.py` runs `PromptBuilder → OllamaClient` against a live Ollama for every `PromptTask` and prints the JSON response. Useful to eyeball whether the model produces reasonable output before relying on the NATS flow (which depends on `incident-service` implementing the read + write-back endpoints).
+
+```bash
+# With the compose stack up (ollama on host:11434, model pulled)
+pixi run --manifest-path services/genai-service/pixi.toml demo
+```
+
+Override with `OLLAMA_URL` / `OLLAMA_MODEL` to point at a different Ollama.
+
+### Input
+
+The script hard-codes a single fixture: one open incident plus a resolved variant (used only for the postmortem run), and a four-entry event log shared by all tasks.
+
+**Open incident** (`summary`, `severity_suggestion`, `solution_suggestions`):
+
+| Field       | Value                                             |
+| ----------- | ------------------------------------------------- |
+| id          | `018e2c5f-1234-7abc-8def-000000000001`            |
+| title       | `Checkout service 5xx spike`                      |
+| description | `Errors on /checkout up sharply since 09:00 UTC.` |
+| status      | `open`                                            |
+| severity    | `SEV2`                                            |
+| createdAt   | `2026-05-20T09:00:00+00:00`                       |
+
+**Resolved incident** (`postmortem`): same as above with `id` ending `…002`, `status=resolved`, and `resolvedAt=2026-05-20T10:30:00+00:00`.
+
+**Event log** (chronological, shared by all tasks):
+
+| Timestamp (UTC)       | Type             | Description                                                      |
+| --------------------- | ---------------- | ---------------------------------------------------------------- |
+| `2026-05-20T09:02:00` | `status_changed` | `status: open -> investigating`                                  |
+| `2026-05-20T09:05:00` | `comment_added`  | `Recent deploy to checkout-service at 08:55 UTC may be related.` |
+| `2026-05-20T09:20:00` | `comment_added`  | `Rolled back checkout-service; error rate dropping.`             |
+| `2026-05-20T10:30:00` | `status_changed` | `status: investigating -> resolved`                              |
+
+### Expected output
+
+One JSON block per `PromptTask` (`summary`, `severity_suggestion`, `solution_suggestions`, `postmortem`), each validated against the corresponding response model. Exact text varies by model and run; shape is fixed. Example (`qwen2.5:3b`, trimmed):
+
+```text
+## summary
+{ "summary": "The checkout service is experiencing a spike in 5xx errors..." }
+
+## severity_suggestion
+{ "severity": "SEV3", "reason": "Significant but not catastrophic spike..." }
+
+## solution_suggestions
+{ "solutions": ["Verify the rollback...", "Check application logs...", ...] }
+
+## postmortem
+{
+  "root_cause": "A recent deployment introduced an error in checkout-service...",
+  "timeline": ["09:02 UTC status changed to investigating", ...],
+  "action_items": ["Tighten pre-deploy validation", ...]
+}
+```
+
+If a generation fails Pydantic validation (small models occasionally produce malformed JSON), the script raises `OllamaError`; rerun. The integration tests below cover the same path with retries.
+
+## Integration tests against a real Ollama
+
+`tests/integration/` exercises `OllamaClient.generate` and the full `PromptBuilder → Ollama` round-trip against a live Ollama. They are skipped unless `OLLAMA_INTEGRATION_URL` is set.
+
+Run them locally against the compose stack:
+
+```bash
+pixi run compose-up   # in the repo root
+OLLAMA_INTEGRATION_URL=http://localhost:11434 \
+OLLAMA_INTEGRATION_MODEL=qwen2.5:3b \
+  pixi run test-integration
+```
+
+In CI they run nightly (and on demand) via `.github/workflows/ollama-integration.yml`. Regular PR CI skips them — they're slow (~10–30 s per call on CPU) and the smaller test model occasionally produces JSON that fails strict validation. Each integration test carries `@pytest.mark.flaky(reruns=3)` (via `pytest-rerunfailures`) to absorb that baseline flakiness; unit `test` stays retry-free.
+
 ## Logging
 
 **Uvicorn** uses Python’s standard **`logging`** module and prints lines like `INFO: Started server process ...`.
 
-**This service** uses **structlog**. By default it uses a **console** renderer (key=value style). Set **`GENAI_LOG_JSON=true`** for one JSON line per event (typical in production log collectors).
+**This service** uses **structlog**. By default it uses a **console** renderer (key=value style). Set **`LOG_JSON=true`** for one JSON line per event (typical in production log collectors).
