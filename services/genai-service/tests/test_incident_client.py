@@ -111,6 +111,37 @@ async def test_patch_postmortem_uses_camel_case_keys():
     }
 
 
+async def test_patch_severity_sends_expected_body():
+    captured: dict = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        captured["url"] = str(request.url)
+        captured["body"] = json.loads(request.content)
+        return httpx.Response(204)
+
+    await _client(handler).patch_severity(INCIDENT_ID, "SEV1", "user impact widespread")
+
+    assert captured["url"].endswith(f"/incidents/{INCIDENT_ID}/genai/severity/result")
+    assert captured["body"] == {
+        "severity": "SEV1",
+        "reason": "user impact widespread",
+    }
+
+
+async def test_patch_solutions_sends_expected_body():
+    captured: dict = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        captured["url"] = str(request.url)
+        captured["body"] = json.loads(request.content)
+        return httpx.Response(204)
+
+    await _client(handler).patch_solutions(INCIDENT_ID, ["restart pod", "rollback"])
+
+    assert captured["url"].endswith(f"/incidents/{INCIDENT_ID}/genai/solutions/result")
+    assert captured["body"] == {"solutions": ["restart pod", "rollback"]}
+
+
 async def test_patch_raises_on_non_2xx():
     def handler(request: httpx.Request) -> httpx.Response:
         return httpx.Response(500, text="boom")

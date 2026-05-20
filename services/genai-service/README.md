@@ -27,13 +27,17 @@ Set `NATS_ENABLED=false` to skip the subscription on startup (useful when runnin
 ```python
 from pydantic import BaseModel
 
-class Summary(BaseModel):
-    title: str
-    severity: str
+class CityInfo(BaseModel):
+    city: str
+    country: str
 
-result = await ollama.generate("summarize incident #42", response_model=Summary)
-# result is a Summary instance, validated.
+result = await ollama.generate(
+    "Where is the Eiffel Tower?", response_model=CityInfo
+)
+# result is a CityInfo instance, validated.
 ```
+
+For the four real `PromptTask` response shapes, see `genai_service.prompts.SummaryResponse`, `SeverityResponse`, `SolutionsResponse`, and `PostmortemResponse`.
 
 Non-2xx responses, transport errors, and schema-validation failures all raise `OllamaError`.
 
