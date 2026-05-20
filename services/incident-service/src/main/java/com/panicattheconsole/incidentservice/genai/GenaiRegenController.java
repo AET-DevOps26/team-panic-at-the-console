@@ -1,5 +1,8 @@
 package com.panicattheconsole.incidentservice.genai;
 
+import java.util.NoSuchElementException;
+import java.util.UUID;
+
 import org.openapitools.api.GenaiApi;
 import org.openapitools.model.RegenAccepted;
 import org.slf4j.Logger;
@@ -8,12 +11,18 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.UUID;
+import com.panicattheconsole.incidentservice.incident.IncidentService;
 
 @RestController
 class GenaiRegenController implements GenaiApi {
 
     private static final Logger log = LoggerFactory.getLogger(GenaiRegenController.class);
+
+    private final IncidentService incidentService;
+
+    public GenaiRegenController(IncidentService incidentService) {
+        this.incidentService = incidentService;
+    }
 
     @Override
     public ResponseEntity genaiHealth() {
@@ -23,29 +32,53 @@ class GenaiRegenController implements GenaiApi {
 
     @Override
     public ResponseEntity<RegenAccepted> regenerateSummary(UUID incidentId) {
-        log.info("TODO: publish incident.regen.requested [task=SUMMARY, incidentId={}]", incidentId);
-        return ResponseEntity.status(HttpStatus.ACCEPTED)
-                .body(new RegenAccepted(true, RegenAccepted.TaskEnum.SUMMARY));
+        try {
+            incidentService.requestRegeneration(incidentId);
+            return ResponseEntity.status(HttpStatus.ACCEPTED)
+                    .body(new RegenAccepted(true, RegenAccepted.TaskEnum.SUMMARY));
+        } catch (NoSuchElementException e) {
+            log.warn("Incident not found: {}", incidentId);
+            return ResponseEntity.notFound().build();
+        }
     }
 
     @Override
     public ResponseEntity<RegenAccepted> regenerateSeverity(UUID incidentId) {
-        log.info("TODO: publish incident.regen.requested [task=SEVERITY_SUGGESTION, incidentId={}]", incidentId);
-        return ResponseEntity.status(HttpStatus.ACCEPTED)
-                .body(new RegenAccepted(true, RegenAccepted.TaskEnum.SEVERITY_SUGGESTION));
+        try {
+            incidentService.requestRegeneration(incidentId);
+            return ResponseEntity.status(HttpStatus.ACCEPTED)
+                    .body(new RegenAccepted(true, RegenAccepted.TaskEnum.SEVERITY_SUGGESTION));
+        } catch (NoSuchElementException e) {
+            log.warn("Incident not found: {}", incidentId);
+            return ResponseEntity.notFound().build();
+        }
     }
 
     @Override
     public ResponseEntity<RegenAccepted> regenerateSolutions(UUID incidentId) {
-        log.info("TODO: publish incident.regen.requested [task=SOLUTION_SUGGESTIONS, incidentId={}]", incidentId);
-        return ResponseEntity.status(HttpStatus.ACCEPTED)
-                .body(new RegenAccepted(true, RegenAccepted.TaskEnum.SOLUTION_SUGGESTIONS));
+        try {
+            incidentService.requestRegeneration(incidentId);
+            return ResponseEntity.status(HttpStatus.ACCEPTED)
+                    .body(new RegenAccepted(true, RegenAccepted.TaskEnum.SOLUTION_SUGGESTIONS));
+        } catch (NoSuchElementException e) {
+            log.warn("Incident not found: {}", incidentId);
+            return ResponseEntity.notFound().build();
+        }
     }
 
     @Override
     public ResponseEntity<RegenAccepted> regeneratePostmortem(UUID incidentId) {
-        log.info("TODO: publish incident.regen.requested [task=POSTMORTEM, incidentId={}]", incidentId);
-        return ResponseEntity.status(HttpStatus.ACCEPTED)
-                .body(new RegenAccepted(true, RegenAccepted.TaskEnum.POSTMORTEM));
+        try {
+            incidentService.validatePostmortermAllowed(incidentId);
+            incidentService.requestRegeneration(incidentId);
+            return ResponseEntity.status(HttpStatus.ACCEPTED)
+                    .body(new RegenAccepted(true, RegenAccepted.TaskEnum.POSTMORTEM));
+        } catch (NoSuchElementException e) {
+            log.warn("Incident not found: {}", incidentId);
+            return ResponseEntity.notFound().build();
+        } catch (IllegalStateException e) {
+            log.warn("Cannot regenerate postmortem for non-resolved incident: {}", incidentId);
+            return ResponseEntity.status(HttpStatus.CONFLICT).build();
+        }
     }
 }

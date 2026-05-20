@@ -1,9 +1,13 @@
 package com.panicattheconsole.incidentservice.genai;
 
+import com.panicattheconsole.incidentservice.incident.IncidentService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.test.web.servlet.MockMvc;
+
+import java.util.UUID;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -14,6 +18,9 @@ class GenaiRegenControllerTest {
 
     @Autowired
     MockMvc mvc;
+
+    @MockBean
+    IncidentService incidentService;
 
     private static final String INCIDENT_ID = "018e2c5f-1234-7abc-8def-000000000001";
 
