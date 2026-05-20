@@ -40,17 +40,40 @@ def ollama_model() -> str:
 
 
 @pytest_asyncio.fixture()
+async def _ollama_preflight(ollama_url: str, ollama_model: str) -> None:
+    """Verify Ollama is reachable AND the model is pulled; skip all integration tests otherwise."""
+    async with httpx.AsyncClient() as http:
+        try:
+            resp = await http.get(f"{ollama_url.rstrip('/')}/api/tags", timeout=5.0)
+        except (httpx.HTTPError, OSError) as exc:
+            pytest.skip(f"Ollama at {ollama_url} not reachable: {exc}")
+
+        if resp.status_code != 200:
+            pytest.skip(
+                f"Ollama at {ollama_url} returned {resp.status_code} for /api/tags"
+            )
+
+        available = {m.get("name", "") for m in resp.json().get("models", [])}
+        if ollama_model not in available:
+            pytest.skip(
+                f"Model {ollama_model!r} not pulled on Ollama at {ollama_url}. "
+                f"Available: {sorted(available)}. "
+                f"Pull it (`ollama pull {ollama_model}`) or set OLLAMA_INTEGRATION_MODEL "
+                f"to one of the available models."
+            )
+
+
+@pytest_asyncio.fixture()
 async def ollama_client(
-    ollama_url: str, ollama_model: str
+    ollama_url: str,
+    ollama_model: str,
+    _ollama_preflight: None,
 ) -> AsyncIterator[OllamaClient]:
     # Loose timeout: small models on CPU still spend a few seconds per call.
     async with httpx.AsyncClient() as http:
-        client = OllamaClient(
+        yield OllamaClient(
             http,
             ollama_url,
             ollama_model,
             generate_timeout_seconds=120.0,
         )
-        if not await client.reachable():
-            pytest.skip(f"Ollama at {ollama_url} not reachable")
-        yield client
