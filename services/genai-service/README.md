@@ -65,6 +65,17 @@ From the repository root (uses the workspace Pixi manifest):
 pixi run test-genai
 ```
 
+## Manual end-to-end smoke
+
+`scripts/demo_generate.py` runs `PromptBuilder → OllamaClient` against a live Ollama for every `PromptTask` and prints the JSON response. Useful to eyeball whether the model produces reasonable output before relying on the NATS flow (which depends on `incident-service` implementing the read + write-back endpoints).
+
+```bash
+# With the compose stack up (ollama on host:11434, model pulled)
+pixi run --manifest-path services/genai-service/pixi.toml demo
+```
+
+Override with `OLLAMA_URL` / `OLLAMA_MODEL` to point at a different Ollama.
+
 ## Integration tests against a real Ollama
 
 `tests/integration/` exercises `OllamaClient.generate` and the full `PromptBuilder → Ollama` round-trip against a live Ollama. They are skipped unless `OLLAMA_INTEGRATION_URL` is set.
