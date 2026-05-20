@@ -65,6 +65,21 @@ From the repository root (uses the workspace Pixi manifest):
 pixi run test-genai
 ```
 
+## Integration tests against a real Ollama
+
+`tests/integration/` exercises `OllamaClient.generate` and the full `PromptBuilder → Ollama` round-trip against a live Ollama. They are skipped unless `OLLAMA_INTEGRATION_URL` is set.
+
+Run them locally against the compose stack:
+
+```bash
+pixi run compose-up   # in the repo root
+OLLAMA_INTEGRATION_URL=http://localhost:11434 \
+OLLAMA_INTEGRATION_MODEL=qwen2.5:3b \
+  pixi run test-integration
+```
+
+In CI they run nightly (and on demand) via `.github/workflows/ollama-integration.yml`. Regular PR CI skips them — they're slow (~10–30 s per call on CPU) and the smaller test model occasionally produces JSON that fails strict validation.
+
 ## Logging
 
 **Uvicorn** uses Python’s standard **`logging`** module and prints lines like `INFO: Started server process ...`.

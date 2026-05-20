@@ -38,6 +38,8 @@ mypy = "*"
 [feature.test.tasks]
 test = "pytest -q"
 test-cov = "pytest --cov=genai_service --cov-report=term-missing"
+# Hits a real Ollama; set OLLAMA_INTEGRATION_URL (and optionally OLLAMA_INTEGRATION_MODEL).
+test-integration = "pytest -m integration -v"
 typecheck = "mypy src/genai_service"
 
 [feature.lint.dependencies]

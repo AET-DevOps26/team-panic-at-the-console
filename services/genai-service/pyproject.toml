@@ -51,3 +51,9 @@ check_untyped_defs = true
 testpaths = ["tests"]
 asyncio_mode = "auto"
 pythonpath = ["src"]
+# Integration tests hit a real Ollama. They are skipped unless OLLAMA_INTEGRATION_URL is set
+# (see tests/integration/conftest.py) and gated by `-m integration` / `not integration`.
+markers = [
+  "integration: hits a real Ollama instance (slow, opt-in via OLLAMA_INTEGRATION_URL)",
+]
+addopts = "-m 'not integration'"
