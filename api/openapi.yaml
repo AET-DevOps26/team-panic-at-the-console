@@ -13,6 +13,8 @@ tags:
     description: Service health and readiness.
   - name: genai
     description: AI-assisted incident analysis (on-demand regeneration triggers).
+  - name: incidents
+    description: Incident read APIs and internal write-back endpoints used by genai-service.
 
 servers:
   - url: http://localhost:4010
@@ -131,6 +133,123 @@ paths:
         "409":
           description: Incident not in resolved state
 
+  /incidents/{incidentId}:
+    get:
+      operationId: getIncident
+      summary: Fetch a single incident
+      tags: [incidents]
+      parameters:
+        - $ref: "#/components/parameters/IncidentIdParam"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Incident"
+        "404":
+          description: Incident not found
+
+  /incidents/{incidentId}/events:
+    get:
+      operationId: listIncidentEvents
+      summary: List Events from the Event Log for one incident, in chronological order
+      tags: [incidents]
+      parameters:
+        - $ref: "#/components/parameters/IncidentIdParam"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/IncidentEvent"
+        "404":
+          description: Incident not found
+
+  /incidents/{incidentId}/genai/summary/result:
+    patch:
+      operationId: writeIncidentSummary
+      summary: (internal) Write AI-generated Summary back to incident-service
+      description: |
+        Called by genai-service after an Ollama generation completes.
+        Cluster-internal only; not exposed via the gateway.
+      tags: [incidents]
+      parameters:
+        - $ref: "#/components/parameters/IncidentIdParam"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SummaryPatch"
+      responses:
+        "204":
+          description: Saved
+        "404":
+          description: Incident not found
+
+  /incidents/{incidentId}/genai/severity/result:
+    patch:
+      operationId: writeIncidentSeveritySuggestion
+      summary: (internal) Write AI-suggested Severity back to incident-service
+      tags: [incidents]
+      parameters:
+        - $ref: "#/components/parameters/IncidentIdParam"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SeverityPatch"
+      responses:
+        "204":
+          description: Saved
+        "404":
+          description: Incident not found
+
+  /incidents/{incidentId}/genai/solutions/result:
+    patch:
+      operationId: writeIncidentSolutions
+      summary: (internal) Write AI-generated Solution Suggestions back to incident-service
+      tags: [incidents]
+      parameters:
+        - $ref: "#/components/parameters/IncidentIdParam"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SolutionsPatch"
+      responses:
+        "204":
+          description: Saved
+        "404":
+          description: Incident not found
+
+  /incidents/{incidentId}/genai/postmortem/result:
+    patch:
+      operationId: writeIncidentPostmortem
+      summary: (internal) Write AI-generated Postmortem back to incident-service
+      tags: [incidents]
+      parameters:
+        - $ref: "#/components/parameters/IncidentIdParam"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PostmortemPatch"
+      responses:
+        "204":
+          description: Saved
+        "404":
+          description: Incident not found
+        "409":
+          description: Incident not in resolved state
+
 components:
   parameters:
     IncidentIdParam:
@@ -173,3 +292,104 @@ components:
           type: string
           example: SUMMARY
           enum: [SUMMARY, SEVERITY_SUGGESTION, SOLUTION_SUGGESTIONS, POSTMORTEM]
+
+    Severity:
+      type: string
+      enum: [SEV1, SEV2, SEV3, SEV4]
+      description: Incident severity. SEV1 is highest impact.
+
+    IncidentStatus:
+      type: string
+      enum: [open, investigating, resolved]
+
+    Incident:
+      type: object
+      description: An incident as stored by incident-service.
+      required: [id, title, status, severity, createdAt]
+      additionalProperties: false
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+          example: Checkout 5xx spike
+        description:
+          type: [string, "null"]
+        status:
+          $ref: "#/components/schemas/IncidentStatus"
+        severity:
+          $ref: "#/components/schemas/Severity"
+        createdAt:
+          type: string
+          format: date-time
+        resolvedAt:
+          type: [string, "null"]
+          format: date-time
+
+    IncidentEvent:
+      type: object
+      description: One entry from an incident's append-only Event Log.
+      required: [timestamp, type, description]
+      additionalProperties: false
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+        type:
+          type: string
+          example: status_changed
+        description:
+          type: string
+          example: "status: open -> investigating"
+
+    SummaryPatch:
+      type: object
+      required: [summary]
+      additionalProperties: false
+      properties:
+        summary:
+          type: string
+          minLength: 1
+
+    SeverityPatch:
+      type: object
+      required: [severity, reason]
+      additionalProperties: false
+      properties:
+        severity:
+          $ref: "#/components/schemas/Severity"
+        reason:
+          type: string
+          minLength: 1
+
+    SolutionsPatch:
+      type: object
+      required: [solutions]
+      additionalProperties: false
+      properties:
+        solutions:
+          type: array
+          minItems: 1
+          items:
+            type: string
+            minLength: 1
+
+    PostmortemPatch:
+      type: object
+      required: [rootCause, timeline, actionItems]
+      additionalProperties: false
+      properties:
+        rootCause:
+          type: string
+          minLength: 1
+        timeline:
+          type: array
+          minItems: 1
+          items:
+            type: string
+        actionItems:
+          type: array
+          minItems: 1
+          items:
+            type: string
