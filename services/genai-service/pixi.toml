@@ -27,6 +27,7 @@ httpx = ">=0.28.1,<0.29"
 pydantic = ">=2,<3"
 pydantic-settings = "*"
 structlog = ">=25.5.0,<26"
+nats-py = ">=2.7,<3"
 
 [feature.test.dependencies]
 pytest = "*"

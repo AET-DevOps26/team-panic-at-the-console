@@ -10,8 +10,8 @@ DEBUG_PATH = "/api/v1/genai/_debug/generate"
 
 @pytest.fixture()
 def debug_client(monkeypatch):
-    """Rebuilds the app with GENAI_DEBUG_ENDPOINTS=true so the route is mounted."""
-    monkeypatch.setenv("GENAI_DEBUG_ENDPOINTS", "true")
+    """Rebuilds the app with DEBUG_ENDPOINTS=true so the route is mounted."""
+    monkeypatch.setenv("DEBUG_ENDPOINTS", "true")
 
     import importlib
 
@@ -25,7 +25,7 @@ def debug_client(monkeypatch):
         yield c
 
     # Restore defaults for other tests.
-    monkeypatch.delenv("GENAI_DEBUG_ENDPOINTS", raising=False)
+    monkeypatch.delenv("DEBUG_ENDPOINTS", raising=False)
     importlib.reload(config_mod)
     importlib.reload(main_mod)
 

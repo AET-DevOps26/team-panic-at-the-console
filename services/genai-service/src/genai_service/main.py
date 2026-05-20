@@ -5,7 +5,11 @@ import structlog
 from fastapi import FastAPI
 
 from genai_service.config import settings
+from genai_service.handlers import IncidentHandlers
+from genai_service.incident_client import IncidentServiceClient
+from genai_service.nats_consumer import NatsConsumer
 from genai_service.ollama_client import OllamaClient
+from genai_service.prompts import PromptBuilder
 from genai_service.routes.debug_generate import router as debug_generate_router
 from genai_service.routes.ollama_health import router as ollama_health_router
 
@@ -32,18 +36,47 @@ async def lifespan(app: FastAPI):
         settings.ollama_model,
         generate_timeout_seconds=settings.ollama_generate_timeout_seconds,
     )
+    incidents = IncidentServiceClient(
+        http,
+        settings.incident_service_url,
+        timeout_seconds=settings.incident_service_timeout_seconds,
+    )
+    handlers = IncidentHandlers(incidents, ollama, PromptBuilder())
+
+    consumer: NatsConsumer | None = None
+    if settings.nats_enabled:
+        consumer = NatsConsumer(
+            settings.nats_url,
+            handlers,
+            queue_group=settings.nats_queue_group,
+            connect_timeout_seconds=settings.nats_connect_timeout_seconds,
+        )
+        try:
+            await consumer.start()
+        except Exception as exc:
+            # Don't block /health on a broker outage; log degraded and continue.
+            logger.error("nats_consumer_start_failed", error=str(exc))
+            consumer = None
 
     app.state.http = http
     app.state.ollama_client = ollama
+    app.state.incident_client = incidents
+    app.state.handlers = handlers
+    app.state.nats_consumer = consumer
 
     logger.info(
         "genai_service_started",
         ollama_url=settings.ollama_url,
         model=settings.ollama_model,
+        nats_enabled=settings.nats_enabled,
+        nats_url=settings.nats_url if settings.nats_enabled else None,
+        incident_service_url=settings.incident_service_url,
     )
 
     yield
 
+    if consumer is not None:
+        await consumer.stop()
     await http.aclose()
     logger.info("genai_service_stopped")
 
