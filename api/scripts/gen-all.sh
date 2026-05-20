@@ -32,4 +32,23 @@ mkdir -p "$REPO_ROOT/services/frontend/src/api"
 npx --yes openapi-typescript@7.4.4 "$SPEC" \
   -o "$REPO_ROOT/services/frontend/src/api/schema.d.ts"
 
+echo "==> Formatting generated files via pre-commit hooks"
+GEN_PATHS=(
+  "$REPO_ROOT/services/generated"
+  "$REPO_ROOT/services/genai-service/client"
+  "$REPO_ROOT/services/frontend/src/api"
+)
+mapfile -t GEN_FILES < <(
+  find "${GEN_PATHS[@]}" \
+    \( -type d \( -name target -o -name .ruff_cache -o -name __pycache__ -o -name node_modules \) -prune \) \
+    -o -type f ! -name '*.class' -print 2>/dev/null
+)
+if [ ${#GEN_FILES[@]} -gt 0 ]; then
+  printf '%s\0' "${GEN_FILES[@]}" | \
+    pixi run lefthook run pre-commit \
+      --files-from-stdin \
+      --no-stage-fixed \
+      --no-fail-on-changes || true
+fi
+
 echo "==> Done. Never edit generated files by hand."
