@@ -78,7 +78,7 @@ OLLAMA_INTEGRATION_MODEL=qwen2.5:3b \
   pixi run test-integration
 ```
 
-In CI they run nightly (and on demand) via `.github/workflows/ollama-integration.yml`. Regular PR CI skips them — they're slow (~10–30 s per call on CPU) and the smaller test model occasionally produces JSON that fails strict validation.
+In CI they run nightly (and on demand) via `.github/workflows/ollama-integration.yml`. Regular PR CI skips them — they're slow (~10–30 s per call on CPU) and the smaller test model occasionally produces JSON that fails strict validation. `test-integration` retries each failing test up to five times (`pytest-rerunfailures`) to absorb that baseline flakiness; unit `test` stays retry-free.
 
 ## Logging
 

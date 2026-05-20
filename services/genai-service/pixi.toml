@@ -33,13 +33,15 @@ nats-py = ">=2.7,<3"
 pytest = "*"
 pytest-asyncio = "*"
 pytest-cov = "*"
+pytest-rerunfailures = "*"
 mypy = "*"
 
 [feature.test.tasks]
 test = "pytest -q"
 test-cov = "pytest --cov=genai_service --cov-report=term-missing"
 # Hits a real Ollama; set OLLAMA_INTEGRATION_URL (and optionally OLLAMA_INTEGRATION_MODEL).
-test-integration = "pytest -m integration -v"
+# Reruns absorb the LLM-flakiness baseline (occasional schema-violating JSON); unit `test` stays retry-free.
+test-integration = "pytest -m integration -v --reruns 5 --reruns-delay 3"
 typecheck = "mypy src/genai_service"
 
 [feature.lint.dependencies]
