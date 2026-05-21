@@ -105,41 +105,46 @@ jobs:
 
       - name: Wait for long-running services to be healthy
         id: wait
+        env:
+          WAIT_TIMEOUT_SECONDS: "600"
+          REQUIRED_SERVICES: "postgres nats ollama gateway incident-service event-service rule-engine user-service notification-service webhook-service genai-service"
         run: |
           set -euo pipefail
-          # Long-running services only; ollama-init is excluded since it already
-          # completed in the previous step.
-          docker compose \
-            -p "${COMPOSE_PROJECT}" \
-            --project-directory . \
-            --env-file "${COMPOSE_ENV_FILE}" \
-            -f "${COMPOSE_FILE}" \
-            wait --timeout 600 \
-            postgres nats ollama gateway incident-service event-service \
-            rule-engine user-service notification-service webhook-service \
-            genai-service || true
-          # `docker compose wait` exits when a container *stops*, not when it
-          # becomes healthy. So we follow up with an explicit health-state check.
-          echo "::group::container status"
+          # ollama-init excluded - it's a one-shot container, already completed
+          # in the previous step. Poll until every required service is
+          # state=running and health=(healthy|none).
+          deadline=$(( $(date +%s) + WAIT_TIMEOUT_SECONDS ))
+          attempt=0
+          while true; do
+            attempt=$(( attempt + 1 ))
+            pending=""
+            for svc in ${REQUIRED_SERVICES}; do
+              cid="${COMPOSE_PROJECT}-${svc}-1"
+              state=$(docker inspect -f '{{.State.Status}}' "${cid}" 2>/dev/null || echo "missing")
+              health=$(docker inspect -f '{{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}' "${cid}" 2>/dev/null || echo "missing")
+              if [ "${state}" != "running" ]; then
+                pending="${pending} ${svc}(state=${state})"
+              elif [ "${health}" != "healthy" ] && [ "${health}" != "none" ]; then
+                pending="${pending} ${svc}(health=${health})"
+              fi
+            done
+            if [ -z "${pending}" ]; then
+              echo "All required services are healthy after ${attempt} polls."
+              break
+            fi
+            if [ "$(date +%s)" -gt "${deadline}" ]; then
+              echo "::error title=Healthcheck timeout::Services not healthy within ${WAIT_TIMEOUT_SECONDS}s:${pending}"
+              docker compose -p "${COMPOSE_PROJECT}" --project-directory . -f "${COMPOSE_FILE}" ps
+              exit 1
+            fi
+            if [ $(( attempt % 10 )) -eq 1 ]; then
+              echo "  poll ${attempt}: still pending:${pending}"
+            fi
+            sleep 3
+          done
+          echo "::group::final container status"
           docker compose -p "${COMPOSE_PROJECT}" --project-directory . -f "${COMPOSE_FILE}" ps
           echo "::endgroup::"
-          unhealthy=0
-          for svc in postgres nats ollama gateway incident-service event-service \
-                     rule-engine user-service notification-service webhook-service \
-                     genai-service; do
-            cid="${COMPOSE_PROJECT}-${svc}-1"
-            state=$(docker inspect -f '{{.State.Status}}' "${cid}" 2>/dev/null || echo "missing")
-            health=$(docker inspect -f '{{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}' "${cid}" 2>/dev/null || echo "missing")
-            echo "  ${svc}: state=${state} health=${health}"
-            if [ "${state}" != "running" ]; then
-              echo "::error title=Service not running::${svc} state=${state}"
-              unhealthy=1
-            elif [ "${health}" != "healthy" ] && [ "${health}" != "none" ]; then
-              echo "::error title=Service unhealthy::${svc} health=${health}"
-              unhealthy=1
-            fi
-          done
-          exit "${unhealthy}"
 
       - name: Save Ollama model cache
         if: success() && steps.ollama-cache.outputs.cache-hit != 'true'
