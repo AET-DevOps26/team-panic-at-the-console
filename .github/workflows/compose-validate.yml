@@ -86,12 +86,13 @@ jobs:
         id: boot
         run: |
           set -euo pipefail
+          read -ra services <<< "${SMOKE_SERVICES}"
           docker compose \
             -p "${COMPOSE_PROJECT}" \
             --project-directory . \
             --env-file "${COMPOSE_ENV_FILE}" \
             -f "${COMPOSE_FILE}" \
-            up -d --build ${SMOKE_SERVICES}
+            up -d --build "${services[@]}"
 
       - name: Wait for ollama-init to complete model pull
         id: ollama-init
@@ -133,10 +134,12 @@ jobs:
       - name: Dump container status and logs on failure
         if: failure() && (steps.boot.outcome == 'failure' || steps.ollama-init.outcome == 'failure' || steps.wait.outcome == 'failure')
         run: |
+          set -euo pipefail
+          read -ra services <<< "${SMOKE_SERVICES}"
           echo "::group::docker compose ps"
           docker compose -p "${COMPOSE_PROJECT}" --project-directory . -f "${COMPOSE_FILE}" ps
           echo "::endgroup::"
-          for svc in ${SMOKE_SERVICES}; do
+          for svc in "${services[@]}"; do
             echo "::group::logs - ${svc}"
             docker compose -p "${COMPOSE_PROJECT}" --project-directory . -f "${COMPOSE_FILE}" logs --tail=200 "${svc}" || true
             echo "::endgroup::"
