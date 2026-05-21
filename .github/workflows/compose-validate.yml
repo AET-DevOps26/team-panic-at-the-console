@@ -105,12 +105,14 @@ jobs:
           # ollama-init exits 0 once the model is pulled; --wait can't represent
           # that, so we use docker wait directly. Resolve the container id via
           # compose so we don't depend on the `<project>-<service>-1` name.
+          # -a is required because ollama-init may have already exited by now
+          # (the model pulls fast from Ollama's Azure-adjacent CDN).
           cid=$(docker compose \
             -p "${COMPOSE_PROJECT}" \
             --project-directory . \
             --env-file "${COMPOSE_ENV_FILE}" \
             -f "${COMPOSE_FILE}" \
-            ps -q ollama-init)
+            ps -aq ollama-init)
           if [ -z "${cid}" ]; then
             echo "::error::ollama-init container not found"
             exit 1
