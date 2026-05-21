@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - "infra/compose/**"
+      - "infra/postgres/**"
       - "services/**"
       - "api/openapi.yaml"
       - ".env.example"
@@ -15,6 +16,7 @@ on:
       - main
     paths:
       - "infra/compose/**"
+      - "infra/postgres/**"
       - "services/**"
       - "api/openapi.yaml"
       - ".env.example"
@@ -47,6 +49,8 @@ jobs:
   compose-smoke:
     name: Smoke-boot full stack
     runs-on: ubuntu-latest
+    # Gate the expensive boot/build on config validation passing first.
+    needs: compose-config
     # Frontend and swagger-ui are excluded - static assets, no runtime wiring to test.
     # Ollama pulls a multi-GB model on first boot; we cache the volume across runs.
     env:
@@ -99,9 +103,20 @@ jobs:
         run: |
           set -euo pipefail
           # ollama-init exits 0 once the model is pulled; --wait can't represent
-          # that, so we use docker wait directly.
-          exit_code=$(docker wait "${COMPOSE_PROJECT}-ollama-init-1")
-          echo "ollama-init exited with code ${exit_code}"
+          # that, so we use docker wait directly. Resolve the container id via
+          # compose so we don't depend on the `<project>-<service>-1` name.
+          cid=$(docker compose \
+            -p "${COMPOSE_PROJECT}" \
+            --project-directory . \
+            --env-file "${COMPOSE_ENV_FILE}" \
+            -f "${COMPOSE_FILE}" \
+            ps -q ollama-init)
+          if [ -z "${cid}" ]; then
+            echo "::error::ollama-init container not found"
+            exit 1
+          fi
+          exit_code=$(docker wait "${cid}")
+          echo "ollama-init (${cid}) exited with code ${exit_code}"
           test "${exit_code}" = "0"
 
       - name: Wait for long-running services to be healthy
