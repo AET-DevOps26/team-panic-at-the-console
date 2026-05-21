@@ -29,8 +29,8 @@ public class NatsConfiguration {
             log.info("Successfully connected to NATS");
             return connection;
         } catch (Exception e) {
-            log.error("Failed to connect to NATS at {}. Events will not be published.", natsServer, e);
-            throw new RuntimeException("Failed to connect to NATS", e);
+            log.error("Failed to connect to NATS at {}. Service startup will be aborted.", natsServer, e);
+            throw new RuntimeException("Failed to connect to NATS; service startup aborted", e);
         }
     }
 
