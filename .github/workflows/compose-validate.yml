@@ -143,10 +143,13 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p /tmp/ollama-cache
+          # chmod a+rX inside the container so the host runner can read the
+          # files when actions/cache tars them up. Ollama's id_ed25519 lands
+          # 0600/root which otherwise blocks the cache save.
           docker run --rm \
             -v "${OLLAMA_VOLUME}":/src:ro \
             -v /tmp/ollama-cache:/dest \
-            alpine sh -c "cp -a /src/. /dest/"
+            alpine sh -c "cp -a /src/. /dest/ && chmod -R a+rX /dest/"
 
       - name: Dump container status and logs on failure
         if: failure() && (steps.boot.outcome == 'failure' || steps.ollama-init.outcome == 'failure' || steps.wait.outcome == 'failure')
