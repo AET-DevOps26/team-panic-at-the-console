@@ -3,7 +3,9 @@ name: Compose Validate
 on:
   pull_request:
     paths:
-      - "infra/compose/docker-compose.yml"
+      - "infra/compose/**"
+      - "services/**"
+      - "api/openapi.yaml"
       - ".env.example"
       - "pixi.toml"
       - ".github/workflows/compose-validate.yml"
@@ -12,7 +14,9 @@ on:
     branches:
       - main
     paths:
-      - "infra/compose/docker-compose.yml"
+      - "infra/compose/**"
+      - "services/**"
+      - "api/openapi.yaml"
       - ".env.example"
       - "pixi.toml"
       - ".github/workflows/compose-validate.yml"
@@ -39,3 +43,51 @@ jobs:
 
       - name: Validate compose files via Pixi task
         run: pixi run compose-validate
+
+  compose-smoke:
+    name: Smoke-boot backend stack
+    runs-on: ubuntu-latest
+    # Ollama + genai are excluded - they pull a multi-GB model at startup.
+    # Frontend and swagger-ui are static and not interesting for runtime wiring.
+    env:
+      SMOKE_SERVICES: "postgres nats gateway incident-service event-service rule-engine user-service notification-service webhook-service"
+      COMPOSE_FILE: "infra/compose/docker-compose.yml"
+      COMPOSE_ENV_FILE: ".env.example"
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd # v4.0.0
+
+      - name: Boot stack and wait for services
+        id: boot
+        run: |
+          set -euo pipefail
+          docker compose \
+            --project-directory . \
+            --env-file "${COMPOSE_ENV_FILE}" \
+            -f "${COMPOSE_FILE}" \
+            up -d --build --wait --wait-timeout 180 ${SMOKE_SERVICES}
+
+      - name: Dump container status and logs on failure
+        if: failure() && steps.boot.outcome == 'failure'
+        run: |
+          echo "::group::docker compose ps"
+          docker compose --project-directory . -f "${COMPOSE_FILE}" ps
+          echo "::endgroup::"
+          for svc in ${SMOKE_SERVICES}; do
+            echo "::group::logs - ${svc}"
+            docker compose --project-directory . -f "${COMPOSE_FILE}" logs --tail=200 "${svc}" || true
+            echo "::endgroup::"
+          done
+
+      - name: Tear down stack
+        if: always()
+        run: |
+          docker compose \
+            --project-directory . \
+            -f "${COMPOSE_FILE}" \
+            down --remove-orphans --volumes
