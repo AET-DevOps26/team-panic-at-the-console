@@ -1,18 +1,22 @@
 package com.panicattheconsole.incidentservice.incident;
 
+import java.time.Instant;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.UUID;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.panicattheconsole.incidentservice.nats.NatsEventPublisher;
+import com.panicattheconsole.incidentservice.nats.IncidentNatsEvent;
 
 /**
  * Service layer for incident operations.
- * Handles persistence, state validation, and NATS event publishing.
+ * Handles persistence, state validation, and deferred NATS event publishing.
  */
 @Service
 @Transactional
@@ -22,14 +26,25 @@ public class IncidentService {
 
     private final IncidentRepository incidentRepository;
     private final CommentRepository commentRepository;
-    private final NatsEventPublisher natsEventPublisher;
+    private final ApplicationEventPublisher applicationEventPublisher;
 
     public IncidentService(IncidentRepository incidentRepository,
                           CommentRepository commentRepository,
-                          NatsEventPublisher natsEventPublisher) {
+                          ApplicationEventPublisher applicationEventPublisher) {
         this.incidentRepository = incidentRepository;
         this.commentRepository = commentRepository;
-        this.natsEventPublisher = natsEventPublisher;
+        this.applicationEventPublisher = applicationEventPublisher;
+    }
+
+    private Map<String, Object> createBaseEvent(UUID incidentId) {
+        Map<String, Object> event = new HashMap<>();
+        event.put("incidentId", incidentId.toString());
+        event.put("timestamp", Instant.now().toString());
+        return event;
+    }
+
+    private void publishAfterCommit(String subject, Map<String, Object> payload) {
+        applicationEventPublisher.publishEvent(new IncidentNatsEvent(subject, payload));
     }
 
     /**
@@ -43,7 +58,7 @@ public class IncidentService {
         incident.setSourceId(sourceId);
 
         Incident saved = incidentRepository.save(incident);
-        natsEventPublisher.publishIncidentCreated(saved.getId());
+        publishAfterCommit("incident.created", createBaseEvent(saved.getId()));
 
         return saved;
     }
@@ -65,6 +80,11 @@ public class IncidentService {
         Incident incident = getIncident(incidentId);
         IncidentStatus oldStatus = incident.getStatus();
 
+        if (!oldStatus.canTransitionTo(newStatus)) {
+            throw new IllegalStateException(
+                    "Invalid status transition: " + oldStatus + " -> " + newStatus);
+        }
+
         incident.setStatus(newStatus);
 
         if (newStatus == IncidentStatus.RESOLVED) {
@@ -72,7 +92,11 @@ public class IncidentService {
         }
 
         Incident saved = incidentRepository.save(incident);
-        natsEventPublisher.publishIncidentUpdated(saved.getId());
+        publishAfterCommit("incident.updated", createBaseEvent(saved.getId()));
+
+        if (newStatus == IncidentStatus.RESOLVED) {
+            publishAfterCommit("incident.resolved", createBaseEvent(saved.getId()));
+        }
 
         log.info("Updated incident status [id={}, old={}, new={}]", incidentId, oldStatus, newStatus);
         return saved;
@@ -89,7 +113,9 @@ public class IncidentService {
         incident.setSeverity(newSeverity);
         Incident saved = incidentRepository.save(incident);
 
-        natsEventPublisher.publishIncidentSeverityEscalated(saved.getId(), newSeverity.toString());
+        Map<String, Object> event = createBaseEvent(saved.getId());
+        event.put("newSeverity", newSeverity.toString());
+        publishAfterCommit("incident.severity.escalated", event);
 
         log.info("Escalated severity [id={}, old={}, new={}]", incidentId, oldSeverity, newSeverity);
         return saved;
@@ -103,7 +129,7 @@ public class IncidentService {
         Incident incident = getIncident(incidentId);
         incident.setSummary(summary);
         incidentRepository.save(incident);
-        natsEventPublisher.publishIncidentUpdated(incidentId);
+        publishAfterCommit("incident.updated", createBaseEvent(incidentId));
         log.info("Updated incident summary [id={}]", incidentId);
     }
 
@@ -115,7 +141,7 @@ public class IncidentService {
         Incident incident = getIncident(incidentId);
         incident.setSeveritySuggestion(suggestion);
         incidentRepository.save(incident);
-        natsEventPublisher.publishIncidentUpdated(incidentId);
+        publishAfterCommit("incident.updated", createBaseEvent(incidentId));
         log.info("Updated incident severity suggestion [id={}]", incidentId);
     }
 
@@ -127,7 +153,7 @@ public class IncidentService {
         Incident incident = getIncident(incidentId);
         incident.setSolutions(solutions);
         incidentRepository.save(incident);
-        natsEventPublisher.publishIncidentUpdated(incidentId);
+        publishAfterCommit("incident.updated", createBaseEvent(incidentId));
         log.info("Updated incident solutions [id={}]", incidentId);
     }
 
@@ -146,7 +172,7 @@ public class IncidentService {
 
         incident.setPostmortem(postmortem);
         incidentRepository.save(incident);
-        natsEventPublisher.publishIncidentUpdated(incidentId);
+        publishAfterCommit("incident.updated", createBaseEvent(incidentId));
         log.info("Updated incident postmortem [id={}]", incidentId);
     }
 
@@ -162,7 +188,9 @@ public class IncidentService {
         incident.addComment(comment);
         Comment saved = commentRepository.save(comment);
 
-        natsEventPublisher.publishIncidentCommentAdded(incidentId, commentId);
+        Map<String, Object> event = createBaseEvent(incidentId);
+        event.put("commentId", commentId.toString());
+        publishAfterCommit("incident.comment.added", event);
         log.info("Added comment to incident [id={}, commentId={}]", incidentId, commentId);
 
         return saved;
@@ -177,7 +205,9 @@ public class IncidentService {
         incident.getAssignedUsers().add(userId);
         Incident saved = incidentRepository.save(incident);
 
-        natsEventPublisher.publishIncidentAssigned(incidentId, userId);
+        Map<String, Object> event = createBaseEvent(incidentId);
+        event.put("userId", userId.toString());
+        publishAfterCommit("incident.assigned", event);
         log.info("Assigned user to incident [id={}, userId={}]", incidentId, userId);
 
         return saved;
@@ -192,15 +222,31 @@ public class IncidentService {
         // Validate incident exists
         getIncident(incidentId);
 
-        natsEventPublisher.publishIncidentRegenRequested(incidentId);
+        publishAfterCommit("incident.regen.requested", createBaseEvent(incidentId));
         log.info("Requested AI regeneration [id={}]", incidentId);
+    }
+
+    /**
+     * Trigger on-demand regeneration of a postmortem.
+     * Requires the incident to be resolved and publishes incident.regen.requested.
+     */
+    public void requestPostmortemRegeneration(UUID incidentId) {
+        Incident incident = getIncident(incidentId);
+
+        if (incident.getStatus() != IncidentStatus.RESOLVED) {
+            throw new IllegalStateException(
+                    "Cannot regenerate postmortem for non-resolved incident: " + incidentId);
+        }
+
+        publishAfterCommit("incident.regen.requested", createBaseEvent(incidentId));
+        log.info("Requested AI regeneration for postmortem [id={}]", incidentId);
     }
 
     /**
      * Validate that postmortem regeneration is allowed.
      * Throws IllegalStateException if incident is not resolved.
      */
-    public void validatePostmortermAllowed(UUID incidentId) {
+    public void validatePostmortemAllowed(UUID incidentId) {
         Incident incident = getIncident(incidentId);
         if (incident.getStatus() != IncidentStatus.RESOLVED) {
             throw new IllegalStateException(

@@ -1,6 +1,5 @@
 package com.panicattheconsole.incidentservice.genai;
 
-import java.util.NoSuchElementException;
 import java.util.UUID;
 
 import org.openapitools.api.GenaiApi;
@@ -32,53 +31,29 @@ class GenaiRegenController implements GenaiApi {
 
     @Override
     public ResponseEntity<RegenAccepted> regenerateSummary(UUID incidentId) {
-        try {
-            incidentService.requestRegeneration(incidentId);
-            return ResponseEntity.status(HttpStatus.ACCEPTED)
-                    .body(new RegenAccepted(true, RegenAccepted.TaskEnum.SUMMARY));
-        } catch (NoSuchElementException e) {
-            log.warn("Incident not found: {}", incidentId);
-            return ResponseEntity.notFound().build();
-        }
+        incidentService.requestRegeneration(incidentId);
+        return ResponseEntity.status(HttpStatus.ACCEPTED)
+                .body(new RegenAccepted(true, RegenAccepted.TaskEnum.SUMMARY));
     }
 
     @Override
     public ResponseEntity<RegenAccepted> regenerateSeverity(UUID incidentId) {
-        try {
-            incidentService.requestRegeneration(incidentId);
-            return ResponseEntity.status(HttpStatus.ACCEPTED)
-                    .body(new RegenAccepted(true, RegenAccepted.TaskEnum.SEVERITY_SUGGESTION));
-        } catch (NoSuchElementException e) {
-            log.warn("Incident not found: {}", incidentId);
-            return ResponseEntity.notFound().build();
-        }
+        incidentService.requestRegeneration(incidentId);
+        return ResponseEntity.status(HttpStatus.ACCEPTED)
+                .body(new RegenAccepted(true, RegenAccepted.TaskEnum.SEVERITY_SUGGESTION));
     }
 
     @Override
     public ResponseEntity<RegenAccepted> regenerateSolutions(UUID incidentId) {
-        try {
-            incidentService.requestRegeneration(incidentId);
-            return ResponseEntity.status(HttpStatus.ACCEPTED)
-                    .body(new RegenAccepted(true, RegenAccepted.TaskEnum.SOLUTION_SUGGESTIONS));
-        } catch (NoSuchElementException e) {
-            log.warn("Incident not found: {}", incidentId);
-            return ResponseEntity.notFound().build();
-        }
+        incidentService.requestRegeneration(incidentId);
+        return ResponseEntity.status(HttpStatus.ACCEPTED)
+                .body(new RegenAccepted(true, RegenAccepted.TaskEnum.SOLUTION_SUGGESTIONS));
     }
 
     @Override
     public ResponseEntity<RegenAccepted> regeneratePostmortem(UUID incidentId) {
-        try {
-            incidentService.validatePostmortermAllowed(incidentId);
-            incidentService.requestRegeneration(incidentId);
-            return ResponseEntity.status(HttpStatus.ACCEPTED)
-                    .body(new RegenAccepted(true, RegenAccepted.TaskEnum.POSTMORTEM));
-        } catch (NoSuchElementException e) {
-            log.warn("Incident not found: {}", incidentId);
-            return ResponseEntity.notFound().build();
-        } catch (IllegalStateException e) {
-            log.warn("Cannot regenerate postmortem for non-resolved incident: {}", incidentId);
-            return ResponseEntity.status(HttpStatus.CONFLICT).build();
-        }
+        incidentService.requestPostmortemRegeneration(incidentId);
+        return ResponseEntity.status(HttpStatus.ACCEPTED)
+                .body(new RegenAccepted(true, RegenAccepted.TaskEnum.POSTMORTEM));
     }
 }

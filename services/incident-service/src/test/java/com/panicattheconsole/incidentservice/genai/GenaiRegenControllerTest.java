@@ -7,6 +7,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.util.NoSuchElementException;
 import java.util.UUID;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -52,4 +53,26 @@ class GenaiRegenControllerTest {
                 .andExpect(status().isAccepted())
                 .andExpect(jsonPath("$.task").value("POSTMORTEM"));
     }
+
+        @Test
+        void summary_returns404_whenNotFound() throws Exception {
+        org.mockito.Mockito.doThrow(new NoSuchElementException("incident missing"))
+            .when(incidentService).requestRegeneration(java.util.UUID.fromString(INCIDENT_ID));
+
+        mvc.perform(post("/incidents/{id}/genai/summary", INCIDENT_ID))
+            .andExpect(status().isNotFound())
+            .andExpect(jsonPath("$.error").value("NOT_FOUND"))
+            .andExpect(jsonPath("$.message").value("incident missing"));
+        }
+
+        @Test
+        void postmortem_returns409_whenNotAllowed() throws Exception {
+        org.mockito.Mockito.doThrow(new IllegalStateException("not allowed"))
+            .when(incidentService).requestPostmortemRegeneration(java.util.UUID.fromString(INCIDENT_ID));
+
+        mvc.perform(post("/incidents/{id}/genai/postmortem", INCIDENT_ID))
+            .andExpect(status().isConflict())
+            .andExpect(jsonPath("$.error").value("CONFLICT"))
+            .andExpect(jsonPath("$.message").value("not allowed"));
+        }
 }

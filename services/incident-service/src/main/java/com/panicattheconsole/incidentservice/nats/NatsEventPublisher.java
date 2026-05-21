@@ -1,5 +1,6 @@
 package com.panicattheconsole.incidentservice.nats;
 
+import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
@@ -14,7 +15,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.nats.client.Connection;
 
 /**
- * Publishes incident events to NATS JetStream.
+ * Publishes incident events to NATS subjects using the core NATS connection API.
  * Events are thin by default: {incidentId, timestamp}.
  */
 @Service
@@ -85,6 +86,10 @@ public class NatsEventPublisher {
         publishEvent("incident.regen.requested", createBaseEvent(incidentId));
     }
 
+    public void publish(String subject, Map<String, Object> event) {
+        publishEvent(subject, event);
+    }
+
     private Map<String, Object> createBaseEvent(UUID incidentId) {
         Map<String, Object> event = new HashMap<>();
         event.put("incidentId", incidentId.toString());
@@ -96,7 +101,7 @@ public class NatsEventPublisher {
         try {
             String payload = objectMapper.writeValueAsString(event);
             log.info("Publishing NATS event [subject={}, payload={}]", subject, payload);
-            natsConnection.publish(subject, payload.getBytes());
+            natsConnection.publish(subject, payload.getBytes(StandardCharsets.UTF_8));
         } catch (Exception e) {
             log.error("Failed to publish NATS event [subject={}]", subject, e);
             // Log but don't throw - allow response to proceed

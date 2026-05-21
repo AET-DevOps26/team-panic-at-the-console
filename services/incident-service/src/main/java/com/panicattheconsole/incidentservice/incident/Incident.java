@@ -2,6 +2,7 @@ package com.panicattheconsole.incidentservice.incident;
 
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -88,7 +89,7 @@ public class Incident {
     private String postmortem;
 
     /**
-     * Assigned responder IDs (stored as JSON).
+     * Assigned responder IDs.
      */
     @ElementCollection
     @CollectionTable(name = "incident_assigned_users", joinColumns = @JoinColumn(name = "incident_id"))
@@ -98,7 +99,7 @@ public class Incident {
     /**
      * Immutable comments on this incident.
      */
-    @OneToMany(mappedBy = "incident", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    @OneToMany(mappedBy = "incident", cascade = {CascadeType.PERSIST, CascadeType.MERGE}, fetch = FetchType.LAZY)
     private List<Comment> comments = new ArrayList<>();
 
     // Constructors
@@ -110,8 +111,9 @@ public class Incident {
         this.status = status;
         this.severity = severity;
         this.title = title;
-        this.createdAt = Instant.now();
-        this.updatedAt = Instant.now();
+        Instant now = Instant.now();
+        this.createdAt = now;
+        this.updatedAt = now;
     }
 
     // Getters and Setters
@@ -227,11 +229,7 @@ public class Incident {
     }
 
     public List<Comment> getComments() {
-        return comments;
-    }
-
-    public void setComments(List<Comment> comments) {
-        this.comments = comments;
+        return Collections.unmodifiableList(comments);
     }
 
     public void addComment(Comment comment) {

@@ -1,5 +1,6 @@
 package com.panicattheconsole.incidentservice.incident;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -12,11 +13,14 @@ import static org.mockito.ArgumentMatchers.any;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import org.mockito.ArgumentCaptor;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 
-import com.panicattheconsole.incidentservice.nats.NatsEventPublisher;
+import com.panicattheconsole.incidentservice.nats.IncidentNatsEvent;
 
 @ExtendWith(MockitoExtension.class)
 class IncidentServiceTest {
@@ -28,7 +32,7 @@ class IncidentServiceTest {
     private CommentRepository commentRepository;
 
     @Mock
-    private NatsEventPublisher natsEventPublisher;
+    private ApplicationEventPublisher applicationEventPublisher;
 
     @InjectMocks
     private IncidentService incidentService;
@@ -48,7 +52,7 @@ class IncidentServiceTest {
 
         incidentService.requestRegeneration(incidentId);
 
-        verify(natsEventPublisher).publishIncidentRegenRequested(incidentId);
+        verify(applicationEventPublisher).publishEvent(any(IncidentNatsEvent.class));
     }
 
     @Test
@@ -59,25 +63,102 @@ class IncidentServiceTest {
                 .isInstanceOf(java.util.NoSuchElementException.class)
                 .hasMessageContaining("Incident not found");
 
-        verify(natsEventPublisher, never()).publishIncidentRegenRequested(any());
+        verify(applicationEventPublisher, never()).publishEvent(any());
     }
 
     @Test
-    void validatePostmortermAllowed_allowsResolvedIncident() {
+    void validatePostmortemAllowed_allowsResolvedIncident() {
         incident.setStatus(IncidentStatus.RESOLVED);
         when(incidentRepository.findById(incidentId)).thenReturn(Optional.of(incident));
 
-        incidentService.validatePostmortermAllowed(incidentId);
+        incidentService.validatePostmortemAllowed(incidentId);
     }
 
     @Test
-    void validatePostmortermAllowed_throwsForNonResolvedIncident() {
+    void validatePostmortemAllowed_throwsForNonResolvedIncident() {
         incident.setStatus(IncidentStatus.INVESTIGATING);
         when(incidentRepository.findById(incidentId)).thenReturn(Optional.of(incident));
 
-        assertThatThrownBy(() -> incidentService.validatePostmortermAllowed(incidentId))
+        assertThatThrownBy(() -> incidentService.validatePostmortemAllowed(incidentId))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("Cannot regenerate postmortem");
+    }
+
+    @Test
+    void requestPostmortemRegeneration_publishesEvent_whenIncidentResolved() {
+        incident.setStatus(IncidentStatus.RESOLVED);
+        when(incidentRepository.findById(incidentId)).thenReturn(Optional.of(incident));
+
+        incidentService.requestPostmortemRegeneration(incidentId);
+
+        verify(applicationEventPublisher).publishEvent(any(IncidentNatsEvent.class));
+    }
+
+    @Test
+    void requestPostmortemRegeneration_throwsForNonResolvedIncident() {
+        incident.setStatus(IncidentStatus.OPEN);
+        when(incidentRepository.findById(incidentId)).thenReturn(Optional.of(incident));
+
+        assertThatThrownBy(() -> incidentService.requestPostmortemRegeneration(incidentId))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("Cannot regenerate postmortem");
+
+        verify(applicationEventPublisher, never()).publishEvent(any());
+    }
+
+    @Test
+    void updateIncidentStatus_allowsOpenToInvestigating() {
+        incident.setStatus(IncidentStatus.OPEN);
+        when(incidentRepository.findById(incidentId)).thenReturn(Optional.of(incident));
+        when(incidentRepository.save(incident)).thenReturn(incident);
+
+        incidentService.updateIncidentStatus(incidentId, IncidentStatus.INVESTIGATING);
+
+        assertThat(incident.getStatus()).isEqualTo(IncidentStatus.INVESTIGATING);
+        verify(applicationEventPublisher).publishEvent(any(IncidentNatsEvent.class));
+    }
+
+    @Test
+    void updateIncidentStatus_allowsInvestigatingToResolved() {
+        incident.setStatus(IncidentStatus.INVESTIGATING);
+        when(incidentRepository.findById(incidentId)).thenReturn(Optional.of(incident));
+        when(incidentRepository.save(incident)).thenReturn(incident);
+
+        incidentService.updateIncidentStatus(incidentId, IncidentStatus.RESOLVED);
+
+        assertThat(incident.getStatus()).isEqualTo(IncidentStatus.RESOLVED);
+
+        ArgumentCaptor<IncidentNatsEvent> eventCaptor = ArgumentCaptor.forClass(IncidentNatsEvent.class);
+        verify(applicationEventPublisher, times(2)).publishEvent(eventCaptor.capture());
+        List<String> subjects = eventCaptor.getAllValues().stream()
+                .map(IncidentNatsEvent::getSubject)
+                .toList();
+
+        assertThat(subjects).containsExactlyInAnyOrder("incident.updated", "incident.resolved");
+    }
+
+    @Test
+    void updateIncidentStatus_rejectsResolvedToInvestigating() {
+        incident.setStatus(IncidentStatus.RESOLVED);
+        when(incidentRepository.findById(incidentId)).thenReturn(Optional.of(incident));
+
+        assertThatThrownBy(() -> incidentService.updateIncidentStatus(incidentId, IncidentStatus.INVESTIGATING))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("Invalid status transition");
+
+        verify(applicationEventPublisher, never()).publishEvent(any());
+    }
+
+    @Test
+    void updateIncidentStatus_rejectsInvestigatingToOpen() {
+        incident.setStatus(IncidentStatus.INVESTIGATING);
+        when(incidentRepository.findById(incidentId)).thenReturn(Optional.of(incident));
+
+        assertThatThrownBy(() -> incidentService.updateIncidentStatus(incidentId, IncidentStatus.OPEN))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("Invalid status transition");
+
+        verify(applicationEventPublisher, never()).publishEvent(any());
     }
 
     @Test
@@ -89,7 +170,7 @@ class IncidentServiceTest {
         incidentService.updatePostmortem(incidentId, "Final postmortem content");
 
         assertThat(incident.getPostmortem()).isEqualTo("Final postmortem content");
-        verify(natsEventPublisher).publishIncidentUpdated(incidentId);
+        verify(applicationEventPublisher).publishEvent(any(IncidentNatsEvent.class));
     }
 
     @Test
@@ -101,6 +182,6 @@ class IncidentServiceTest {
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("Cannot set postmortem for non-resolved incident");
 
-        verify(natsEventPublisher, never()).publishIncidentUpdated(any());
+        verify(applicationEventPublisher, never()).publishEvent(any());
     }
 }
