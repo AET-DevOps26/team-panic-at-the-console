@@ -16,7 +16,7 @@ public class NatsConfiguration {
 
     private static final Logger log = LoggerFactory.getLogger(NatsConfiguration.class);
 
-    @Value("${nats.server:nats://localhost:4222}")
+    @Value("${nats.url:nats://localhost:4222}")
     private String natsServer;
 
     @Bean
