@@ -105,46 +105,20 @@ jobs:
 
       - name: Wait for long-running services to be healthy
         id: wait
-        env:
-          WAIT_TIMEOUT_SECONDS: "600"
-          REQUIRED_SERVICES: "postgres nats ollama gateway incident-service event-service rule-engine user-service notification-service webhook-service genai-service"
         run: |
           set -euo pipefail
-          # ollama-init excluded - it's a one-shot container, already completed
-          # in the previous step. Poll until every required service is
-          # state=running and health=(healthy|none).
-          deadline=$(( $(date +%s) + WAIT_TIMEOUT_SECONDS ))
-          attempt=0
-          while true; do
-            attempt=$(( attempt + 1 ))
-            pending=""
-            for svc in ${REQUIRED_SERVICES}; do
-              cid="${COMPOSE_PROJECT}-${svc}-1"
-              state=$(docker inspect -f '{{.State.Status}}' "${cid}" 2>/dev/null || echo "missing")
-              health=$(docker inspect -f '{{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}' "${cid}" 2>/dev/null || echo "missing")
-              if [ "${state}" != "running" ]; then
-                pending="${pending} ${svc}(state=${state})"
-              elif [ "${health}" != "healthy" ] && [ "${health}" != "none" ]; then
-                pending="${pending} ${svc}(health=${health})"
-              fi
-            done
-            if [ -z "${pending}" ]; then
-              echo "All required services are healthy after ${attempt} polls."
-              break
-            fi
-            if [ "$(date +%s)" -gt "${deadline}" ]; then
-              echo "::error title=Healthcheck timeout::Services not healthy within ${WAIT_TIMEOUT_SECONDS}s:${pending}"
-              docker compose -p "${COMPOSE_PROJECT}" --project-directory . -f "${COMPOSE_FILE}" ps
-              exit 1
-            fi
-            if [ $(( attempt % 10 )) -eq 1 ]; then
-              echo "  poll ${attempt}: still pending:${pending}"
-            fi
-            sleep 3
-          done
-          echo "::group::final container status"
-          docker compose -p "${COMPOSE_PROJECT}" --project-directory . -f "${COMPOSE_FILE}" ps
-          echo "::endgroup::"
+          # ollama-init is excluded - it's a one-shot container that exited 0
+          # in the previous step, and --wait would treat that as a failure.
+          # --no-recreate keeps the existing containers in place.
+          docker compose \
+            -p "${COMPOSE_PROJECT}" \
+            --project-directory . \
+            --env-file "${COMPOSE_ENV_FILE}" \
+            -f "${COMPOSE_FILE}" \
+            up -d --no-recreate --wait --wait-timeout 600 \
+            postgres nats ollama gateway incident-service event-service \
+            rule-engine user-service notification-service webhook-service \
+            genai-service
 
       - name: Save Ollama model cache
         if: success() && steps.ollama-cache.outputs.cache-hit != 'true'
