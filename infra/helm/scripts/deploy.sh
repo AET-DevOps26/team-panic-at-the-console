@@ -12,7 +12,6 @@ set -euo pipefail
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
 CHART_DIR="$REPO_ROOT/infra/helm/devops-platform"
 ENC_VALUES="$REPO_ROOT/infra/helm/secrets/values.prod.enc.yaml"
-DEC_VALUES="$REPO_ROOT/infra/helm/secrets/values.prod.dec.yaml"
 
 require() {
   local name="$1"
@@ -39,13 +38,15 @@ kubectl version --client
 sops --version | head -n1
 
 WORK_DIR="$(mktemp -d)"
-trap 'rm -rf "$WORK_DIR" "$DEC_VALUES"' EXIT
+DEC_VALUES="$WORK_DIR/values.prod.dec.yaml"
+trap 'rm -rf "$WORK_DIR"' EXIT
 
 echo ">> configure kubeconfig"
 KUBECONFIG="$WORK_DIR/kubeconfig"
 export KUBECONFIG
-printf '%s' "$KUBECONFIG_B64" | base64 --decode > "$KUBECONFIG"
+printf '%s' "$KUBECONFIG_B64" | base64 -d > "$KUBECONFIG"
 chmod 600 "$KUBECONFIG"
+unset KUBECONFIG_B64
 
 echo ">> decrypt SOPS values"
 SOPS_AGE_KEY_FILE="$WORK_DIR/age.key"
