@@ -38,21 +38,22 @@ helm version --short
 kubectl version --client
 sops --version | head -n1
 
+WORK_DIR="$(mktemp -d)"
+trap 'rm -rf "$WORK_DIR" "$DEC_VALUES"' EXIT
+
 echo ">> configure kubeconfig"
-mkdir -p "$HOME/.kube"
-if [ -f "$HOME/.kube/config" ] && [ ! -f "$HOME/.kube/config.helm-deploy.bak" ]; then
-  cp "$HOME/.kube/config" "$HOME/.kube/config.helm-deploy.bak"
-  echo "   backed up existing kubeconfig to ~/.kube/config.helm-deploy.bak"
-fi
-echo "$KUBECONFIG_B64" | base64 --decode > "$HOME/.kube/config"
-chmod 600 "$HOME/.kube/config"
+KUBECONFIG="$WORK_DIR/kubeconfig"
+export KUBECONFIG
+printf '%s' "$KUBECONFIG_B64" | base64 --decode > "$KUBECONFIG"
+chmod 600 "$KUBECONFIG"
 
 echo ">> decrypt SOPS values"
-mkdir -p "$HOME/.config/sops/age"
-printf '%s' "$SOPS_AGE_KEY" > "$HOME/.config/sops/age/keys.txt"
-chmod 600 "$HOME/.config/sops/age/keys.txt"
+SOPS_AGE_KEY_FILE="$WORK_DIR/age.key"
+export SOPS_AGE_KEY_FILE
+printf '%s' "$SOPS_AGE_KEY" > "$SOPS_AGE_KEY_FILE"
+chmod 600 "$SOPS_AGE_KEY_FILE"
+unset SOPS_AGE_KEY
 sops --decrypt "$ENC_VALUES" > "$DEC_VALUES"
-trap 'rm -f "$DEC_VALUES"' EXIT
 
 echo ">> helm upgrade --install (namespace=$DEPLOY_NAMESPACE tag=$TAG)"
 helm upgrade --install devops-platform "$CHART_DIR" \
