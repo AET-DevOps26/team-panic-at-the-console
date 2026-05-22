@@ -19,6 +19,10 @@ class _CamelModel(BaseModel):
 class Event(_CamelModel):
     """One entry from an incident's Event Log (see CONTEXT.md). Chronological, immutable."""
 
+    model_config = ConfigDict(
+        extra="ignore", alias_generator=to_camel, populate_by_name=True, frozen=True
+    )
+
     timestamp: datetime
     type: str
     description: str

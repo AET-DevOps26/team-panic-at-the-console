@@ -76,6 +76,31 @@ def test_build_renders_events_chronologically():
     assert a < b < c
 
 
+def test_build_sorts_unordered_events_by_timestamp():
+    events = [
+        _event(10, desc="EVT-charlie"),
+        _event(1, desc="EVT-alpha"),
+        _event(5, desc="EVT-bravo"),
+    ]
+
+    prompt = PromptBuilder().build(_incident(), events, PromptTask.SUMMARY)
+
+    a, b, c = (prompt.user.index(s) for s in ("EVT-alpha", "EVT-bravo", "EVT-charlie"))
+    assert a < b < c
+
+
+def test_build_truncates_keeps_newest_when_input_unsorted():
+    events = [_event(i, desc=f"evt-{i:02d}") for i in (3, 10, 1, 7, 5)]
+
+    prompt = PromptBuilder(max_events=2).build(_incident(), events, PromptTask.SUMMARY)
+
+    assert "evt-07" in prompt.user
+    assert "evt-10" in prompt.user
+    assert "evt-01" not in prompt.user
+    assert "evt-03" not in prompt.user
+    assert "evt-05" not in prompt.user
+
+
 def test_build_truncates_to_last_n_events_with_note():
     events = [_event(i, desc=f"evt-{i:02d}") for i in range(1, 11)]
 

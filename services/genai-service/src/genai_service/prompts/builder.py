@@ -83,7 +83,8 @@ class PromptBuilder:
         )
 
     def _format_context(self, incident: Incident, events: Sequence[Event]) -> str:
-        kept = self._truncate(events)
+        ordered = sorted(events, key=lambda e: e.timestamp)
+        kept = self._truncate(ordered)
 
         header = [
             f"Incident {incident.id}",
