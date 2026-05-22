@@ -70,6 +70,6 @@ helm upgrade --install devops-platform "$CHART_DIR" \
   --create-namespace \
   --wait \
   --timeout 10m \
-  --atomic \
+  --rollback-on-failure \
   --set global.image.tag="$TAG" \
   --values "$DEC_VALUES"
