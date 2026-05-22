@@ -19,7 +19,7 @@ import jakarta.annotation.Generated;
  * SummaryPatch
  */
 
-@Generated(value = "org.openapitools.codegen.languages.SpringCodegen", date = "2026-05-20T11:29:59.407720+02:00[Europe/Berlin]", comments = "Generator version: 7.14.0")
+@Generated(value = "org.openapitools.codegen.languages.SpringCodegen", comments = "Generator version: 7.14.0")
 public class SummaryPatch {
 
   private String summary;
