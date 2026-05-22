@@ -95,10 +95,52 @@ jobs:
         env:
           GITHUB_EVENT_RELEASE_TAG_NAME: ${{ github.event.release.tag_name }}
 
-      - name: Deploy placeholder
+      - name: Install Helm, kubectl, and sops
         run: |
-          echo "Release tag: ${STEPS_TAG_OUTPUTS_VALUE}"
-          echo "All service images were pushed to GHCR."
-          echo "Wire this step to your runtime target (Kubernetes/VM/PaaS)."
-        env:
-          STEPS_TAG_OUTPUTS_VALUE: ${{ steps.tag.outputs.value }}
+          set -euo pipefail
+          curl -fsSL https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+          curl -fsSL https://dl.k8s.io/release/v1.30.2/bin/linux/amd64/kubectl -o kubectl
+          sudo install -m 0755 kubectl /usr/local/bin/kubectl
+          curl -fsSL https://github.com/getsops/sops/releases/download/v3.9.0/sops-v3.9.0.linux.amd64 -o sops
+          sudo install -m 0755 sops /usr/local/bin/sops
+
+      - name: Configure kubeconfig
+        run: |
+          set -euo pipefail
+          if [ -z "${{ secrets.KUBECONFIG_B64 }}" ]; then
+            echo "::error title=Missing secret::Set KUBECONFIG_B64 repo/environment secret first."
+            exit 1
+          fi
+          mkdir -p "$HOME/.kube"
+          echo "${{ secrets.KUBECONFIG_B64 }}" | base64 --decode > "$HOME/.kube/config"
+
+      - name: Decrypt production values
+        run: |
+          set -euo pipefail
+          if [ -z "${{ secrets.SOPS_AGE_KEY }}" ]; then
+            echo "::error title=Missing secret::Set SOPS_AGE_KEY repo/environment secret first."
+            exit 1
+          fi
+          mkdir -p "$HOME/.config/sops/age"
+          printf '%s' "${{ secrets.SOPS_AGE_KEY }}" > "$HOME/.config/sops/age/keys.txt"
+          sops --decrypt infra/helm/secrets/values.prod.enc.yaml > infra/helm/secrets/values.prod.dec.yaml
+
+      - name: Resolve target namespace
+        id: ns
+        run: |
+          set -euo pipefail
+          ns="${{ vars.DEPLOY_NAMESPACE }}"
+          if [ -z "$ns" ]; then
+            echo "::error title=Missing variable::Set DEPLOY_NAMESPACE repo/environment variable first."
+            exit 1
+          fi
+          echo "value=$ns" >> "$GITHUB_OUTPUT"
+
+      - name: Deploy chart
+        run: |
+          set -euo pipefail
+          helm upgrade --install devops-platform infra/helm/devops-platform \
+            --namespace "${{ steps.ns.outputs.value }}" \
+            --create-namespace \
+            --set global.image.tag="${{ steps.tag.outputs.value }}" \
+            --values infra/helm/secrets/values.prod.dec.yaml
