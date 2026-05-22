@@ -188,8 +188,8 @@ services:
   genai-service:
     image: ghcr.io/aet-devops26/team-panic-at-the-console/genai-service:${IMAGE_TAG:-main}
     build:
-      context: ./services/genai-service
-      dockerfile: Dockerfile
+      context: ./services
+      dockerfile: ./genai-service/Dockerfile
     environment:
       NATS_URL: ${NATS_URL:-nats://nats:4222}
       OLLAMA_URL: http://ollama:11434

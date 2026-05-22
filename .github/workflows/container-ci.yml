@@ -63,6 +63,9 @@ jobs:
           - service: incident-service
             build_context: ./services
             build_dockerfile: ./services/incident-service/Dockerfile
+          - service: genai-service
+            build_context: ./services
+            build_dockerfile: ./services/genai-service/Dockerfile
 
     steps:
       - name: Checkout branch
