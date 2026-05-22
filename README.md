@@ -98,12 +98,31 @@ Create a Git tag like `v0.1.0` (or publish a GitHub Release for that tag) to tri
   - `KUBECONFIG_B64` (base64 encoded kubeconfig)
   - `SOPS_AGE_KEY` (AGE private key content)
 
-Use deploy tooling from Pixi:
+Deploy / uninstall the chart (requires `KUBECONFIG_B64`, `SOPS_AGE_KEY`, `DEPLOY_NAMESPACE`, `TAG`):
 
 ```bash
-pixi run deploy-tools-version
+# Deploy current production values to the configured namespace
+KUBECONFIG_B64=$(base64 < ~/.kube/config) \
+SOPS_AGE_KEY="$(cat ~/.config/sops/age/keys.txt)" \
+DEPLOY_NAMESPACE=team-panic-at-the-console-devops26 \
+TAG=v0.1.0 \
+pixi run -e deploy helm-deploy
+
+# Uninstall the release (kubeconfig + namespace only)
+KUBECONFIG_B64=$(base64 < ~/.kube/config) \
+DEPLOY_NAMESPACE=team-panic-at-the-console-devops26 \
+pixi run -e deploy helm-uninstall
+```
+
+Override the encrypted values file via `VALUES_FILE=...` if needed.
+
+Launch `k9s` against the cluster pointed to by your active kubeconfig (`$KUBECONFIG` or `~/.kube/config`). Useful for inspecting pods, logs, and events in the deploy namespace without leaving the terminal:
+
+```bash
 pixi run -e deploy k9s
 ```
+
+Make sure your kubeconfig context targets the intended cluster first (`kubectl config current-context`).
 
 ## Testing
 
