@@ -3,7 +3,10 @@ name: Compose Validate
 on:
   pull_request:
     paths:
-      - "infra/compose/docker-compose.yml"
+      - "infra/compose/**"
+      - "infra/postgres/**"
+      - "services/**"
+      - "api/openapi.yaml"
       - ".env.example"
       - "pixi.toml"
       - ".github/workflows/compose-validate.yml"
@@ -12,7 +15,10 @@ on:
     branches:
       - main
     paths:
-      - "infra/compose/docker-compose.yml"
+      - "infra/compose/**"
+      - "infra/postgres/**"
+      - "services/**"
+      - "api/openapi.yaml"
       - ".env.example"
       - "pixi.toml"
       - ".github/workflows/compose-validate.yml"
@@ -39,3 +45,131 @@ jobs:
 
       - name: Validate compose files via Pixi task
         run: pixi run compose-validate
+
+  compose-smoke:
+    name: Smoke-boot full stack
+    runs-on: ubuntu-latest
+    # Gate the expensive boot/build on config validation passing first.
+    needs: compose-config
+    # Frontend and swagger-ui are excluded - static assets, no runtime wiring to test.
+    # Ollama pulls a multi-GB model on first boot; we cache the volume across runs.
+    env:
+      SMOKE_SERVICES: "postgres nats ollama ollama-init gateway incident-service event-service rule-engine user-service notification-service webhook-service genai-service"
+      COMPOSE_PROJECT: "smoke"
+      COMPOSE_FILE: "infra/compose/docker-compose.yml"
+      COMPOSE_ENV_FILE: ".env.example"
+      OLLAMA_VOLUME: "smoke_ollama_data"
+      OLLAMA_MODEL: "qwen2.5:3b"
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd # v4.0.0
+
+      - name: Restore Ollama model cache
+        id: ollama-cache
+        uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
+        with:
+          path: /tmp/ollama-cache
+          key: ollama-models-${{ env.OLLAMA_MODEL }}-v1
+
+      - name: Seed Ollama volume from cache
+        if: steps.ollama-cache.outputs.cache-hit == 'true'
+        run: |
+          set -euo pipefail
+          docker volume create "${OLLAMA_VOLUME}"
+          docker run --rm \
+            -v "${OLLAMA_VOLUME}":/dest \
+            -v /tmp/ollama-cache:/src:ro \
+            alpine sh -c "cp -a /src/. /dest/"
+
+      - name: Boot stack
+        id: boot
+        run: |
+          set -euo pipefail
+          read -ra services <<< "${SMOKE_SERVICES}"
+          docker compose \
+            -p "${COMPOSE_PROJECT}" \
+            --project-directory . \
+            --env-file "${COMPOSE_ENV_FILE}" \
+            -f "${COMPOSE_FILE}" \
+            up -d --build "${services[@]}"
+
+      - name: Wait for ollama-init to complete model pull
+        id: ollama-init
+        run: |
+          set -euo pipefail
+          # ollama-init exits 0 once the model is pulled; --wait can't represent
+          # that, so we use docker wait directly. Resolve the container id via
+          # compose so we don't depend on the `<project>-<service>-1` name.
+          # -a is required because ollama-init may have already exited by now
+          # (the model pulls fast from Ollama's Azure-adjacent CDN).
+          cid=$(docker compose \
+            -p "${COMPOSE_PROJECT}" \
+            --project-directory . \
+            --env-file "${COMPOSE_ENV_FILE}" \
+            -f "${COMPOSE_FILE}" \
+            ps -aq ollama-init)
+          if [ -z "${cid}" ]; then
+            echo "::error::ollama-init container not found"
+            exit 1
+          fi
+          exit_code=$(docker wait "${cid}")
+          echo "ollama-init (${cid}) exited with code ${exit_code}"
+          test "${exit_code}" = "0"
+
+      - name: Wait for long-running services to be healthy
+        id: wait
+        run: |
+          set -euo pipefail
+          # ollama-init is excluded - it's a one-shot container that exited 0
+          # in the previous step, and --wait would treat that as a failure.
+          # --no-recreate keeps the existing containers in place.
+          docker compose \
+            -p "${COMPOSE_PROJECT}" \
+            --project-directory . \
+            --env-file "${COMPOSE_ENV_FILE}" \
+            -f "${COMPOSE_FILE}" \
+            up -d --no-recreate --wait --wait-timeout 600 \
+            postgres nats ollama gateway incident-service event-service \
+            rule-engine user-service notification-service webhook-service \
+            genai-service
+
+      - name: Save Ollama model cache
+        if: success() && steps.ollama-cache.outputs.cache-hit != 'true'
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/ollama-cache
+          # chmod a+rX inside the container so the host runner can read the
+          # files when actions/cache tars them up. Ollama's id_ed25519 lands
+          # 0600/root which otherwise blocks the cache save.
+          docker run --rm \
+            -v "${OLLAMA_VOLUME}":/src:ro \
+            -v /tmp/ollama-cache:/dest \
+            alpine sh -c "cp -a /src/. /dest/ && chmod -R a+rX /dest/"
+
+      - name: Dump container status and logs on failure
+        if: failure() && (steps.boot.outcome == 'failure' || steps.ollama-init.outcome == 'failure' || steps.wait.outcome == 'failure')
+        run: |
+          set -euo pipefail
+          read -ra services <<< "${SMOKE_SERVICES}"
+          echo "::group::docker compose ps"
+          docker compose -p "${COMPOSE_PROJECT}" --project-directory . -f "${COMPOSE_FILE}" ps
+          echo "::endgroup::"
+          for svc in "${services[@]}"; do
+            echo "::group::logs - ${svc}"
+            docker compose -p "${COMPOSE_PROJECT}" --project-directory . -f "${COMPOSE_FILE}" logs --tail=200 "${svc}" || true
+            echo "::endgroup::"
+          done
+
+      - name: Tear down stack
+        if: always()
+        run: |
+          docker compose \
+            -p "${COMPOSE_PROJECT}" \
+            --project-directory . \
+            -f "${COMPOSE_FILE}" \
+            down --remove-orphans --volumes
