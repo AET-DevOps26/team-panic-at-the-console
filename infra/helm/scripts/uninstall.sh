@@ -42,9 +42,3 @@ if helm status "$RELEASE" --namespace "$DEPLOY_NAMESPACE" >/dev/null 2>&1; then
 else
   echo "   release '$RELEASE' not found in namespace '$DEPLOY_NAMESPACE'; skipping helm uninstall"
 fi
-
-echo ">> delete leftover resources in namespace=$DEPLOY_NAMESPACE"
-kubectl delete all,configmap,secret,pvc,ingress \
-  --namespace "$DEPLOY_NAMESPACE" \
-  --selector "app.kubernetes.io/instance=$RELEASE" \
-  --ignore-not-found

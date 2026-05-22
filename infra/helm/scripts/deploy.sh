@@ -7,11 +7,14 @@
 #   SOPS_AGE_KEY      age private key for SOPS-encrypted values
 #   DEPLOY_NAMESPACE  target namespace
 #   TAG               image tag to deploy (e.g. main, v0.1.0, sha-<sha>)
+# Optional env:
+#   VALUES_FILE       path to SOPS-encrypted values file
+#                     (default: infra/helm/secrets/values.prod.enc.yaml)
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
 CHART_DIR="$REPO_ROOT/infra/helm/devops-platform"
-ENC_VALUES="$REPO_ROOT/infra/helm/secrets/values.prod.enc.yaml"
+ENC_VALUES="${VALUES_FILE:-$REPO_ROOT/infra/helm/secrets/values.prod.enc.yaml}"
 
 require() {
   local name="$1"
@@ -38,8 +41,13 @@ kubectl version --client
 sops --version | head -n1
 
 WORK_DIR="$(mktemp -d)"
-DEC_VALUES="$WORK_DIR/values.prod.dec.yaml"
+DEC_VALUES="$WORK_DIR/values.dec.yaml"
 trap 'rm -rf "$WORK_DIR"' EXIT
+
+if [ ! -f "$ENC_VALUES" ]; then
+  echo "::error:: encrypted values file not found: $ENC_VALUES" >&2
+  exit 1
+fi
 
 echo ">> configure kubeconfig"
 KUBECONFIG="$WORK_DIR/kubeconfig"
