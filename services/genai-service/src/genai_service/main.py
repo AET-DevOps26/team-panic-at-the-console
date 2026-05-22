@@ -4,9 +4,9 @@ import httpx
 import structlog
 from fastapi import FastAPI
 
+from client import Client as IncidentApiClient
 from genai_service.config import settings
 from genai_service.handlers import IncidentHandlers
-from genai_service.incident_client import IncidentServiceClient
 from genai_service.nats_consumer import NatsConsumer
 from genai_service.ollama_client import OllamaClient
 from genai_service.prompts import PromptBuilder
@@ -36,12 +36,11 @@ async def lifespan(app: FastAPI):
         settings.ollama_model,
         generate_timeout_seconds=settings.ollama_generate_timeout_seconds,
     )
-    incidents = IncidentServiceClient(
-        http,
-        settings.incident_service_url,
-        timeout_seconds=settings.incident_service_timeout_seconds,
+    incident_api_client = IncidentApiClient(
+        base_url=settings.incident_service_url,
+        timeout=httpx.Timeout(settings.incident_service_timeout_seconds),
     )
-    handlers = IncidentHandlers(incidents, ollama, PromptBuilder())
+    handlers = IncidentHandlers(incident_api_client, ollama, PromptBuilder())
 
     consumer: NatsConsumer | None = None
     if settings.nats_enabled:
@@ -60,7 +59,7 @@ async def lifespan(app: FastAPI):
 
     app.state.http = http
     app.state.ollama_client = ollama
-    app.state.incident_client = incidents
+    app.state.incident_api_client = incident_api_client
     app.state.handlers = handlers
     app.state.nats_consumer = consumer
 
@@ -73,12 +72,14 @@ async def lifespan(app: FastAPI):
         incident_service_url=settings.incident_service_url,
     )
 
-    yield
-
-    if consumer is not None:
-        await consumer.stop()
-    await http.aclose()
-    logger.info("genai_service_stopped")
+    try:
+        async with incident_api_client:
+            yield
+    finally:
+        if consumer is not None:
+            await consumer.stop()
+        await http.aclose()
+        logger.info("genai_service_stopped")
 
 
 app = FastAPI(title="GenAI Service", version="0.1.0", lifespan=lifespan)
