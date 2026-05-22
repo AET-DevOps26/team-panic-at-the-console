@@ -47,6 +47,7 @@ k9s = "*"
 [feature.deploy.tasks]
 deploy-tools-version = "helm version --short && kubectl version --client && sops --version && k9s version"
 helm-deploy = "bash infra/helm/scripts/deploy.sh"
+helm-uninstall = "bash infra/helm/scripts/uninstall.sh"
 
 [environments]
 default = ["lint"]
