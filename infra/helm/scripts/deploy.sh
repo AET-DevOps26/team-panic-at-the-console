@@ -68,5 +68,8 @@ echo ">> helm upgrade --install (namespace=$DEPLOY_NAMESPACE tag=$TAG)"
 helm upgrade --install devops-platform "$CHART_DIR" \
   --namespace "$DEPLOY_NAMESPACE" \
   --create-namespace \
+  --wait \
+  --timeout 10m \
+  --atomic \
   --set global.image.tag="$TAG" \
   --values "$DEC_VALUES"
