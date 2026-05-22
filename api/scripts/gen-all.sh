@@ -25,7 +25,7 @@ TMP_CONFIG_DIR=$(mktemp -d)
 trap 'rm -rf "$TMP_CONFIG_DIR"' EXIT
 # project_name_override sets both the output directory and the importable package name.
 # We keep `client` so genai-service imports generated modules from `client.api.*`
-# (for example, `client.api.health` or `client.api.genai`).
+# (for example, `client.api.health`, `client.api.genai`, or `client.api.incidents`).
 printf 'project_name_override: client\n' > "$TMP_CONFIG_DIR/config.yaml"
 GEN_ROOT="$REPO_ROOT/services/generated"
 rm -rf "$GEN_ROOT/python-client" "$GEN_ROOT/client"
