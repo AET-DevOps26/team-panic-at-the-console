@@ -17,14 +17,17 @@ RUN cd genai-service && pixi install --frozen -e prod
 
 FROM python:3.12-slim AS runtime
 
-WORKDIR /app
+# Keep the same paths as the build stage: pixi entrypoints embed absolute shebangs
+# under /app/genai-service/.pixi/ and editable installs reference ../generated/.
+WORKDIR /app/genai-service
 
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
-    PATH="/app/.pixi/envs/prod/bin:$PATH"
+    PATH="/app/genai-service/.pixi/envs/prod/bin:$PATH"
 
-COPY --from=build /app/genai-service/.pixi/envs/prod /app/.pixi/envs/prod
-COPY --from=build /app/genai-service/src /app/src
+COPY --from=build /app/genai-service/.pixi ./.pixi
+COPY --from=build /app/genai-service/src ./src
+COPY --from=build /app/generated /app/generated
 
 EXPOSE 8087
 
