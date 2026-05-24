@@ -10,18 +10,19 @@ T = TypeVar("T", bound="PostmortemResponse")
 
 @_attrs_define
 class PostmortemResponse:
-    """Latest AI-generated postmortem draft for a resolved incident.
+    """Latest AI-generated postmortem draft for a resolved incident (GET in a later release; structured LLM output contract
+    today).
 
-    Example:
-        {'rootCause': 'Connection pool misconfiguration in payment-service v2.4.1', 'timeline': ['14:02 Deploy v2.4.1
-            completed', '14:18 Checkout error rate crossed 5%'], 'actionItems': ['Add pool-size validation to deploy
-            checklist', 'Alert on checkout latency SLO burn']}
+        Example:
+            {'rootCause': 'Connection pool misconfiguration in payment-service v2.4.1', 'timeline': ['14:02 Deploy v2.4.1
+                completed', '14:18 Checkout error rate crossed 5%'], 'actionItems': ['Add pool-size validation to deploy
+                checklist', 'Alert on checkout latency SLO burn']}
 
-    Attributes:
-        root_cause (str):  Example: Connection pool misconfiguration in payment-service v2.4.1.
-        timeline (list[str]):  Example: ['14:02 Deploy v2.4.1 completed', '14:18 Checkout error rate crossed 5%'].
-        action_items (list[str]):  Example: ['Add pool-size validation to deploy checklist', 'Alert on checkout latency
-            SLO burn'].
+        Attributes:
+            root_cause (str):  Example: Connection pool misconfiguration in payment-service v2.4.1.
+            timeline (list[str]):  Example: ['14:02 Deploy v2.4.1 completed', '14:18 Checkout error rate crossed 5%'].
+            action_items (list[str]):  Example: ['Add pool-size validation to deploy checklist', 'Alert on checkout latency
+                SLO burn'].
     """
 
     root_cause: str

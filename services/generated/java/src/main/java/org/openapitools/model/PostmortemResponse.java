@@ -18,11 +18,15 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import java.util.*;
 import jakarta.annotation.Generated;
 
+import java.util.Map;
+import java.util.HashMap;
+import com.fasterxml.jackson.annotation.JsonAnyGetter;
+import com.fasterxml.jackson.annotation.JsonAnySetter;
 /**
- * Latest AI-generated postmortem draft for a resolved incident.
+ * Latest AI-generated postmortem draft for a resolved incident (GET in a later release; structured LLM output contract today).
  */
 
-@Schema(name = "PostmortemResponse", description = "Latest AI-generated postmortem draft for a resolved incident.")
+@Schema(name = "PostmortemResponse", description = "Latest AI-generated postmortem draft for a resolved incident (GET in a later release; structured LLM output contract today). ")
 @Generated(value = "org.openapitools.codegen.languages.SpringCodegen", comments = "Generator version: 7.14.0")
 public class PostmortemResponse {
 
@@ -85,7 +89,7 @@ public class PostmortemResponse {
    * @return timeline
    */
   @NotNull
-  @Schema(name = "timeline", example = "[14:02 Deploy v2.4.1 completed, 14:18 Checkout error rate crossed 5%]", requiredMode = Schema.RequiredMode.REQUIRED)
+  @Schema(name = "timeline", example = "[\"14:02 Deploy v2.4.1 completed\",\"14:18 Checkout error rate crossed 5%\"]", requiredMode = Schema.RequiredMode.REQUIRED)
   @JsonProperty("timeline")
   public List<String> getTimeline() {
     return timeline;
@@ -113,7 +117,7 @@ public class PostmortemResponse {
    * @return actionItems
    */
   @NotNull
-  @Schema(name = "actionItems", example = "[Add pool-size validation to deploy checklist, Alert on checkout latency SLO burn]", requiredMode = Schema.RequiredMode.REQUIRED)
+  @Schema(name = "actionItems", example = "[\"Add pool-size validation to deploy checklist\",\"Alert on checkout latency SLO burn\"]", requiredMode = Schema.RequiredMode.REQUIRED)
   @JsonProperty("actionItems")
   public List<String> getActionItems() {
     return actionItems;
@@ -122,6 +126,43 @@ public class PostmortemResponse {
   public void setActionItems(List<String> actionItems) {
     this.actionItems = actionItems;
   }
+    /**
+    * A container for additional, undeclared properties.
+    * This is a holder for any undeclared properties as specified with
+    * the 'additionalProperties' keyword in the OAS document.
+    */
+    private Map<String, Object> additionalProperties;
+
+    /**
+    * Set the additional (undeclared) property with the specified name and value.
+    * If the property does not already exist, create it otherwise replace it.
+    */
+    @JsonAnySetter
+    public PostmortemResponse putAdditionalProperty(String key, Object value) {
+        if (this.additionalProperties == null) {
+            this.additionalProperties = new HashMap<String, Object>();
+        }
+        this.additionalProperties.put(key, value);
+        return this;
+    }
+
+    /**
+    * Return the additional (undeclared) property.
+    */
+    @JsonAnyGetter
+    public Map<String, Object> getAdditionalProperties() {
+        return additionalProperties;
+    }
+
+    /**
+    * Return the additional (undeclared) property with the specified name.
+    */
+    public Object getAdditionalProperty(String key) {
+        if (this.additionalProperties == null) {
+            return null;
+        }
+        return this.additionalProperties.get(key);
+    }
 
   @Override
   public boolean equals(Object o) {
@@ -134,12 +175,13 @@ public class PostmortemResponse {
     PostmortemResponse postmortemResponse = (PostmortemResponse) o;
     return Objects.equals(this.rootCause, postmortemResponse.rootCause) &&
         Objects.equals(this.timeline, postmortemResponse.timeline) &&
-        Objects.equals(this.actionItems, postmortemResponse.actionItems);
+        Objects.equals(this.actionItems, postmortemResponse.actionItems) &&
+    Objects.equals(this.additionalProperties, postmortemResponse.additionalProperties);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(rootCause, timeline, actionItems);
+    return Objects.hash(rootCause, timeline, actionItems, additionalProperties);
   }
 
   @Override
@@ -149,6 +191,8 @@ public class PostmortemResponse {
     sb.append("    rootCause: ").append(toIndentedString(rootCause)).append("\n");
     sb.append("    timeline: ").append(toIndentedString(timeline)).append("\n");
     sb.append("    actionItems: ").append(toIndentedString(actionItems)).append("\n");
+
+    sb.append("    additionalProperties: ").append(toIndentedString(additionalProperties)).append("\n");
     sb.append("}");
     return sb.toString();
   }

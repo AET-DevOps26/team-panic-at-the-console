@@ -12,14 +12,15 @@ T = TypeVar("T", bound="SeverityResponse")
 
 @_attrs_define
 class SeverityResponse:
-    """Latest AI-generated severity recommendation with rationale.
+    """Latest AI-generated severity recommendation with rationale (GET in a later release; structured LLM output contract
+    today).
 
-    Example:
-        {'severity': 'SEV2', 'reason': 'Customer-facing checkout degraded for more than 15 minutes with no workaround.'}
+        Example:
+            {'severity': 'SEV2', 'reason': 'Customer-facing checkout degraded for more than 15 minutes with no workaround.'}
 
-    Attributes:
-        severity (SeverityResponseSeverity):  Example: SEV2.
-        reason (str):  Example: Customer-facing checkout degraded for more than 15 minutes with no workaround..
+        Attributes:
+            severity (SeverityResponseSeverity):  Example: SEV2.
+            reason (str):  Example: Customer-facing checkout degraded for more than 15 minutes with no workaround..
     """
 
     severity: SeverityResponseSeverity

@@ -18,11 +18,15 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import java.util.*;
 import jakarta.annotation.Generated;
 
+import java.util.Map;
+import java.util.HashMap;
+import com.fasterxml.jackson.annotation.JsonAnyGetter;
+import com.fasterxml.jackson.annotation.JsonAnySetter;
 /**
- * Latest AI-generated remediation suggestions for an incident.
+ * Latest AI-generated remediation suggestions (GET in a later release; structured LLM output contract today).
  */
 
-@Schema(name = "SolutionsResponse", description = "Latest AI-generated remediation suggestions for an incident.")
+@Schema(name = "SolutionsResponse", description = "Latest AI-generated remediation suggestions (GET in a later release; structured LLM output contract today). ")
 @Generated(value = "org.openapitools.codegen.languages.SpringCodegen", comments = "Generator version: 7.14.0")
 public class SolutionsResponse {
 
@@ -58,7 +62,7 @@ public class SolutionsResponse {
    * @return solutions
    */
   @NotNull
-  @Schema(name = "solutions", example = "[Roll back payment-service to v2.3.9, Scale checkout-api replicas to 6]", requiredMode = Schema.RequiredMode.REQUIRED)
+  @Schema(name = "solutions", example = "[\"Roll back payment-service to v2.3.9\",\"Scale checkout-api replicas to 6\"]", requiredMode = Schema.RequiredMode.REQUIRED)
   @JsonProperty("solutions")
   public List<String> getSolutions() {
     return solutions;
@@ -67,6 +71,43 @@ public class SolutionsResponse {
   public void setSolutions(List<String> solutions) {
     this.solutions = solutions;
   }
+    /**
+    * A container for additional, undeclared properties.
+    * This is a holder for any undeclared properties as specified with
+    * the 'additionalProperties' keyword in the OAS document.
+    */
+    private Map<String, Object> additionalProperties;
+
+    /**
+    * Set the additional (undeclared) property with the specified name and value.
+    * If the property does not already exist, create it otherwise replace it.
+    */
+    @JsonAnySetter
+    public SolutionsResponse putAdditionalProperty(String key, Object value) {
+        if (this.additionalProperties == null) {
+            this.additionalProperties = new HashMap<String, Object>();
+        }
+        this.additionalProperties.put(key, value);
+        return this;
+    }
+
+    /**
+    * Return the additional (undeclared) property.
+    */
+    @JsonAnyGetter
+    public Map<String, Object> getAdditionalProperties() {
+        return additionalProperties;
+    }
+
+    /**
+    * Return the additional (undeclared) property with the specified name.
+    */
+    public Object getAdditionalProperty(String key) {
+        if (this.additionalProperties == null) {
+            return null;
+        }
+        return this.additionalProperties.get(key);
+    }
 
   @Override
   public boolean equals(Object o) {
@@ -77,12 +118,13 @@ public class SolutionsResponse {
       return false;
     }
     SolutionsResponse solutionsResponse = (SolutionsResponse) o;
-    return Objects.equals(this.solutions, solutionsResponse.solutions);
+    return Objects.equals(this.solutions, solutionsResponse.solutions) &&
+    Objects.equals(this.additionalProperties, solutionsResponse.additionalProperties);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(solutions);
+    return Objects.hash(solutions, additionalProperties);
   }
 
   @Override
@@ -90,6 +132,8 @@ public class SolutionsResponse {
     StringBuilder sb = new StringBuilder();
     sb.append("class SolutionsResponse {\n");
     sb.append("    solutions: ").append(toIndentedString(solutions)).append("\n");
+
+    sb.append("    additionalProperties: ").append(toIndentedString(additionalProperties)).append("\n");
     sb.append("}");
     return sb.toString();
   }

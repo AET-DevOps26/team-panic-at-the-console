@@ -1,4 +1,3 @@
-from genai_service.prompts.adapters import events_from_client, incident_from_client
 from genai_service.prompts.builder import Prompt, PromptBuilder
 from genai_service.prompts.models import (
     Event,
@@ -20,6 +19,4 @@ __all__ = [
     "SeverityResponse",
     "SolutionsResponse",
     "SummaryResponse",
-    "incident_from_client",
-    "events_from_client",
 ]

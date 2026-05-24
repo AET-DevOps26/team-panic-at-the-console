@@ -10,14 +10,15 @@ T = TypeVar("T", bound="SummaryResponse")
 
 @_attrs_define
 class SummaryResponse:
-    """Latest AI-generated narrative summary for an incident.
+    """Latest AI-generated narrative summary for an incident (returned by GET in a later release; used now as the
+    structured LLM output contract).
 
-    Example:
-        {'summary': 'Checkout API latency spiked after deploy v2.4.1; error rate on payment-service rose to 12%.'}
+        Example:
+            {'summary': 'Checkout API latency spiked after deploy v2.4.1; error rate on payment-service rose to 12%.'}
 
-    Attributes:
-        summary (str):  Example: Checkout API latency spiked after deploy v2.4.1; error rate on payment-service rose to
-            12%..
+        Attributes:
+            summary (str):  Example: Checkout API latency spiked after deploy v2.4.1; error rate on payment-service rose to
+                12%..
     """
 
     summary: str

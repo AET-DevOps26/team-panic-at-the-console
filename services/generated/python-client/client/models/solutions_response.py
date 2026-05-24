@@ -10,7 +10,7 @@ T = TypeVar("T", bound="SolutionsResponse")
 
 @_attrs_define
 class SolutionsResponse:
-    """Latest AI-generated remediation suggestions for an incident.
+    """Latest AI-generated remediation suggestions (GET in a later release; structured LLM output contract today).
 
     Example:
         {'solutions': ['Roll back payment-service to v2.3.9', 'Scale checkout-api replicas to 6']}
