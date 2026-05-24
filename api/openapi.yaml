@@ -29,7 +29,7 @@ paths:
       security: []
       responses:
         "200":
-          description: OK
+          description: Gateway health status
           content:
             application/json:
               schema:
@@ -53,7 +53,7 @@ paths:
       security: []
       responses:
         "200":
-          description: OK
+          description: GenAI service and Ollama reachability status
           content:
             application/json:
               schema:
@@ -70,13 +70,20 @@ paths:
         - $ref: "#/components/parameters/IncidentIdParam"
       responses:
         "202":
-          description: Accepted
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/RegenAccepted"
+          $ref: "#/components/responses/RegenAccepted"
         "404":
-          description: Incident not found
+          $ref: "#/components/responses/IncidentNotFound"
+    get:
+      operationId: getSummary
+      summary: Get latest AI-generated summary for an incident
+      tags: [genai]
+      parameters:
+        - $ref: "#/components/parameters/IncidentIdParam"
+      responses:
+        "200":
+          $ref: "#/components/responses/SummaryOk"
+        "404":
+          $ref: "#/components/responses/IncidentNotFound"
 
   /incidents/{incidentId}/genai/severity:
     post:
@@ -87,13 +94,20 @@ paths:
         - $ref: "#/components/parameters/IncidentIdParam"
       responses:
         "202":
-          description: Accepted
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/RegenAccepted"
+          $ref: "#/components/responses/RegenAccepted"
         "404":
-          description: Incident not found
+          $ref: "#/components/responses/IncidentNotFound"
+    get:
+      operationId: getSeverity
+      summary: Get latest AI-generated severity suggestion for an incident
+      tags: [genai]
+      parameters:
+        - $ref: "#/components/parameters/IncidentIdParam"
+      responses:
+        "200":
+          $ref: "#/components/responses/SeverityOk"
+        "404":
+          $ref: "#/components/responses/IncidentNotFound"
 
   /incidents/{incidentId}/genai/solutions:
     post:
@@ -104,13 +118,20 @@ paths:
         - $ref: "#/components/parameters/IncidentIdParam"
       responses:
         "202":
-          description: Accepted
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/RegenAccepted"
+          $ref: "#/components/responses/RegenAccepted"
         "404":
-          description: Incident not found
+          $ref: "#/components/responses/IncidentNotFound"
+    get:
+      operationId: getSolutions
+      summary: Get latest AI-generated solution suggestions for an incident
+      tags: [genai]
+      parameters:
+        - $ref: "#/components/parameters/IncidentIdParam"
+      responses:
+        "200":
+          $ref: "#/components/responses/SolutionsOk"
+        "404":
+          $ref: "#/components/responses/IncidentNotFound"
 
   /incidents/{incidentId}/genai/postmortem:
     post:
@@ -121,15 +142,55 @@ paths:
         - $ref: "#/components/parameters/IncidentIdParam"
       responses:
         "202":
-          description: Accepted
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/RegenAccepted"
+          $ref: "#/components/responses/RegenAccepted"
         "404":
-          description: Incident not found
+          $ref: "#/components/responses/IncidentNotFound"
         "409":
-          description: Incident not in resolved state
+          $ref: "#/components/responses/IncidentNotResolved"
+    get:
+      operationId: getPostmortem
+      summary: Get latest AI-generated postmortem for a resolved incident
+      tags: [genai]
+      parameters:
+        - $ref: "#/components/parameters/IncidentIdParam"
+      responses:
+        "200":
+          $ref: "#/components/responses/PostmortemOk"
+        "404":
+          $ref: "#/components/responses/IncidentNotFound"
+        "409":
+          $ref: "#/components/responses/IncidentNotResolved"
+
+webhooks:
+  genaiPromptContext:
+    post:
+      summary: Prompt context contract (NATS assembly; not an HTTP route)
+      description: >
+        Documents the incident snapshot and event log shape consumed by the GenAI
+        prompt builder. Published here so generated clients include Event and Incident.
+      tags: [genai]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GenaiPromptContext"
+            example:
+              incident:
+                id: 018e2c5f-1234-7abc-8def-000000000001
+                title: Checkout API latency spike
+                description: Elevated p99 latency on checkout-api after deploy v2.4.1
+                status: investigating
+                severity: SEV2
+                createdAt: "2026-05-24T14:02:00Z"
+                resolvedAt: null
+              events:
+                - timestamp: "2026-05-24T14:18:00Z"
+                  type: severity_changed
+                  description: Severity escalated from SEV3 to SEV2
+      responses:
+        default:
+          description: Webhook contract only; no HTTP handler
 
 components:
   parameters:
@@ -142,6 +203,63 @@ components:
         type: string
         format: uuid
         example: 018e2c5f-1234-7abc-8def-000000000001
+
+  responses:
+    RegenAccepted:
+      description: Regeneration task accepted for async processing
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/RegenAccepted"
+    IncidentNotFound:
+      description: No incident exists with the given ID
+    IncidentNotResolved:
+      description: Postmortem operations require the incident to be in resolved state
+    SummaryOk:
+      description: Latest AI-generated incident summary
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/SummaryResponse"
+          example:
+            summary: >-
+              Checkout API latency spiked after deploy v2.4.1; error rate on
+              payment-service rose to 12%.
+    SeverityOk:
+      description: Latest AI-generated severity suggestion
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/SeverityResponse"
+          example:
+            severity: SEV2
+            reason: >-
+              Customer-facing checkout degraded for more than 15 minutes with no
+              workaround.
+    SolutionsOk:
+      description: Latest AI-generated solution suggestions
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/SolutionsResponse"
+          example:
+            solutions:
+              - Roll back payment-service to v2.3.9
+              - Scale checkout-api replicas to 6
+    PostmortemOk:
+      description: Latest AI-generated postmortem draft
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/PostmortemResponse"
+          example:
+            rootCause: Connection pool misconfiguration in payment-service v2.4.1
+            timeline:
+              - "14:02 Deploy v2.4.1 completed"
+              - "14:18 Checkout error rate crossed 5%"
+            actionItems:
+              - Add pool-size validation to deploy checklist
+              - Alert on checkout latency SLO burn
 
   schemas:
     GenaiHealthResponse:
@@ -173,3 +291,170 @@ components:
           type: string
           example: SUMMARY
           enum: [SUMMARY, SEVERITY_SUGGESTION, SOLUTION_SUGGESTIONS, POSTMORTEM]
+
+    GenaiPromptContext:
+      type: object
+      description: Incident snapshot and event log used when assembling GenAI prompts.
+      required: [incident, events]
+      additionalProperties: false
+      example:
+        incident:
+          id: 018e2c5f-1234-7abc-8def-000000000001
+          title: Checkout API latency spike
+          description: Elevated p99 latency on checkout-api after deploy v2.4.1
+          status: investigating
+          severity: SEV2
+          createdAt: "2026-05-24T14:02:00Z"
+          resolvedAt: null
+        events:
+          - timestamp: "2026-05-24T14:18:00Z"
+            type: severity_changed
+            description: Severity escalated from SEV3 to SEV2
+      properties:
+        incident:
+          $ref: "#/components/schemas/Incident"
+        events:
+          type: array
+          items:
+            $ref: "#/components/schemas/Event"
+          example:
+            - timestamp: "2026-05-24T14:18:00Z"
+              type: severity_changed
+              description: Severity escalated from SEV3 to SEV2
+
+    Event:
+      type: object
+      description: One entry from an incident's Event Log (chronological, immutable).
+      required: [timestamp, type, description]
+      additionalProperties: false
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+          example: "2026-05-24T14:18:00Z"
+        type:
+          type: string
+          example: severity_changed
+        description:
+          type: string
+          example: Severity escalated from SEV3 to SEV2
+
+    Incident:
+      type: object
+      description: Subset of incident representation used by genai prompts.
+      required: [id, title, status, severity, createdAt]
+      additionalProperties: false
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: 018e2c5f-1234-7abc-8def-000000000001
+        title:
+          type: string
+          example: Checkout API latency spike
+        description:
+          type: ["string", "null"]
+          example: Elevated p99 latency on checkout-api after deploy v2.4.1
+        status:
+          type: string
+          enum: [open, investigating, resolved]
+          example: investigating
+        severity:
+          type: string
+          enum: [SEV1, SEV2, SEV3, SEV4]
+          example: SEV2
+        createdAt:
+          type: string
+          format: date-time
+          example: "2026-05-24T14:02:00Z"
+        resolvedAt:
+          type: ["string", "null"]
+          format: date-time
+          example: null
+
+    SummaryResponse:
+      type: object
+      description: Latest AI-generated narrative summary for an incident.
+      required: [summary]
+      additionalProperties: false
+      example:
+        summary: >-
+          Checkout API latency spiked after deploy v2.4.1; error rate on
+          payment-service rose to 12%.
+      properties:
+        summary:
+          type: string
+          example: >-
+            Checkout API latency spiked after deploy v2.4.1; error rate on
+            payment-service rose to 12%.
+
+    SeverityResponse:
+      type: object
+      description: Latest AI-generated severity recommendation with rationale.
+      required: [severity, reason]
+      additionalProperties: false
+      example:
+        severity: SEV2
+        reason: >-
+          Customer-facing checkout degraded for more than 15 minutes with no
+          workaround.
+      properties:
+        severity:
+          type: string
+          enum: [SEV1, SEV2, SEV3, SEV4]
+          example: SEV2
+        reason:
+          type: string
+          example: >-
+            Customer-facing checkout degraded for more than 15 minutes with no
+            workaround.
+
+    SolutionsResponse:
+      type: object
+      description: Latest AI-generated remediation suggestions for an incident.
+      required: [solutions]
+      additionalProperties: false
+      example:
+        solutions:
+          - Roll back payment-service to v2.3.9
+          - Scale checkout-api replicas to 6
+      properties:
+        solutions:
+          type: array
+          items:
+            type: string
+          example:
+            - Roll back payment-service to v2.3.9
+            - Scale checkout-api replicas to 6
+
+    PostmortemResponse:
+      type: object
+      description: Latest AI-generated postmortem draft for a resolved incident.
+      required: [rootCause, timeline, actionItems]
+      additionalProperties: false
+      example:
+        rootCause: Connection pool misconfiguration in payment-service v2.4.1
+        timeline:
+          - "14:02 Deploy v2.4.1 completed"
+          - "14:18 Checkout error rate crossed 5%"
+        actionItems:
+          - Add pool-size validation to deploy checklist
+          - Alert on checkout latency SLO burn
+      properties:
+        rootCause:
+          type: string
+          example: Connection pool misconfiguration in payment-service v2.4.1
+        timeline:
+          type: array
+          items:
+            type: string
+          example:
+            - "14:02 Deploy v2.4.1 completed"
+            - "14:18 Checkout error rate crossed 5%"
+        actionItems:
+          type: array
+          items:
+            type: string
+          example:
+            - Add pool-size validation to deploy checklist
+            - Alert on checkout latency SLO burn

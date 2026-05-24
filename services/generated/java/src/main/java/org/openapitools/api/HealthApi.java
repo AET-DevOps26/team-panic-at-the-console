@@ -46,7 +46,7 @@ public interface HealthApi {
     /**
      * GET /health : Health check
      *
-     * @return OK (status code 200)
+     * @return Gateway health status (status code 200)
      *         or Service unavailable (status code 503)
      *         or Bad request (status code 400)
      */
@@ -55,7 +55,7 @@ public interface HealthApi {
         summary = "Health check",
         tags = { "health" },
         responses = {
-            @ApiResponse(responseCode = "200", description = "OK", content = {
+            @ApiResponse(responseCode = "200", description = "Gateway health status", content = {
                 @Content(mediaType = "application/json", schema = @Schema(implementation = HealthCheck200Response.class))
             }),
             @ApiResponse(responseCode = "503", description = "Service unavailable"),
