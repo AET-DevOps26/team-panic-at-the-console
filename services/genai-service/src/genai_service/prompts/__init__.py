@@ -1,7 +1,6 @@
+from client.models import Incident, IncidentEvent
 from genai_service.prompts.builder import Prompt, PromptBuilder
 from genai_service.prompts.models import (
-    Event,
-    Incident,
     PostmortemResponse,
     SeverityResponse,
     SolutionsResponse,
@@ -10,8 +9,8 @@ from genai_service.prompts.models import (
 from genai_service.prompts.tasks import PromptTask
 
 __all__ = [
-    "Event",
     "Incident",
+    "IncidentEvent",
     "PostmortemResponse",
     "Prompt",
     "PromptBuilder",

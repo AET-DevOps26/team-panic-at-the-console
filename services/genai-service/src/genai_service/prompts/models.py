@@ -1,43 +1,6 @@
-from datetime import datetime
-from typing import Literal
+from pydantic import BaseModel, Field
 
-from pydantic import BaseModel, ConfigDict, Field
-from pydantic.alias_generators import to_camel
-
-Severity = Literal["SEV1", "SEV2", "SEV3", "SEV4"]
-IncidentStatus = Literal["open", "investigating", "resolved"]
-
-
-class _CamelModel(BaseModel):
-    # incident-service exposes camelCase JSON (Spring/Jackson default). We keep
-    # snake_case attributes and translate at the boundary.
-    model_config = ConfigDict(
-        extra="ignore", alias_generator=to_camel, populate_by_name=True
-    )
-
-
-class Event(_CamelModel):
-    """One entry from an incident's Event Log (see CONTEXT.md). Chronological, immutable."""
-
-    model_config = ConfigDict(
-        extra="ignore", alias_generator=to_camel, populate_by_name=True, frozen=True
-    )
-
-    timestamp: datetime
-    type: str
-    description: str
-
-
-class Incident(_CamelModel):
-    """Subset of incident-service's Incident representation that the PromptBuilder needs."""
-
-    id: str
-    title: str
-    description: str | None = None
-    status: IncidentStatus
-    severity: Severity
-    created_at: datetime
-    resolved_at: datetime | None = None
+from client.models import Severity
 
 
 class SummaryResponse(BaseModel):

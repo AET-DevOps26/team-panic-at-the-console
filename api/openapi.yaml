@@ -170,6 +170,56 @@ components:
           example: SUMMARY
           enum: [SUMMARY, SEVERITY_SUGGESTION, SOLUTION_SUGGESTIONS, POSTMORTEM]
 
+    Severity:
+      type: string
+      enum: [SEV1, SEV2, SEV3, SEV4]
+      description: Incident severity. SEV1 is highest impact.
+
+    IncidentStatus:
+      type: string
+      enum: [open, investigating, resolved]
+
+    Incident:
+      type: object
+      description: An incident as stored by incident-service.
+      required: [id, title, status, severity, createdAt]
+      additionalProperties: false
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+          example: Checkout 5xx spike
+        description:
+          type: [string, "null"]
+        status:
+          $ref: "#/components/schemas/IncidentStatus"
+        severity:
+          $ref: "#/components/schemas/Severity"
+        createdAt:
+          type: string
+          format: date-time
+        resolvedAt:
+          type: [string, "null"]
+          format: date-time
+
+    IncidentEvent:
+      type: object
+      description: One entry from an incident's append-only Event Log.
+      required: [timestamp, type, description]
+      additionalProperties: false
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+        type:
+          type: string
+          example: status_changed
+        description:
+          type: string
+          example: "status: open -> investigating"
+
     SummaryResponse:
       type: object
       description: >

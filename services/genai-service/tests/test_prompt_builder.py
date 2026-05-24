@@ -1,10 +1,10 @@
 from datetime import UTC, datetime
+from uuid import UUID
 
 import pytest
 
+from client.models import Incident, IncidentEvent, IncidentStatus, Severity
 from genai_service.prompts import (
-    Event,
-    Incident,
     PostmortemResponse,
     Prompt,
     PromptBuilder,
@@ -14,14 +14,19 @@ from genai_service.prompts import (
     SummaryResponse,
 )
 
+INCIDENT_ID = UUID("018e2c5f-1234-7abc-8def-000000000001")
 
-def _incident(status: str = "open", resolved_at: datetime | None = None) -> Incident:
+
+def _incident(
+    status: IncidentStatus = IncidentStatus.OPEN,
+    resolved_at: datetime | None = None,
+) -> Incident:
     return Incident(
-        id="inc-1",
+        id=INCIDENT_ID,
         title="Checkout service 5xx spike",
         description="Errors on /checkout up sharply.",
-        status=status,  # type: ignore[arg-type]
-        severity="SEV2",
+        status=status,
+        severity=Severity.SEV2,
         created_at=datetime(2026, 5, 20, 9, 0, tzinfo=UTC),
         resolved_at=resolved_at,
     )
@@ -29,10 +34,10 @@ def _incident(status: str = "open", resolved_at: datetime | None = None) -> Inci
 
 def _event(
     minute: int, type_: str = "comment_added", desc: str = "looking into it"
-) -> Event:
-    return Event(
+) -> IncidentEvent:
+    return IncidentEvent(
         timestamp=datetime(2026, 5, 20, 9, minute, tzinfo=UTC),
-        type=type_,
+        type_=type_,
         description=desc,
     )
 
@@ -56,7 +61,7 @@ def test_build_picks_response_model_per_task(task, model):
 def test_build_includes_incident_metadata_in_user_prompt():
     prompt = PromptBuilder().build(_incident(), [_event(1)], PromptTask.SUMMARY)
 
-    assert "Incident inc-1" in prompt.user
+    assert f"Incident {INCIDENT_ID}" in prompt.user
     assert "Checkout service 5xx spike" in prompt.user
     assert "Status: open" in prompt.user
     assert "Severity: SEV2" in prompt.user
@@ -121,7 +126,7 @@ def test_build_handles_empty_event_log():
 
 def test_build_postmortem_includes_resolved_at_and_uses_postmortem_model():
     resolved = datetime(2026, 5, 20, 10, 0, tzinfo=UTC)
-    incident = _incident(status="resolved", resolved_at=resolved)
+    incident = _incident(status=IncidentStatus.RESOLVED, resolved_at=resolved)
 
     prompt = PromptBuilder().build(incident, [_event(1)], PromptTask.POSTMORTEM)
 
@@ -132,7 +137,7 @@ def test_build_postmortem_includes_resolved_at_and_uses_postmortem_model():
 def test_build_postmortem_rejects_unresolved_incident():
     with pytest.raises(ValueError, match="resolved incident"):
         PromptBuilder().build(
-            _incident(status="open"), [_event(1)], PromptTask.POSTMORTEM
+            _incident(status=IncidentStatus.OPEN), [_event(1)], PromptTask.POSTMORTEM
         )
 
 
@@ -144,7 +149,8 @@ def test_max_events_must_be_positive():
 def test_each_task_uses_distinct_system_prompt():
     builder = PromptBuilder()
     incident = _incident(
-        status="resolved", resolved_at=datetime(2026, 5, 20, 10, 0, tzinfo=UTC)
+        status=IncidentStatus.RESOLVED,
+        resolved_at=datetime(2026, 5, 20, 10, 0, tzinfo=UTC),
     )
     events = [_event(1)]
 

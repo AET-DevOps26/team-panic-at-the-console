@@ -1,11 +1,11 @@
+import datetime
 from collections.abc import Sequence
 from dataclasses import dataclass
 
 from pydantic import BaseModel
 
+from client.models import Incident, IncidentEvent, IncidentStatus
 from genai_service.prompts.models import (
-    Event,
-    Incident,
     PostmortemResponse,
     SeverityResponse,
     SolutionsResponse,
@@ -55,9 +55,10 @@ _RESPONSE_MODELS: dict[PromptTask, type[BaseModel]] = {
 class PromptBuilder:
     """Constructs an Ollama prompt from an Incident, its Event Log, and a PromptTask.
 
-    All context-length management and structured-output schema selection lives here
-    (the "deep module" per CONTEXT.md). Callers pass in the data; the builder owns
-    formatting, truncation, and per-task response models.
+    Consumes the generated client's attrs Incident/IncidentEvent models directly so
+    there is one shape of incident data flowing through genai-service. All
+    context-length management and structured-output schema selection lives here
+    (the "deep module" per CONTEXT.md).
     """
 
     def __init__(self, max_events: int = 50) -> None:
@@ -68,12 +69,15 @@ class PromptBuilder:
     def build(
         self,
         incident: Incident,
-        events: Sequence[Event],
+        events: Sequence[IncidentEvent],
         task: PromptTask,
     ) -> Prompt:
-        if task is PromptTask.POSTMORTEM and incident.status != "resolved":
+        if (
+            task is PromptTask.POSTMORTEM
+            and incident.status is not IncidentStatus.RESOLVED
+        ):
             raise ValueError(
-                f"Postmortem requires a resolved incident; status is {incident.status!r}."
+                f"Postmortem requires a resolved incident; status is {incident.status.value!r}."
             )
 
         return Prompt(
@@ -82,20 +86,26 @@ class PromptBuilder:
             response_model=_RESPONSE_MODELS[task],
         )
 
-    def _format_context(self, incident: Incident, events: Sequence[Event]) -> str:
+    def _format_context(
+        self, incident: Incident, events: Sequence[IncidentEvent]
+    ) -> str:
         ordered = sorted(events, key=lambda e: e.timestamp)
         kept = self._truncate(ordered)
 
         header = [
             f"Incident {incident.id}",
             f"Title: {incident.title}",
-            f"Status: {incident.status}",
-            f"Severity: {incident.severity}",
+            f"Status: {incident.status.value}",
+            f"Severity: {incident.severity.value}",
             f"Created at: {incident.created_at.isoformat()}",
         ]
-        if incident.resolved_at is not None:
-            header.append(f"Resolved at: {incident.resolved_at.isoformat()}")
-        header.append(f"Description: {incident.description or '(none)'}")
+        resolved_at = incident.resolved_at
+        if isinstance(resolved_at, datetime.datetime):
+            header.append(f"Resolved at: {resolved_at.isoformat()}")
+        description = (
+            incident.description if isinstance(incident.description, str) else None
+        )
+        header.append(f"Description: {description or '(none)'}")
 
         if not kept:
             event_section = "Event log: (no events recorded)"
@@ -106,13 +116,14 @@ class PromptBuilder:
                 else ""
             )
             event_lines = "\n".join(
-                f"- [{e.timestamp.isoformat()}] {e.type}: {e.description}" for e in kept
+                f"- [{e.timestamp.isoformat()}] {e.type_}: {e.description}"
+                for e in kept
             )
             event_section = f"Event log:\n{truncated_note}{event_lines}"
 
         return "\n".join(header) + "\n\n" + event_section
 
-    def _truncate(self, events: Sequence[Event]) -> Sequence[Event]:
+    def _truncate(self, events: Sequence[IncidentEvent]) -> Sequence[IncidentEvent]:
         if len(events) <= self._max_events:
             return events
         return events[-self._max_events :]
