@@ -22,6 +22,9 @@ packages = ["src/genai_service"]
 [tool.ruff]
 line-length = 88
 
+[tool.ruff.lint.isort]
+known-first-party = ["client", "genai_service"]
+
 [tool.ruff.lint]
 ignore = [
   "N803", # invalid-argument-name
