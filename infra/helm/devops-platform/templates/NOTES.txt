@@ -6,9 +6,9 @@ Check it with:
   kubectl get ingress -n {{ .Release.Namespace }} devops-platform
 
 Frontend:
-  http(s)://<ingress-address>{{ .Values.ingress.paths.frontend | default "/" }}
+  http(s)://<ingress-address>{{ .Values.ingress.paths.frontend }}
 
 API gateway:
-  http(s)://<ingress-address>{{ .Values.ingress.paths.api | default "/api" }}
+  http(s)://<ingress-address>{{ .Values.ingress.paths.api }}
 
 If you set a hostname in values, use that host instead of <ingress-address>.

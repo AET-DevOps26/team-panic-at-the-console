@@ -94,7 +94,7 @@ Create a Git tag like `v0.1.0` (or publish a GitHub Release for that tag) to tri
 - Encrypted production values expected at: `infra/helm/secrets/values.prod.enc.yaml`
 - Deploy environment also includes `k9s` for cluster exploration/debugging.
 - Shared chart environment defaults are configured in `infra/helm/devops-platform/values.yaml` under `global.env` and injected into services that set `inheritGlobalEnv: true` (service-specific env entries still stay local).
-- Ingress is enabled by default and exposes the frontend at `/` and the API gateway at `/api`.
+- The chart includes an Ingress that exposes the frontend at `/` and the API gateway at `/api`.
 - The ingress host is `team-panic-at-the-console-devops26.stud.k8s.aet.cit.tum.de`.
 - TLS is enabled through cert-manager with the `letsencrypt-prod` cluster issuer and writes to the `devops-platform-tls` secret.
 - Required secrets for deploy workflow:

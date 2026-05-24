@@ -1,42 +1,32 @@
-{{- if .Values.ingress.enabled }}
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: devops-platform
   labels:
     app.kubernetes.io/name: devops-platform
-  {{- with .Values.ingress.annotations }}
   annotations:
-    {{- toYaml . | nindent 4 }}
-  {{- end }}
+    {{- toYaml .Values.ingress.annotations | nindent 4 }}
 spec:
-  {{- if .Values.ingress.className }}
   ingressClassName: {{ .Values.ingress.className }}
-  {{- end }}
-  {{- if and .Values.ingress.tls .Values.ingress.host }}
   tls:
-    - secretName: {{ required "ingress.secretName is required when ingress.tls is enabled" .Values.ingress.secretName }}
+    - secretName: {{ .Values.ingress.secretName }}
       hosts:
         - {{ .Values.ingress.host }}
-  {{- end }}
   rules:
-    - {{- if .Values.ingress.host }}
-      host: {{ .Values.ingress.host }}
-      {{- end }}
+    - host: {{ .Values.ingress.host }}
       http:
         paths:
-          - path: {{ .Values.ingress.paths.frontend | default "/" }}
+          - path: {{ .Values.ingress.paths.frontend }}
             pathType: Prefix
             backend:
               service:
                 name: frontend
                 port:
-                  number: 3000
-          - path: {{ .Values.ingress.paths.api | default "/api" }}
+                  number: {{ .Values.services.frontend.port }}
+          - path: {{ .Values.ingress.paths.api }}
             pathType: Prefix
             backend:
               service:
                 name: gateway
                 port:
-                  number: 8080
-{{- end }}
+                  number: {{ .Values.services.gateway.port }}

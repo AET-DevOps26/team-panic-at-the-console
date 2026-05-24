@@ -9,9 +9,7 @@ global:
       value: nats://nats:4222
 
 ingress:
-  enabled: true
   className: nginx
-  tls: true
   annotations:
     cert-manager.io/cluster-issuer: letsencrypt-prod
   host: team-panic-at-the-console-devops26.stud.k8s.aet.cit.tum.de
