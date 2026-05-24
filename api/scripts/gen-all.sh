@@ -20,12 +20,21 @@ npx --yes @openapitools/openapi-generator-cli@2.13.0 generate \
   --global-property=supportingFiles=ApiUtil.java \
   -o "$REPO_ROOT/services/generated/java"
 
-echo "==> Generating Python client (genai-service)"
+echo "==> Generating Python client (services/generated/python-client)"
 TMP_CONFIG_DIR=$(mktemp -d)
 trap 'rm -rf "$TMP_CONFIG_DIR"' EXIT
+# project_name_override sets both the output directory and the importable package name.
+# We keep `client` so genai-service imports generated modules from `client.api.*`
+# (for example, `client.api.health` or `client.api.genai`).
 printf 'project_name_override: client\n' > "$TMP_CONFIG_DIR/config.yaml"
-rm -rf "$REPO_ROOT/services/genai-service/client"
-(cd "$REPO_ROOT/services/genai-service" && openapi-python-client generate --path "$SPEC" --config "$TMP_CONFIG_DIR/config.yaml")
+GEN_ROOT="$REPO_ROOT/services/generated"
+rm -rf "$GEN_ROOT/python-client" "$GEN_ROOT/client"
+mkdir -p "$GEN_ROOT"
+(cd "$GEN_ROOT" && openapi-python-client generate --path "$SPEC" --config "$TMP_CONFIG_DIR/config.yaml")
+# openapi-python-client writes a `client/` dir holding pyproject.toml + the
+# `client/` package. Rename to `python-client/` so the directory matches the
+# language while the importable package keeps its short name.
+mv "$GEN_ROOT/client" "$GEN_ROOT/python-client"
 
 echo "==> Generating TypeScript SDK (frontend)"
 mkdir -p "$REPO_ROOT/services/frontend/src/api"
@@ -35,7 +44,6 @@ npx --yes openapi-typescript@7.4.4 "$SPEC" \
 echo "==> Formatting generated files via pre-commit hooks"
 find \
   "$REPO_ROOT/services/generated" \
-  "$REPO_ROOT/services/genai-service/client" \
   "$REPO_ROOT/services/frontend/src/api" \
   \( -type d \( -name target -o -name .ruff_cache -o -name __pycache__ -o -name node_modules \) -prune \) \
   -o -type f ! -name '*.class' -print0 2>/dev/null \

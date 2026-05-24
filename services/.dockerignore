@@ -1,7 +1,8 @@
-# Default-deny: only the incident-service build needs these paths.
-# Other service builds use their own per-service context.
+# Default-deny: shared services/ context builds only include listed trees.
+# See container-ci.yml matrix `include` entries and per-service Dockerfiles.
 *
 !incident-service/
+!genai-service/
 !generated/
 
 # Within the allowed dirs, prune dev artifacts
