@@ -64,14 +64,14 @@ def _build_response(
 
 def sync_detailed(
     *,
-    client: AuthenticatedClient,
+    client: AuthenticatedClient | Client,
     limit: int | Unset = 50,
     offset: int | Unset = 0,
 ) -> Response[ErrorResponse | UserListResponse]:
     """List users (directory)
 
-     Returns all users for assignment pickers and mention lists.
-    Intended for authenticated clients only; authorization rules are enforced in user-service / gateway.
+     Returns all users for assignment pickers and mention lists. Requires a valid `session` cookie (see
+    `GET /users/me`). Python callers use `Client` + cookies, not Bearer auth.
 
     Args:
         limit (int | Unset):  Default: 50.
@@ -99,14 +99,14 @@ def sync_detailed(
 
 def sync(
     *,
-    client: AuthenticatedClient,
+    client: AuthenticatedClient | Client,
     limit: int | Unset = 50,
     offset: int | Unset = 0,
 ) -> ErrorResponse | UserListResponse | None:
     """List users (directory)
 
-     Returns all users for assignment pickers and mention lists.
-    Intended for authenticated clients only; authorization rules are enforced in user-service / gateway.
+     Returns all users for assignment pickers and mention lists. Requires a valid `session` cookie (see
+    `GET /users/me`). Python callers use `Client` + cookies, not Bearer auth.
 
     Args:
         limit (int | Unset):  Default: 50.
@@ -129,14 +129,14 @@ def sync(
 
 async def asyncio_detailed(
     *,
-    client: AuthenticatedClient,
+    client: AuthenticatedClient | Client,
     limit: int | Unset = 50,
     offset: int | Unset = 0,
 ) -> Response[ErrorResponse | UserListResponse]:
     """List users (directory)
 
-     Returns all users for assignment pickers and mention lists.
-    Intended for authenticated clients only; authorization rules are enforced in user-service / gateway.
+     Returns all users for assignment pickers and mention lists. Requires a valid `session` cookie (see
+    `GET /users/me`). Python callers use `Client` + cookies, not Bearer auth.
 
     Args:
         limit (int | Unset):  Default: 50.
@@ -162,14 +162,14 @@ async def asyncio_detailed(
 
 async def asyncio(
     *,
-    client: AuthenticatedClient,
+    client: AuthenticatedClient | Client,
     limit: int | Unset = 50,
     offset: int | Unset = 0,
 ) -> ErrorResponse | UserListResponse | None:
     """List users (directory)
 
-     Returns all users for assignment pickers and mention lists.
-    Intended for authenticated clients only; authorization rules are enforced in user-service / gateway.
+     Returns all users for assignment pickers and mention lists. Requires a valid `session` cookie (see
+    `GET /users/me`). Python callers use `Client` + cookies, not Bearer auth.
 
     Args:
         limit (int | Unset):  Default: 50.

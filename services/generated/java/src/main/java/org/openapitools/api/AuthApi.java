@@ -39,7 +39,7 @@ import jakarta.annotation.Generated;
 
 @Generated(value = "org.openapitools.codegen.languages.SpringCodegen", comments = "Generator version: 7.14.0")
 @Validated
-@Tag(name = "auth", description = "Registration, login, and logout (user-service). Session JWT is issued as an httpOnly cookie per ADR 0007.")
+@Tag(name = "auth", description = "Registration, login, and logout (user-service). On login, user-service sets an httpOnly `session` cookie (JWT, `SameSite=Strict`) per ADR 0007. User routes use `security: []` in the spec so generated Python clients accept `Client` + cookies instead of mandatory Bearer tokens (see ADR 0007). ")
 public interface AuthApi {
 
     default Optional<NativeWebRequest> getRequest() {
