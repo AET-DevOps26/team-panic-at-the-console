@@ -31,57 +31,37 @@ public class NatsEventPublisher {
         this.objectMapper = objectMapper;
     }
 
-    /**
-     * Publish incident.created event.
-     */
     public void publishIncidentCreated(UUID incidentId) {
         publishEvent("incident.created", createBaseEvent(incidentId));
     }
 
-    /**
-     * Publish incident.updated event.
-     */
     public void publishIncidentUpdated(UUID incidentId) {
         publishEvent("incident.updated", createBaseEvent(incidentId));
     }
 
-    /**
-     * Publish incident.severity.escalated event.
-     */
+
     public void publishIncidentSeverityEscalated(UUID incidentId, String newSeverity) {
         Map<String, Object> event = createBaseEvent(incidentId);
         event.put("newSeverity", newSeverity);
         publishEvent("incident.severity.escalated", event);
     }
 
-    /**
-     * Publish incident.resolved event.
-     */
     public void publishIncidentResolved(UUID incidentId) {
         publishEvent("incident.resolved", createBaseEvent(incidentId));
     }
 
-    /**
-     * Publish incident.comment.added event.
-     */
     public void publishIncidentCommentAdded(UUID incidentId, UUID commentId) {
         Map<String, Object> event = createBaseEvent(incidentId);
         event.put("commentId", commentId.toString());
         publishEvent("incident.comment.added", event);
     }
 
-    /**
-     * Publish incident.assigned event.
-     */
     public void publishIncidentAssigned(UUID incidentId, UUID userId) {
         Map<String, Object> event = createBaseEvent(incidentId);
         event.put("userId", userId.toString());
         publishEvent("incident.assigned", event);
     }
 
-    /**
-     * Publish incident.regen.requested event.
-     */
     public void publishIncidentRegenRequested(UUID incidentId) {
         publishEvent("incident.regen.requested", createBaseEvent(incidentId));
     }

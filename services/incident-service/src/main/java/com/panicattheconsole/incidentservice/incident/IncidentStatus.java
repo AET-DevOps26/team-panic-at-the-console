@@ -10,9 +10,6 @@ public enum IncidentStatus {
     RESOLVED;
 
     public boolean canTransitionTo(IncidentStatus target) {
-        if (this == target) {
-            return true;
-        }
 
         return switch (this) {
             case OPEN -> target == INVESTIGATING;

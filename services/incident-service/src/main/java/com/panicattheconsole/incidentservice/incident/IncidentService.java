@@ -47,10 +47,7 @@ public class IncidentService {
         applicationEventPublisher.publishEvent(new IncidentNatsEvent(subject, payload));
     }
 
-    /**
-     * Create a new incident.
-     * Publishes incident.created event.
-     */
+
     public Incident createIncident(UUID incidentId, Severity severity, String title, UUID sourceId) {
         log.info("Creating incident [id={}, severity={}, title={}]", incidentId, severity, title);
 
@@ -63,19 +60,13 @@ public class IncidentService {
         return saved;
     }
 
-    /**
-     * Get an incident by ID.
-     * Throws NoSuchElementException if not found.
-     */
+
     public Incident getIncident(UUID incidentId) {
         return incidentRepository.findById(incidentId)
                 .orElseThrow(() -> new NoSuchElementException("Incident not found: " + incidentId));
     }
 
-    /**
-     * Update incident status.
-     * Publishes incident.updated event.
-     */
+
     public Incident updateIncidentStatus(UUID incidentId, IncidentStatus newStatus) {
         Incident incident = getIncident(incidentId);
         IncidentStatus oldStatus = incident.getStatus();
@@ -102,10 +93,6 @@ public class IncidentService {
         return saved;
     }
 
-    /**
-     * Escalate incident severity.
-     * Publishes incident.severity.escalated event.
-     */
     public Incident escalateSeverity(UUID incidentId, Severity newSeverity) {
         Incident incident = getIncident(incidentId);
         Severity oldSeverity = incident.getSeverity();
@@ -196,10 +183,6 @@ public class IncidentService {
         return saved;
     }
 
-    /**
-     * Assign a user to an incident.
-     * Publishes incident.assigned event.
-     */
     public Incident assignUser(UUID incidentId, UUID userId) {
         Incident incident = getIncident(incidentId);
         incident.getAssignedUsers().add(userId);
