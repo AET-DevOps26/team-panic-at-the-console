@@ -111,11 +111,12 @@ pixi run -e deploy k9s
 # Lint (all services, same as CI)
 pixi run lint
 
-# incident-service unit tests
+# Java service unit tests
 pixi run --manifest-path services/incident-service/pixi.toml test
+pixi run --manifest-path services/user-service/pixi.toml test
 
-# genai-service currently does not provide a Pixi manifest/test task
-# (services/genai-service contains a Dockerfile only)
+# genai-service (Python)
+pixi run test-genai
 ```
 
 ## Local Runtime

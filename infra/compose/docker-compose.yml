@@ -139,8 +139,8 @@ services:
   user-service:
     image: ghcr.io/aet-devops26/team-panic-at-the-console/user-service:${IMAGE_TAG:-main}
     build:
-      context: ./services/user-service
-      dockerfile: Dockerfile
+      context: ./services
+      dockerfile: user-service/Dockerfile
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/users
       SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-devops}
