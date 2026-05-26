@@ -6,6 +6,9 @@ metadata:
     app.kubernetes.io/name: nats
 spec:
   replicas: 1
+  strategy:
+    type: Recreate
+    rollingUpdate: null
   selector:
     matchLabels:
       app.kubernetes.io/name: nats
@@ -20,11 +23,18 @@ spec:
           imagePullPolicy: IfNotPresent
           args:
             - "--jetstream"
+            - "--store_dir"
+            - /data/jetstream
             - "--http_port"
             - {{ .Values.nats.monitoringPort | quote }}
           ports:
             - containerPort: {{ .Values.nats.port }}
             - containerPort: {{ .Values.nats.monitoringPort }}
+          {{- if .Values.nats.persistence }}
+          volumeMounts:
+            - name: data
+              mountPath: /data
+          {{- end }}
           readinessProbe:
             httpGet:
               path: /healthz
@@ -33,3 +43,9 @@ spec:
             periodSeconds: 5
           resources:
             {{- toYaml .Values.nats.resources | nindent 12 }}
+      {{- if .Values.nats.persistence }}
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: nats-data
+      {{- end }}

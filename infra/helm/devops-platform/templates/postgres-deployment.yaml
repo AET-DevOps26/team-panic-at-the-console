@@ -8,6 +8,7 @@ spec:
   replicas: 1
   strategy:
     type: Recreate
+    rollingUpdate: null
   selector:
     matchLabels:
       app.kubernetes.io/name: postgres
@@ -29,7 +30,10 @@ spec:
             - name: POSTGRES_USER
               value: {{ .Values.postgres.user | quote }}
             - name: POSTGRES_PASSWORD
-              value: {{ .Values.postgres.password | quote }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "devops-platform.postgresSecretName" . }}
+                  key: password
             - name: POSTGRES_DB
               value: {{ .Values.postgres.database | quote }}
           volumeMounts:
@@ -40,17 +44,21 @@ spec:
           readinessProbe:
             exec:
               command:
-                - /bin/sh
-                - -c
-                - pg_isready -U {{ .Values.postgres.user }} -d {{ .Values.postgres.database }}
+                - pg_isready
+                - -U
+                - {{ .Values.postgres.user | quote }}
+                - -d
+                - {{ .Values.postgres.database | quote }}
             initialDelaySeconds: 5
             periodSeconds: 5
           livenessProbe:
             exec:
               command:
-                - /bin/sh
-                - -c
-                - pg_isready -U {{ .Values.postgres.user }} -d {{ .Values.postgres.database }}
+                - pg_isready
+                - -U
+                - {{ .Values.postgres.user | quote }}
+                - -d
+                - {{ .Values.postgres.database | quote }}
             initialDelaySeconds: 30
             periodSeconds: 10
           resources:

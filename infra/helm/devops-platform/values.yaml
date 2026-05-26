@@ -8,10 +8,16 @@ global:
     - name: NATS_URL
       value: nats://nats:4222
 
+# Override postgresPassword in SOPS values for non-dev deploys.
+secrets:
+  postgresPassword: ""
+
 nats:
   image: nats:2.10-alpine
   port: 4222
   monitoringPort: 8222
+  persistence:
+    size: 1Gi
   resources:
     requests:
       memory: 64Mi
@@ -72,7 +78,6 @@ services:
       - name: SPRING_DATASOURCE_USERNAME
         value: devops
       - name: SPRING_DATASOURCE_PASSWORD
-        value: devops
 
   event-service:
     enabled: true
@@ -86,7 +91,6 @@ services:
       - name: SPRING_DATASOURCE_USERNAME
         value: devops
       - name: SPRING_DATASOURCE_PASSWORD
-        value: devops
 
   rule-engine:
     enabled: true
@@ -100,7 +104,6 @@ services:
       - name: SPRING_DATASOURCE_USERNAME
         value: devops
       - name: SPRING_DATASOURCE_PASSWORD
-        value: devops
 
   user-service:
     enabled: true
@@ -113,7 +116,6 @@ services:
       - name: SPRING_DATASOURCE_USERNAME
         value: devops
       - name: SPRING_DATASOURCE_PASSWORD
-        value: devops
 
   notification-service:
     enabled: true
@@ -127,7 +129,6 @@ services:
       - name: SPRING_DATASOURCE_USERNAME
         value: devops
       - name: SPRING_DATASOURCE_PASSWORD
-        value: devops
 
   webhook-service:
     enabled: true

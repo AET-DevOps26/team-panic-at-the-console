@@ -1,0 +1,14 @@
+{{- if .Values.nats.persistence }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: nats-data
+  labels:
+    app.kubernetes.io/name: nats
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: {{ .Values.nats.persistence.size }}
+{{- end }}
