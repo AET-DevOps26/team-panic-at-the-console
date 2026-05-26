@@ -43,57 +43,13 @@ jobs:
           fi
 
   build-service-images:
-    name: Build ${{ matrix.service }} image
-    runs-on: ubuntu-latest
+    name: Build service images
     needs: validate-container-layout
-    strategy:
-      fail-fast: false
-      matrix:
-        service:
-          - frontend
-          - gateway
-          - incident-service
-          - event-service
-          - rule-engine
-          - user-service
-          - notification-service
-          - webhook-service
-          - genai-service
-        include:
-          - service: incident-service
-            build_context: ./services
-            build_dockerfile: ./services/incident-service/Dockerfile
-          - service: genai-service
-            build_context: ./services
-            build_dockerfile: ./services/genai-service/Dockerfile
-
-    steps:
-      - name: Checkout branch
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-        with:
-          persist-credentials: false
-
-      - name: Normalize image repository
-        id: repo
-        run: echo "lower=${GITHUB_REPOSITORY,,}" >> "$GITHUB_OUTPUT"
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd # v4.0.0
-
-      - name: Log in to GHCR
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        uses: docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121 # v4.1.0
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Build (and optionally push) image
-        uses: docker/build-push-action@bcafcacb16a39f128d818304e6c9c0c18556b85f # v7.1.0
-        with:
-          context: ${{ matrix.build_context || format('./services/{0}', matrix.service) }}
-          file: ${{ matrix.build_dockerfile || format('./services/{0}/Dockerfile', matrix.service) }}
-          push: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
-          tags: |
-            ghcr.io/${{ steps.repo.outputs.lower }}/${{ matrix.service }}:${{ github.sha }}
-            ghcr.io/${{ steps.repo.outputs.lower }}/${{ matrix.service }}:main
+    uses: ./.github/workflows/_build-images.yml
+    permissions:
+      contents: read
+      packages: write
+    with:
+      push: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+      primary_tag: main
+      sha_tag: ${{ github.sha }}
