@@ -65,3 +65,6 @@ infra/helm/monitoring/charts/*.tgz
 
 # Helm / SOPS decrypted secrets
 infra/helm/secrets/*.dec.yaml
+
+# Staged into the chart by infra/helm/scripts/deploy.sh (source: api/openapi.yaml)
+infra/helm/devops-platform/files/openapi.yaml

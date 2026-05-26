@@ -120,7 +120,7 @@ pixi run -e deploy helm-uninstall
 Override the encrypted values file via `VALUES_FILE=...` if needed.
 
 Public URL: `https://team-panic-at-the-console-devops26.stud.k8s.aet.cit.tum.de/`
-Append `/api` for the gateway.
+Append `/api` for the gateway, `/swagger/` for Swagger UI (OpenAPI explorer).
 
 Launch `k9s` against the cluster pointed to by your active kubeconfig (`$KUBECONFIG` or `~/.kube/config`). Useful for inspecting pods, logs, and events in the deploy namespace without leaving the terminal:
 
@@ -153,6 +153,12 @@ pixi run compose-up
 Starts all services plus shared infrastructure (Postgres, NATS). Service env vars (`DATABASE_URL`, `NATS_URL`) are pre-wired.
 
 The compose file lives at `infra/compose/docker-compose.yml`. `pixi run compose-up` passes the correct `--project-directory`, `--env-file`, and `-f` flags automatically.
+
+Local URLs (same path layout as the Helm ingress):
+
+- API gateway: `http://localhost:8080/api/v1/` (e.g. `http://localhost:8080/api/v1/health`)
+- Swagger UI: `http://localhost:8080/swagger/`
+- Frontend: `http://localhost:3000/` (unchanged)
 
 Shared non-secret defaults (for example `NATS_URL`) are defined once in `.env.example` and referenced from service-specific environment sections.
 
