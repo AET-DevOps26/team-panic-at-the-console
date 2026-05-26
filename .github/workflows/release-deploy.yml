@@ -16,32 +16,12 @@ permissions:
   packages: write
 
 jobs:
-  build-and-push-images:
-    name: Build and push ${{ matrix.service }}
+  resolve-tag:
+    name: Resolve release tag
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        service:
-          - frontend
-          - gateway
-          - incident-service
-          - event-service
-          - rule-engine
-          - user-service
-          - notification-service
-          - webhook-service
-          - genai-service
+    outputs:
+      tag: ${{ steps.tag.outputs.value }}
     steps:
-      - name: Checkout branch
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-        with:
-          persist-credentials: false
-
-      - name: Normalize image repository
-        id: repo
-        run: echo "lower=${GITHUB_REPOSITORY,,}" >> "$GITHUB_OUTPUT"
-
       - name: Resolve release tag
         id: tag
         run: |
@@ -53,30 +33,22 @@ jobs:
         env:
           GITHUB_EVENT_RELEASE_TAG_NAME: ${{ github.event.release.tag_name }}
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd # v4.0.0
-
-      - name: Log in to GHCR
-        uses: docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121 # v4.1.0
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Build and push image
-        uses: docker/build-push-action@bcafcacb16a39f128d818304e6c9c0c18556b85f # v7.1.0
-        with:
-          context: ./services/${{ matrix.service }}
-          file: ./services/${{ matrix.service }}/Dockerfile
-          push: true
-          tags: |
-            ghcr.io/${{ steps.repo.outputs.lower }}/${{ matrix.service }}:${{ steps.tag.outputs.value }}
-            ghcr.io/${{ steps.repo.outputs.lower }}/${{ matrix.service }}:sha-${{ github.sha }}
+  build-and-push-images:
+    name: Build and push images
+    needs: resolve-tag
+    uses: ./.github/workflows/_build-images.yml
+    permissions:
+      contents: read
+      packages: write
+    with:
+      push: true
+      primary_tag: ${{ needs.resolve-tag.outputs.tag }}
+      sha_tag: sha-${{ github.sha }}
 
   deploy:
     name: Deploy tagged release
     runs-on: ubuntu-latest
-    needs: build-and-push-images
+    needs: [resolve-tag, build-and-push-images]
     environment: production
     steps:
       - name: Checkout branch
@@ -84,21 +56,15 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Resolve release tag
-        id: tag
-        run: |
-          if [ "${{ github.event_name }}" = "release" ]; then
-            echo "value=${GITHUB_EVENT_RELEASE_TAG_NAME}" >> "$GITHUB_OUTPUT"
-          else
-            echo "value=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
-          fi
-        env:
-          GITHUB_EVENT_RELEASE_TAG_NAME: ${{ github.event.release.tag_name }}
+      - name: Set up pixi
+        uses: prefix-dev/setup-pixi@1b2de7f3351f171c8b4dfeb558c639cb58ed4ec0 # v0.9.5
+        with:
+          environments: deploy
 
-      - name: Deploy placeholder
-        run: |
-          echo "Release tag: ${STEPS_TAG_OUTPUTS_VALUE}"
-          echo "All service images were pushed to GHCR."
-          echo "Wire this step to your runtime target (Kubernetes/VM/PaaS)."
+      - name: Run helm-deploy task
         env:
-          STEPS_TAG_OUTPUTS_VALUE: ${{ steps.tag.outputs.value }}
+          KUBECONFIG_B64: ${{ secrets.KUBECONFIG_B64 }}
+          SOPS_AGE_KEY: ${{ secrets.SOPS_AGE_KEY }}
+          DEPLOY_NAMESPACE: ${{ vars.DEPLOY_NAMESPACE }}
+          TAG: ${{ needs.resolve-tag.outputs.tag }}
+        run: pixi run -e deploy helm-deploy

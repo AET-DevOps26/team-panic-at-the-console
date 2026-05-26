@@ -5,7 +5,7 @@ from typing import Any, TypeVar
 
 from attrs import define as _attrs_define
 
-from ..models.severity_response_severity import SeverityResponseSeverity
+from ..models.severity import Severity
 
 T = TypeVar("T", bound="SeverityResponse")
 
@@ -19,11 +19,11 @@ class SeverityResponse:
             {'severity': 'SEV2', 'reason': 'Customer-facing checkout degraded for more than 15 minutes with no workaround.'}
 
         Attributes:
-            severity (SeverityResponseSeverity):  Example: SEV2.
+            severity (Severity): Incident severity. SEV1 is highest impact.
             reason (str):  Example: Customer-facing checkout degraded for more than 15 minutes with no workaround..
     """
 
-    severity: SeverityResponseSeverity
+    severity: Severity
     reason: str
 
     def to_dict(self) -> dict[str, Any]:
@@ -45,7 +45,7 @@ class SeverityResponse:
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
         d = dict(src_dict)
-        severity = SeverityResponseSeverity(d.pop("severity"))
+        severity = Severity(d.pop("severity"))
 
         reason = d.pop("reason")
 

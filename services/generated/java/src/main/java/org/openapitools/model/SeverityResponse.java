@@ -5,6 +5,7 @@ import java.util.Objects;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
+import org.openapitools.model.Severity;
 import org.springframework.lang.Nullable;
 import org.openapitools.jackson.nullable.JsonNullable;
 import java.time.OffsetDateTime;
@@ -28,46 +29,7 @@ import com.fasterxml.jackson.annotation.JsonAnySetter;
 @Generated(value = "org.openapitools.codegen.languages.SpringCodegen", comments = "Generator version: 7.14.0")
 public class SeverityResponse {
 
-  /**
-   * Gets or Sets severity
-   */
-  public enum SeverityEnum {
-    SEV1("SEV1"),
-
-    SEV2("SEV2"),
-
-    SEV3("SEV3"),
-
-    SEV4("SEV4");
-
-    private final String value;
-
-    SeverityEnum(String value) {
-      this.value = value;
-    }
-
-    @JsonValue
-    public String getValue() {
-      return value;
-    }
-
-    @Override
-    public String toString() {
-      return String.valueOf(value);
-    }
-
-    @JsonCreator
-    public static SeverityEnum fromValue(String value) {
-      for (SeverityEnum b : SeverityEnum.values()) {
-        if (b.value.equals(value)) {
-          return b;
-        }
-      }
-      throw new IllegalArgumentException("Unexpected value '" + value + "'");
-    }
-  }
-
-  private SeverityEnum severity;
+  private Severity severity;
 
   private String reason;
 
@@ -78,12 +40,12 @@ public class SeverityResponse {
   /**
    * Constructor with only required parameters
    */
-  public SeverityResponse(SeverityEnum severity, String reason) {
+  public SeverityResponse(Severity severity, String reason) {
     this.severity = severity;
     this.reason = reason;
   }
 
-  public SeverityResponse severity(SeverityEnum severity) {
+  public SeverityResponse severity(Severity severity) {
     this.severity = severity;
     return this;
   }
@@ -92,14 +54,14 @@ public class SeverityResponse {
    * Get severity
    * @return severity
    */
-  @NotNull
-  @Schema(name = "severity", example = "SEV2", requiredMode = Schema.RequiredMode.REQUIRED)
+  @NotNull @Valid
+  @Schema(name = "severity", requiredMode = Schema.RequiredMode.REQUIRED)
   @JsonProperty("severity")
-  public SeverityEnum getSeverity() {
+  public Severity getSeverity() {
     return severity;
   }
 
-  public void setSeverity(SeverityEnum severity) {
+  public void setSeverity(Severity severity) {
     this.severity = severity;
   }
 

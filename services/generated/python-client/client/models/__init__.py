@@ -12,7 +12,6 @@ from .regen_accepted_task import RegenAcceptedTask
 from .severity import Severity
 from .severity_patch import SeverityPatch
 from .severity_response import SeverityResponse
-from .severity_response_severity import SeverityResponseSeverity
 from .solutions_patch import SolutionsPatch
 from .solutions_response import SolutionsResponse
 from .summary_patch import SummaryPatch
@@ -31,7 +30,6 @@ __all__ = (
     "Severity",
     "SeverityPatch",
     "SeverityResponse",
-    "SeverityResponseSeverity",
     "SolutionsPatch",
     "SolutionsResponse",
     "SummaryPatch",
