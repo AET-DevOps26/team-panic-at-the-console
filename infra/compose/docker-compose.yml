@@ -34,7 +34,7 @@ services:
     volumes:
       - ollama_data:/root/.ollama
     healthcheck:
-      test: ["CMD-SHELL", "ollama list 2>/dev/null | grep -q '${OLLAMA_MODEL:-qwen2.5}'"]
+      test: ["CMD-SHELL", "ollama list 2>/dev/null | grep -q '${GENAI_OLLAMA_MODEL:-qwen2.5:3b}'"]
       interval: 30s
       timeout: 10s
       retries: 20
@@ -47,8 +47,7 @@ services:
       - ollama_data:/root/.ollama
     environment:
       OLLAMA_HOST: http://ollama:11434
-      OLLAMA_MODEL: ${OLLAMA_MODEL:-qwen2.5:3b}
-    entrypoint: ["/bin/sh", "-c", "until ollama list >/dev/null 2>&1; do sleep 2; done; ollama pull ${OLLAMA_MODEL:-qwen2.5:3b}"]
+    entrypoint: ["/bin/sh", "-c", "until ollama list >/dev/null 2>&1; do sleep 2; done; ollama pull ${GENAI_OLLAMA_MODEL:-qwen2.5:3b}"]
     depends_on:
       ollama:
         condition: service_started
@@ -192,8 +191,8 @@ services:
       dockerfile: ./genai-service/Dockerfile
     environment:
       NATS_URL: ${NATS_URL:-nats://nats:4222}
-      OLLAMA_URL: http://ollama:11434
-      OLLAMA_MODEL: ${OLLAMA_MODEL:-qwen2.5:3b}
+      GENAI_OLLAMA_URL: ${GENAI_OLLAMA_URL:-http://ollama:11434}
+      GENAI_OLLAMA_MODEL: ${GENAI_OLLAMA_MODEL:-qwen2.5:3b}
       INCIDENT_SERVICE_URL: http://incident-service:8081
     ports:
       - "8087:8087"
