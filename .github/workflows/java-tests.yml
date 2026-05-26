@@ -12,17 +12,19 @@ on:
     branches: [main]
     paths:
       - "services/incident-service/**"
+      - "services/gateway/**"
       - "services/generated/java/**"
       - "api/openapi.yaml"
   pull_request:
     paths:
       - "services/incident-service/**"
+      - "services/gateway/**"
       - "services/generated/java/**"
       - "api/openapi.yaml"
   merge_group:
 
 jobs:
-  test:
+  incident-service:
     name: incident-service
     runs-on: ubuntu-latest
 
@@ -50,3 +52,32 @@ jobs:
 
       - name: Build and test
         run: pixi run --manifest-path services/incident-service/pixi.toml test
+
+  gateway:
+    name: gateway
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+
+      - name: Set up pixi
+        uses: prefix-dev/setup-pixi@1b2de7f3351f171c8b4dfeb558c639cb58ed4ec0 # v0.9.5
+        with:
+          manifest-path: services/gateway/pixi.toml
+          frozen: true
+          cache: true
+
+      - name: Cache Maven repository
+        uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
+        with:
+          path: ~/.m2/repository
+          key: maven-${{ runner.os }}-jdk25-${{ hashFiles('services/gateway/pom.xml') }}
+          restore-keys: |
+            maven-${{ runner.os }}-jdk25-
+            maven-${{ runner.os }}-
+
+      - name: Build and test
+        run: pixi run --manifest-path services/gateway/pixi.toml test
