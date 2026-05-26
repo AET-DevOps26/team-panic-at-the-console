@@ -94,9 +94,17 @@ Push a tag like `v0.1.0` (or publish a GitHub Release) to run `release-deploy.ym
 
 Production deploy secrets live in `infra/helm/secrets/values.prod.enc.yaml` (encrypted, committed). Plaintext defaults for local chart dev stay in `infra/helm/devops-platform/values.yaml`.
 
+**Pixi tasks** (deploy environment; install with `pixi install`):
+
+| Task | Purpose |
+| ---- | ------- |
+| `pixi run -e deploy helm-deploy` | Decrypt SOPS values and install/upgrade the chart |
+| `pixi run -e deploy helm-uninstall` | Remove the Helm release |
+| `pixi run -e deploy k9s` | Open k9s (uses your active kubeconfig) |
+
 **Flow (local or CI):**
 
-1. `infra/helm/scripts/deploy.sh` decrypts `values.prod.enc.yaml` with the AGE private key (`SOPS_AGE_KEY`).
+1. `pixi run -e deploy helm-deploy` decrypts `values.prod.enc.yaml` with `SOPS_AGE_KEY`.
 2. Helm installs/upgrades `infra/helm/devops-platform` with `--values` (decrypted file) and `--set global.image.tag=$TAG`.
 3. The chart creates `postgres-credentials` from `secrets.postgresPassword` in the decrypted file (falls back to `postgres.password` in `values.yaml` if unset).
 
@@ -121,7 +129,7 @@ Configure under **Settings → Environments → production**:
 | `SOPS_AGE_KEY` | Secret | Full AGE private key file (same as `keys.txt`) |
 | `DEPLOY_NAMESPACE` | Variable | e.g. `team-panic-at-the-console-devops26` |
 
-Both deploy workflows pass these into `pixi run -e deploy helm-deploy`, which calls `deploy.sh`.
+Both deploy workflows run `pixi run -e deploy helm-deploy` with these values.
 
 #### New team member access
 
@@ -182,6 +190,9 @@ secrets:
 
 #### Deploy / uninstall locally
 
+Required environment variables for `helm-deploy`: `KUBECONFIG_B64`, `SOPS_AGE_KEY`, `DEPLOY_NAMESPACE`, `TAG`.  
+`helm-uninstall` needs `KUBECONFIG_B64` and `DEPLOY_NAMESPACE` only.
+
 ```bash
 export SOPS_AGE_KEY_FILE=~/.config/sops/age/keys.txt
 
@@ -191,13 +202,12 @@ DEPLOY_NAMESPACE=team-panic-at-the-console-devops26 \
 TAG=v0.0.3 \
 pixi run -e deploy helm-deploy
 
-# Uninstall release (kubeconfig + namespace only; no SOPS)
 KUBECONFIG_B64=$(base64 < ~/.kube/config | tr -d '\n') \
 DEPLOY_NAMESPACE=team-panic-at-the-console-devops26 \
 pixi run -e deploy helm-uninstall
 ```
 
-Override the encrypted file: `VALUES_FILE=path/to/other.enc.yaml`.
+Optional: `VALUES_FILE=path/to/other.enc.yaml` when running `helm-deploy`.
 
 **Cluster URL:** `https://team-panic-at-the-console-devops26.stud.k8s.aet.cit.tum.de/` (frontend `/`, API `/api`).
 
