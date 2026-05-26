@@ -14,9 +14,14 @@ tags:
   - name: genai
     description: AI-assisted incident analysis (on-demand regeneration triggers).
   - name: auth
-    description: Registration, login, and logout (user-service). Session JWT is issued as an httpOnly cookie per ADR 0007.
+    description: |
+      Registration, login, and logout (user-service). On login, user-service sets an httpOnly `session`
+      cookie (JWT, `SameSite=Strict`) per ADR 0007. User routes use `security: []` in the spec so generated
+      Python clients accept `Client` + cookies instead of mandatory Bearer tokens (see ADR 0007).
   - name: users
-    description: User profiles and directory (user-service).
+    description: |
+      User profiles and directory (user-service). Runtime auth uses the `session` cookie or gateway-injected
+      `X-User-Id` / `X-User-Role`; OpenAPI marks operations `security: []` for codegen only.
 
 servers:
   - url: http://localhost:4010
@@ -219,9 +224,12 @@ paths:
     get:
       operationId: getCurrentUser
       summary: Get the authenticated user profile
+      description: |
+        Requires a valid `session` cookie (browser) or prior login via `POST /auth/login` on the same HTTP client.
+        Python callers should use `Client` and pass cookies (e.g. `client.with_cookies({"session": "<jwt>"})`), not
+        `AuthenticatedClient` / `Authorization: Bearer`.
       tags: [users]
-      security:
-        - sessionCookie: []
+      security: []
       responses:
         "200":
           description: Current user
@@ -241,11 +249,10 @@ paths:
       operationId: listUsers
       summary: List users (directory)
       description: |
-        Returns all users for assignment pickers and mention lists.
-        Intended for authenticated clients only; authorization rules are enforced in user-service / gateway.
+        Returns all users for assignment pickers and mention lists. Requires a valid `session` cookie (see
+        `GET /users/me`). Python callers use `Client` + cookies, not Bearer auth.
       tags: [users]
-      security:
-        - sessionCookie: []
+      security: []
       parameters:
         - $ref: "#/components/parameters/UserListLimitParam"
         - $ref: "#/components/parameters/UserListOffsetParam"
@@ -264,15 +271,6 @@ paths:
                 $ref: "#/components/schemas/ErrorResponse"
 
 components:
-  securitySchemes:
-    sessionCookie:
-      type: apiKey
-      in: cookie
-      name: session
-      description: |
-        httpOnly JWT session cookie issued by user-service on login (ADR 0007).
-        Gateway validates the cookie and forwards identity as `X-User-Id` / `X-User-Role` to internal services.
-
   parameters:
     UserListLimitParam:
       name: limit

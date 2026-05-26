@@ -38,7 +38,7 @@ import jakarta.annotation.Generated;
 
 @Generated(value = "org.openapitools.codegen.languages.SpringCodegen", comments = "Generator version: 7.14.0")
 @Validated
-@Tag(name = "users", description = "User profiles and directory (user-service).")
+@Tag(name = "users", description = "User profiles and directory (user-service). Runtime auth uses the `session` cookie or gateway-injected `X-User-Id` / `X-User-Role`; OpenAPI marks operations `security: []` for codegen only. ")
 public interface UsersApi {
 
     default Optional<NativeWebRequest> getRequest() {
@@ -47,6 +47,7 @@ public interface UsersApi {
 
     /**
      * GET /users/me : Get the authenticated user profile
+     * Requires a valid &#x60;session&#x60; cookie (browser) or prior login via &#x60;POST /auth/login&#x60; on the same HTTP client. Python callers should use &#x60;Client&#x60; and pass cookies (e.g. &#x60;client.with_cookies({\&quot;session\&quot;: \&quot;&lt;jwt&gt;\&quot;})&#x60;), not &#x60;AuthenticatedClient&#x60; / &#x60;Authorization: Bearer&#x60;.
      *
      * @return Current user (status code 200)
      *         or Not authenticated (status code 401)
@@ -54,6 +55,7 @@ public interface UsersApi {
     @Operation(
         operationId = "getCurrentUser",
         summary = "Get the authenticated user profile",
+        description = "Requires a valid `session` cookie (browser) or prior login via `POST /auth/login` on the same HTTP client. Python callers should use `Client` and pass cookies (e.g. `client.with_cookies({\"session\": \"<jwt>\"})`), not `AuthenticatedClient` / `Authorization: Bearer`. ",
         tags = { "users" },
         responses = {
             @ApiResponse(responseCode = "200", description = "Current user", content = {
@@ -62,9 +64,6 @@ public interface UsersApi {
             @ApiResponse(responseCode = "401", description = "Not authenticated", content = {
                 @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))
             })
-        },
-        security = {
-            @SecurityRequirement(name = "sessionCookie")
         }
     )
     @RequestMapping(
@@ -97,7 +96,7 @@ public interface UsersApi {
 
     /**
      * GET /users : List users (directory)
-     * Returns all users for assignment pickers and mention lists. Intended for authenticated clients only; authorization rules are enforced in user-service / gateway.
+     * Returns all users for assignment pickers and mention lists. Requires a valid &#x60;session&#x60; cookie (see &#x60;GET /users/me&#x60;). Python callers use &#x60;Client&#x60; + cookies, not Bearer auth.
      *
      * @param limit Maximum number of users to return (default 50, max 100). (optional, default to 50)
      * @param offset Number of users to skip for pagination. (optional, default to 0)
@@ -107,7 +106,7 @@ public interface UsersApi {
     @Operation(
         operationId = "listUsers",
         summary = "List users (directory)",
-        description = "Returns all users for assignment pickers and mention lists. Intended for authenticated clients only; authorization rules are enforced in user-service / gateway. ",
+        description = "Returns all users for assignment pickers and mention lists. Requires a valid `session` cookie (see `GET /users/me`). Python callers use `Client` + cookies, not Bearer auth. ",
         tags = { "users" },
         responses = {
             @ApiResponse(responseCode = "200", description = "User directory page", content = {
@@ -116,9 +115,6 @@ public interface UsersApi {
             @ApiResponse(responseCode = "401", description = "Not authenticated", content = {
                 @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))
             })
-        },
-        security = {
-            @SecurityRequirement(name = "sessionCookie")
         }
     )
     @RequestMapping(

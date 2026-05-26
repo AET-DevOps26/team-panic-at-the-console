@@ -49,9 +49,15 @@ def _build_response(
 
 def sync_detailed(
     *,
-    client: AuthenticatedClient,
+    client: AuthenticatedClient | Client,
 ) -> Response[ErrorResponse | User]:
-    """Get the authenticated user profile
+    r"""Get the authenticated user profile
+
+     Requires a valid `session` cookie (browser) or prior login via `POST /auth/login` on the same HTTP
+    client.
+    Python callers should use `Client` and pass cookies (e.g. `client.with_cookies({\"session\":
+    \"<jwt>\"})`), not
+    `AuthenticatedClient` / `Authorization: Bearer`.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -72,9 +78,15 @@ def sync_detailed(
 
 def sync(
     *,
-    client: AuthenticatedClient,
+    client: AuthenticatedClient | Client,
 ) -> ErrorResponse | User | None:
-    """Get the authenticated user profile
+    r"""Get the authenticated user profile
+
+     Requires a valid `session` cookie (browser) or prior login via `POST /auth/login` on the same HTTP
+    client.
+    Python callers should use `Client` and pass cookies (e.g. `client.with_cookies({\"session\":
+    \"<jwt>\"})`), not
+    `AuthenticatedClient` / `Authorization: Bearer`.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -91,9 +103,15 @@ def sync(
 
 async def asyncio_detailed(
     *,
-    client: AuthenticatedClient,
+    client: AuthenticatedClient | Client,
 ) -> Response[ErrorResponse | User]:
-    """Get the authenticated user profile
+    r"""Get the authenticated user profile
+
+     Requires a valid `session` cookie (browser) or prior login via `POST /auth/login` on the same HTTP
+    client.
+    Python callers should use `Client` and pass cookies (e.g. `client.with_cookies({\"session\":
+    \"<jwt>\"})`), not
+    `AuthenticatedClient` / `Authorization: Bearer`.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -112,9 +130,15 @@ async def asyncio_detailed(
 
 async def asyncio(
     *,
-    client: AuthenticatedClient,
+    client: AuthenticatedClient | Client,
 ) -> ErrorResponse | User | None:
-    """Get the authenticated user profile
+    r"""Get the authenticated user profile
+
+     Requires a valid `session` cookie (browser) or prior login via `POST /auth/login` on the same HTTP
+    client.
+    Python callers should use `Client` and pass cookies (e.g. `client.with_cookies({\"session\":
+    \"<jwt>\"})`), not
+    `AuthenticatedClient` / `Authorization: Bearer`.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
