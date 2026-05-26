@@ -115,9 +115,9 @@ services:
     image:
       repository: genai-service
     env:
-      - name: OLLAMA_URL
+      - name: GENAI_OLLAMA_URL
         value: http://ollama:11434
-      - name: OLLAMA_MODEL
+      - name: GENAI_OLLAMA_MODEL
         value: *ollamaModel
       - name: INCIDENT_SERVICE_URL
         value: http://incident-service:8081

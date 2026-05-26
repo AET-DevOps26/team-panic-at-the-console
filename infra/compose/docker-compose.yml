@@ -192,8 +192,8 @@ services:
       dockerfile: ./genai-service/Dockerfile
     environment:
       NATS_URL: ${NATS_URL:-nats://nats:4222}
-      OLLAMA_URL: http://ollama:11434
-      OLLAMA_MODEL: ${OLLAMA_MODEL:-qwen2.5:3b}
+      GENAI_OLLAMA_URL: http://ollama:11434
+      GENAI_OLLAMA_MODEL: ${OLLAMA_MODEL:-qwen2.5:3b}
       INCIDENT_SERVICE_URL: http://incident-service:8081
     ports:
       - "8087:8087"
