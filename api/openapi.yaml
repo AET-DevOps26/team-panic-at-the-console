@@ -384,6 +384,7 @@ components:
         password:
           type: string
           format: password
+          minLength: 8
           writeOnly: true
           example: "change-me-8+"
 
