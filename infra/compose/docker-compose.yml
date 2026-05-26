@@ -68,15 +68,19 @@ services:
   gateway:
     image: ghcr.io/aet-devops26/team-panic-at-the-console/gateway:${IMAGE_TAG:-main}
     build:
-      context: ./services/gateway
-      dockerfile: Dockerfile
+      context: ./services
+      dockerfile: gateway/Dockerfile
     environment:
+      GATEWAY_INCIDENT_SERVICE_URL: http://incident-service:8081
+      GATEWAY_GENAI_SERVICE_URL: http://genai-service:8087
       NATS_URL: ${NATS_URL:-nats://nats:4222}
     ports:
       - "8080:8080"
     depends_on:
-      nats:
+      incident-service:
         condition: service_started
+      genai-service:
+        condition: service_healthy
     restart: unless-stopped
 
   incident-service:
