@@ -1,0 +1,14 @@
+DevOps platform deployed in namespace {{ .Release.Namespace }}.
+
+If your ingress controller is ready, the public address is whatever EXTERNAL-IP or hostname it publishes for the devops-platform ingress.
+
+Check it with:
+  kubectl get ingress -n {{ .Release.Namespace }} devops-platform
+
+Frontend:
+  http(s)://<ingress-address>{{ .Values.ingress.paths.frontend }}
+
+API gateway:
+  http(s)://<ingress-address>{{ .Values.ingress.paths.api }}
+
+If you set a hostname in values, use that host instead of <ingress-address>.
