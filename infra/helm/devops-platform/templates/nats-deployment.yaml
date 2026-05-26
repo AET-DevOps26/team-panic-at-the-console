@@ -1,0 +1,35 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nats
+  labels:
+    app.kubernetes.io/name: nats
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: nats
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: nats
+    spec:
+      containers:
+        - name: nats
+          image: {{ .Values.nats.image }}
+          imagePullPolicy: IfNotPresent
+          args:
+            - "--jetstream"
+            - "--http_port"
+            - {{ .Values.nats.monitoringPort | quote }}
+          ports:
+            - containerPort: {{ .Values.nats.port }}
+            - containerPort: {{ .Values.nats.monitoringPort }}
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: {{ .Values.nats.monitoringPort }}
+            initialDelaySeconds: 3
+            periodSeconds: 5
+          resources:
+            {{- toYaml .Values.nats.resources | nindent 12 }}

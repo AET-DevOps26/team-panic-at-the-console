@@ -9,7 +9,7 @@ services:
       POSTGRES_DB: postgres
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./infra/postgres/init-dbs.sh:/docker-entrypoint-initdb.d/init-dbs.sh
+      - ./infra/helm/devops-platform/files/init-dbs.sh:/docker-entrypoint-initdb.d/init-dbs.sh
     ports:
       - "5432:5432"
     healthcheck:

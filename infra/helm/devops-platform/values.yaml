@@ -8,6 +8,34 @@ global:
     - name: NATS_URL
       value: nats://nats:4222
 
+nats:
+  image: nats:2.10-alpine
+  port: 4222
+  monitoringPort: 8222
+  resources:
+    requests:
+      memory: 64Mi
+      cpu: 50m
+    limits:
+      memory: 128Mi
+      cpu: 200m
+
+postgres:
+  image: postgres:16-alpine
+  port: 5432
+  user: devops
+  password: devops
+  database: postgres
+  persistence:
+    size: 5Gi
+  resources:
+    requests:
+      memory: 256Mi
+      cpu: 100m
+    limits:
+      memory: 512Mi
+      cpu: 500m
+
 ingress:
   className: nginx
   annotations:

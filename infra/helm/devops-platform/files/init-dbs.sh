@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-# Creates one database per service on the shared dev Postgres instance.
+# Creates one database per service on the shared Postgres instance.
 # Each service should use its own DB; this mirrors prod isolation without
 # running nine separate containers locally.
 for db in incidents events users notifications rules; do

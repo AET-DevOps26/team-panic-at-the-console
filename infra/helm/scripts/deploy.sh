@@ -64,6 +64,13 @@ chmod 600 "$SOPS_AGE_KEY_FILE"
 unset SOPS_AGE_KEY
 sops --decrypt "$ENC_VALUES" > "$DEC_VALUES"
 
+echo ">> ensure namespace exists: $DEPLOY_NAMESPACE"
+if kubectl get namespace "$DEPLOY_NAMESPACE" >/dev/null 2>&1; then
+  echo "   namespace already exists"
+else
+  kubectl create namespace "$DEPLOY_NAMESPACE"
+fi
+
 echo ">> helm upgrade --install (namespace=$DEPLOY_NAMESPACE tag=$TAG)"
 helm upgrade --install devops-platform "$CHART_DIR" \
   --namespace "$DEPLOY_NAMESPACE" \

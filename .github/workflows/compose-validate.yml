@@ -4,7 +4,7 @@ on:
   pull_request:
     paths:
       - "infra/compose/**"
-      - "infra/postgres/**"
+      - "infra/helm/devops-platform/files/**"
       - "services/**"
       - "api/openapi.yaml"
       - ".env.example"
@@ -16,7 +16,7 @@ on:
       - main
     paths:
       - "infra/compose/**"
-      - "infra/postgres/**"
+      - "infra/helm/devops-platform/files/**"
       - "services/**"
       - "api/openapi.yaml"
       - ".env.example"
