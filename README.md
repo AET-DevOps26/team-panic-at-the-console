@@ -94,16 +94,41 @@ Create a Git tag like `v0.1.0` (or publish a GitHub Release for that tag) to tri
 - Encrypted production values expected at: `infra/helm/secrets/values.prod.enc.yaml`
 - Deploy environment also includes `k9s` for cluster exploration/debugging.
 - Shared chart environment defaults are configured in `infra/helm/devops-platform/values.yaml` under `global.env` and injected into services that set `inheritGlobalEnv: true` (service-specific env entries still stay local).
+- The chart includes an Ingress that exposes the frontend at `/` and the API gateway at `/api`.
+- The ingress host is `team-panic-at-the-console-devops26.stud.k8s.aet.cit.tum.de`.
+- TLS is enabled through cert-manager with the `letsencrypt-prod` cluster issuer and writes to the `devops-platform-tls` secret.
 - Required secrets for deploy workflow:
   - `KUBECONFIG_B64` (base64 encoded kubeconfig)
   - `SOPS_AGE_KEY` (AGE private key content)
 
-Use deploy tooling from Pixi:
+Deploy / uninstall the chart (requires `KUBECONFIG_B64`, `SOPS_AGE_KEY`, `DEPLOY_NAMESPACE`, `TAG`):
 
 ```bash
-pixi run deploy-tools-version
+# Deploy current production values to the configured namespace
+KUBECONFIG_B64=$(base64 < ~/.kube/config) \
+SOPS_AGE_KEY="$(cat ~/.config/sops/age/keys.txt)" \
+DEPLOY_NAMESPACE=team-panic-at-the-console-devops26 \
+TAG=v0.0.1 \
+pixi run -e deploy helm-deploy
+
+# Uninstall the release (kubeconfig + namespace only)
+KUBECONFIG_B64=$(base64 < ~/.kube/config) \
+DEPLOY_NAMESPACE=team-panic-at-the-console-devops26 \
+pixi run -e deploy helm-uninstall
+```
+
+Override the encrypted values file via `VALUES_FILE=...` if needed.
+
+Public URL: `https://team-panic-at-the-console-devops26.stud.k8s.aet.cit.tum.de/`
+Append `/api` for the gateway.
+
+Launch `k9s` against the cluster pointed to by your active kubeconfig (`$KUBECONFIG` or `~/.kube/config`). Useful for inspecting pods, logs, and events in the deploy namespace without leaving the terminal:
+
+```bash
 pixi run -e deploy k9s
 ```
+
+Make sure your kubeconfig context targets the intended cluster first (`kubectl config current-context`).
 
 ## Testing
 
@@ -132,7 +157,7 @@ The compose file lives at `infra/compose/docker-compose.yml`. `pixi run compose-
 
 Shared non-secret defaults (for example `NATS_URL`) are defined once in `.env.example` and referenced from service-specific environment sections.
 
-- Override the image tag: `IMAGE_TAG=v0.1.0 pixi run compose-up`
+- Override the image tag: `IMAGE_TAG=v0.0.1 pixi run compose-up`
 
 ## Mock API Server
 
