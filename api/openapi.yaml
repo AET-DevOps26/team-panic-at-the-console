@@ -252,9 +252,7 @@ components:
           workaround.
       properties:
         severity:
-          type: string
-          enum: [SEV1, SEV2, SEV3, SEV4]
-          example: SEV2
+          $ref: "#/components/schemas/Severity"
         reason:
           type: string
           example: >-
