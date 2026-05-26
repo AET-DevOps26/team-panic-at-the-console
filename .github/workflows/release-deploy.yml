@@ -95,10 +95,15 @@ jobs:
         env:
           GITHUB_EVENT_RELEASE_TAG_NAME: ${{ github.event.release.tag_name }}
 
-      - name: Deploy placeholder
-        run: |
-          echo "Release tag: ${STEPS_TAG_OUTPUTS_VALUE}"
-          echo "All service images were pushed to GHCR."
-          echo "Wire this step to your runtime target (Kubernetes/VM/PaaS)."
+      - name: Set up pixi
+        uses: prefix-dev/setup-pixi@1b2de7f3351f171c8b4dfeb558c639cb58ed4ec0 # v0.9.5
+        with:
+          environments: deploy
+
+      - name: Run helm-deploy task
         env:
-          STEPS_TAG_OUTPUTS_VALUE: ${{ steps.tag.outputs.value }}
+          KUBECONFIG_B64: ${{ secrets.KUBECONFIG_B64 }}
+          SOPS_AGE_KEY: ${{ secrets.SOPS_AGE_KEY }}
+          DEPLOY_NAMESPACE: ${{ vars.DEPLOY_NAMESPACE }}
+          TAG: ${{ steps.tag.outputs.value }}
+        run: pixi run -e deploy helm-deploy
