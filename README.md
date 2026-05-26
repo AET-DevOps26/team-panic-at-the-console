@@ -120,7 +120,7 @@ pixi run -e deploy helm-uninstall
 Override the encrypted values file via `VALUES_FILE=...` if needed.
 
 Public URL: `https://team-panic-at-the-console-devops26.stud.k8s.aet.cit.tum.de/`
-Append `/api` for the gateway, `/swagger/` for Swagger UI (OpenAPI explorer).
+Append `/api` for the gateway ingress prefix (API routes live under `/api/v1/`), `/swagger/` for Swagger UI (OpenAPI explorer).
 
 Launch `k9s` against the cluster pointed to by your active kubeconfig (`$KUBECONFIG` or `~/.kube/config`). Useful for inspecting pods, logs, and events in the deploy namespace without leaving the terminal:
 

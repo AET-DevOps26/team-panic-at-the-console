@@ -30,8 +30,8 @@ spec:
                 name: gateway
                 port:
                   number: {{ .Values.services.gateway.port }}
-          {{- $swaggerUi := index .Values.services "swagger-ui" }}
-          {{- if and $swaggerUi $swaggerUi.enabled }}
+          {{ $swaggerUi := index .Values.services "swagger-ui" }}
+          {{ if and $swaggerUi $swaggerUi.enabled }}
           - path: {{ .Values.ingress.paths.swagger }}
             pathType: Prefix
             backend:
@@ -39,4 +39,4 @@ spec:
                 name: swagger-ui
                 port:
                   number: {{ $swaggerUi.port }}
-          {{- end }}
+          {{ end }}
