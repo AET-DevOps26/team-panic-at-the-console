@@ -48,7 +48,7 @@ public interface GenaiApi {
     /**
      * GET /genai/health : GenAI service health check
      *
-     * @return OK (status code 200)
+     * @return GenAI service and Ollama reachability status (status code 200)
      *         or Ollama unreachable (status code 503)
      */
     @Operation(
@@ -56,7 +56,7 @@ public interface GenaiApi {
         summary = "GenAI service health check",
         tags = { "genai" },
         responses = {
-            @ApiResponse(responseCode = "200", description = "OK", content = {
+            @ApiResponse(responseCode = "200", description = "GenAI service and Ollama reachability status", content = {
                 @Content(mediaType = "application/json", schema = @Schema(implementation = GenaiHealthResponse.class))
             }),
             @ApiResponse(responseCode = "503", description = "Ollama unreachable")
@@ -89,20 +89,20 @@ public interface GenaiApi {
      * POST /incidents/{incidentId}/genai/postmortem : Trigger postmortem regeneration for a resolved incident
      *
      * @param incidentId UUID of the target incident. (required)
-     * @return Accepted (status code 202)
-     *         or Incident not found (status code 404)
-     *         or Incident not in resolved state (status code 409)
+     * @return Regeneration task accepted for async processing (status code 202)
+     *         or No incident exists with the given ID (status code 404)
+     *         or Postmortem operations require the incident to be in resolved state (status code 409)
      */
     @Operation(
         operationId = "regeneratePostmortem",
         summary = "Trigger postmortem regeneration for a resolved incident",
         tags = { "genai" },
         responses = {
-            @ApiResponse(responseCode = "202", description = "Accepted", content = {
+            @ApiResponse(responseCode = "202", description = "Regeneration task accepted for async processing", content = {
                 @Content(mediaType = "application/json", schema = @Schema(implementation = RegenAccepted.class))
             }),
-            @ApiResponse(responseCode = "404", description = "Incident not found"),
-            @ApiResponse(responseCode = "409", description = "Incident not in resolved state")
+            @ApiResponse(responseCode = "404", description = "No incident exists with the given ID"),
+            @ApiResponse(responseCode = "409", description = "Postmortem operations require the incident to be in resolved state")
         }
     )
     @RequestMapping(
@@ -132,18 +132,18 @@ public interface GenaiApi {
      * POST /incidents/{incidentId}/genai/severity : Trigger severity suggestion regeneration for an incident
      *
      * @param incidentId UUID of the target incident. (required)
-     * @return Accepted (status code 202)
-     *         or Incident not found (status code 404)
+     * @return Regeneration task accepted for async processing (status code 202)
+     *         or No incident exists with the given ID (status code 404)
      */
     @Operation(
         operationId = "regenerateSeverity",
         summary = "Trigger severity suggestion regeneration for an incident",
         tags = { "genai" },
         responses = {
-            @ApiResponse(responseCode = "202", description = "Accepted", content = {
+            @ApiResponse(responseCode = "202", description = "Regeneration task accepted for async processing", content = {
                 @Content(mediaType = "application/json", schema = @Schema(implementation = RegenAccepted.class))
             }),
-            @ApiResponse(responseCode = "404", description = "Incident not found")
+            @ApiResponse(responseCode = "404", description = "No incident exists with the given ID")
         }
     )
     @RequestMapping(
@@ -173,18 +173,18 @@ public interface GenaiApi {
      * POST /incidents/{incidentId}/genai/solutions : Trigger solution suggestions regeneration for an incident
      *
      * @param incidentId UUID of the target incident. (required)
-     * @return Accepted (status code 202)
-     *         or Incident not found (status code 404)
+     * @return Regeneration task accepted for async processing (status code 202)
+     *         or No incident exists with the given ID (status code 404)
      */
     @Operation(
         operationId = "regenerateSolutions",
         summary = "Trigger solution suggestions regeneration for an incident",
         tags = { "genai" },
         responses = {
-            @ApiResponse(responseCode = "202", description = "Accepted", content = {
+            @ApiResponse(responseCode = "202", description = "Regeneration task accepted for async processing", content = {
                 @Content(mediaType = "application/json", schema = @Schema(implementation = RegenAccepted.class))
             }),
-            @ApiResponse(responseCode = "404", description = "Incident not found")
+            @ApiResponse(responseCode = "404", description = "No incident exists with the given ID")
         }
     )
     @RequestMapping(
@@ -214,18 +214,18 @@ public interface GenaiApi {
      * POST /incidents/{incidentId}/genai/summary : Trigger summary regeneration for an incident
      *
      * @param incidentId UUID of the target incident. (required)
-     * @return Accepted (status code 202)
-     *         or Incident not found (status code 404)
+     * @return Regeneration task accepted for async processing (status code 202)
+     *         or No incident exists with the given ID (status code 404)
      */
     @Operation(
         operationId = "regenerateSummary",
         summary = "Trigger summary regeneration for an incident",
         tags = { "genai" },
         responses = {
-            @ApiResponse(responseCode = "202", description = "Accepted", content = {
+            @ApiResponse(responseCode = "202", description = "Regeneration task accepted for async processing", content = {
                 @Content(mediaType = "application/json", schema = @Schema(implementation = RegenAccepted.class))
             }),
-            @ApiResponse(responseCode = "404", description = "Incident not found")
+            @ApiResponse(responseCode = "404", description = "No incident exists with the given ID")
         }
     )
     @RequestMapping(

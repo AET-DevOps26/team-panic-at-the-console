@@ -28,16 +28,6 @@ pre-commit:
             glob: "**/*.toml"
             run: pixi {run} taplo format {staged_files}
 
-          - name: trailing-whitespace-fixer
-            glob: "**/*"
-            file_types: text
-            run: pixi {run} trailing-whitespace-fixer {staged_files}
-
-          - name: end-of-file-fixer
-            glob: "**/*"
-            file_types: text
-            run: pixi {run} end-of-file-fixer {staged_files}
-
           - name: check-merge-conflict
             glob: "**/*"
             file_types: text
@@ -51,6 +41,20 @@ pre-commit:
           - name: openapi-lint
             glob: "api/openapi.yaml"
             run: pixi {run} openapi-lint
+
+    # Run after parallel linters; both modify file bytes and must not race.
+    - group:
+        parallel: false
+        jobs:
+          - name: trailing-whitespace-fixer
+            glob: "**/*"
+            file_types: text
+            run: pixi {run} trailing-whitespace-fixer {staged_files}
+
+          - name: end-of-file-fixer
+            glob: "**/*"
+            file_types: text
+            run: pixi {run} end-of-file-fixer {staged_files}
 
 post-checkout:
   jobs:

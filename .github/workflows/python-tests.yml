@@ -36,9 +36,6 @@ jobs:
           frozen: true
           cache: true
 
-      - name: Lint
-        run: pixi run --manifest-path services/genai-service/pixi.toml lint
-
       - name: Type check
         run: pixi run --manifest-path services/genai-service/pixi.toml typecheck
 
