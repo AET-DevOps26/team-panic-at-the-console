@@ -11,4 +11,11 @@ Frontend:
 API gateway:
   http(s)://<ingress-address>{{ .Values.ingress.paths.api }}
 
+NATS (cluster-internal):
+  nats://nats:{{ .Values.nats.port }}
+
+Postgres (cluster-internal):
+  postgres:{{ .Values.postgres.port }}
+
+
 If you set a hostname in values, use that host instead of <ingress-address>.

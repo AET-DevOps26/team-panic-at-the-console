@@ -58,7 +58,7 @@ See `CONTEXT.md` for full architectural decisions and `docs/adr/` for key trade-
 
 ### Infrastructure
 
-- **Postgres** (`localhost:5432`) - shared instance; one database per stateful service (`incidents`, `events`, `users`, `notifications`, `rules`); initialized by `infra/postgres/init-dbs.sh`
+- **Postgres** (`localhost:5432`) - shared instance; one database per stateful service (`incidents`, `events`, `users`, `notifications`, `rules`); initialized by `infra/helm/devops-platform/files/init-dbs.sh`
 - **NATS** (`localhost:4222`, monitoring: `localhost:8222`) - event bus with JetStream; used for all side effects between services
 - **Ollama** (`localhost:11434`) - local LLM inference; model `qwen2.5:3b` pulled on startup
 
@@ -68,7 +68,7 @@ See `CONTEXT.md` for full architectural decisions and `docs/adr/` for key trade-
 api/                  # OpenAPI specs
 services/             # Application services (one dir per service)
 infra/helm/           # Helm chart for Kubernetes deployment
-infra/postgres/       # Dev DB init scripts
+infra/helm/devops-platform/files/  # Postgres DB init script (compose + Helm)
 .github/workflows/    # CI/CD pipelines
 ```
 
@@ -85,7 +85,7 @@ When reviewing PRs, flag:
 
 - New services missing a `Dockerfile` or not added to the matrix in `container-ci.yml`
 - Workflows missing `merge_group` trigger (required for merge queue compatibility)
-- Services reading/writing a database they don't own (each stateful service has one DB; check `infra/postgres/init-dbs.sh` for current list)
+- Services reading/writing a database they don't own (each stateful service has one DB; check `infra/helm/devops-platform/files/init-dbs.sh` for current list)
 - Secrets or credentials committed or hardcoded: use environment variables or SOPS
 - Changes to CI job names without a corresponding branch ruleset update
 

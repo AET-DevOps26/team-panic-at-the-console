@@ -3,10 +3,45 @@ global:
     registry: ghcr.io/aet-devops26/team-panic-at-the-console
     tag: main
   namespace: default
+  # Shared Ollama model tag: genai-service (GENAI_OLLAMA_*) and ollama pull (postStart).
   ollamaModel: &ollamaModel qwen2.5:3b
   env:
     - name: NATS_URL
       value: nats://nats:4222
+
+# Override postgresPassword in SOPS values for non-dev deploys.
+secrets:
+  postgresPassword: ""
+
+nats:
+  image: nats:2.10-alpine
+  port: 4222
+  monitoringPort: 8222
+  persistence:
+    size: 1Gi
+  resources:
+    requests:
+      memory: 64Mi
+      cpu: 50m
+    limits:
+      memory: 128Mi
+      cpu: 200m
+
+postgres:
+  image: postgres:16-alpine
+  port: 5432
+  user: devops
+  password: devops
+  database: postgres
+  persistence:
+    size: 5Gi
+  resources:
+    requests:
+      memory: 256Mi
+      cpu: 100m
+    limits:
+      memory: 512Mi
+      cpu: 500m
 
 ingress:
   className: nginx
@@ -49,7 +84,6 @@ services:
       - name: SPRING_DATASOURCE_USERNAME
         value: devops
       - name: SPRING_DATASOURCE_PASSWORD
-        value: devops
 
   event-service:
     enabled: true
@@ -63,7 +97,6 @@ services:
       - name: SPRING_DATASOURCE_USERNAME
         value: devops
       - name: SPRING_DATASOURCE_PASSWORD
-        value: devops
 
   rule-engine:
     enabled: true
@@ -77,7 +110,6 @@ services:
       - name: SPRING_DATASOURCE_USERNAME
         value: devops
       - name: SPRING_DATASOURCE_PASSWORD
-        value: devops
 
   user-service:
     enabled: true
@@ -90,7 +122,6 @@ services:
       - name: SPRING_DATASOURCE_USERNAME
         value: devops
       - name: SPRING_DATASOURCE_PASSWORD
-        value: devops
 
   notification-service:
     enabled: true
@@ -104,7 +135,6 @@ services:
       - name: SPRING_DATASOURCE_USERNAME
         value: devops
       - name: SPRING_DATASOURCE_PASSWORD
-        value: devops
 
   webhook-service:
     enabled: true
@@ -120,9 +150,9 @@ services:
     image:
       repository: genai-service
     env:
-      - name: OLLAMA_URL
+      - name: GENAI_OLLAMA_URL
         value: http://ollama:11434
-      - name: OLLAMA_MODEL
+      - name: GENAI_OLLAMA_MODEL
         value: *ollamaModel
       - name: INCIDENT_SERVICE_URL
         value: http://incident-service:8081
@@ -134,7 +164,7 @@ services:
       override: "ollama/ollama:0.9.0"
     command: ["ollama", "serve"]
     env:
-      - name: OLLAMA_MODEL
+      - name: GENAI_OLLAMA_MODEL
         value: *ollamaModel
     lifecycle:
       postStart:
@@ -142,7 +172,7 @@ services:
           command:
             - "/bin/sh"
             - "-c"
-            - "until ollama list >/dev/null 2>&1; do sleep 2; done; ollama pull ${OLLAMA_MODEL:-qwen2.5:3b}"
+            - "until ollama list >/dev/null 2>&1; do sleep 2; done; ollama pull ${GENAI_OLLAMA_MODEL:-qwen2.5:3b}"
     persistence:
       size: 10Gi
       mountPath: /root/.ollama

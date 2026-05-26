@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: postgres-init
+  labels:
+    app.kubernetes.io/name: postgres
+data:
+  init-dbs.sh: |
+{{ .Files.Get "files/init-dbs.sh" | indent 4 }}
