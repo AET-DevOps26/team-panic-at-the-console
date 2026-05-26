@@ -6,9 +6,17 @@ src/main/java/org/openapitools/api/UsersApi.java
 src/main/java/org/openapitools/model/ErrorResponse.java
 src/main/java/org/openapitools/model/GenaiHealthResponse.java
 src/main/java/org/openapitools/model/HealthCheck200Response.java
+src/main/java/org/openapitools/model/Incident.java
+src/main/java/org/openapitools/model/IncidentEvent.java
+src/main/java/org/openapitools/model/IncidentStatus.java
 src/main/java/org/openapitools/model/LoginRequest.java
+src/main/java/org/openapitools/model/PostmortemResponse.java
 src/main/java/org/openapitools/model/RegenAccepted.java
 src/main/java/org/openapitools/model/RegisterRequest.java
+src/main/java/org/openapitools/model/Severity.java
+src/main/java/org/openapitools/model/SeverityResponse.java
+src/main/java/org/openapitools/model/SolutionsResponse.java
+src/main/java/org/openapitools/model/SummaryResponse.java
 src/main/java/org/openapitools/model/User.java
 src/main/java/org/openapitools/model/UserListResponse.java
 src/main/java/org/openapitools/model/UserRole.java
