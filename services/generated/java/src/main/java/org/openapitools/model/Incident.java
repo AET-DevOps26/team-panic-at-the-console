@@ -6,11 +6,14 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
 import java.time.OffsetDateTime;
+import java.util.Arrays;
 import java.util.UUID;
+import org.openapitools.jackson.nullable.JsonNullable;
 import org.openapitools.model.IncidentStatus;
 import org.openapitools.model.Severity;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.lang.Nullable;
+import java.util.NoSuchElementException;
 import org.openapitools.jackson.nullable.JsonNullable;
 import java.time.OffsetDateTime;
 import jakarta.validation.Valid;
@@ -21,10 +24,6 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import java.util.*;
 import jakarta.annotation.Generated;
 
-import java.util.Map;
-import java.util.HashMap;
-import com.fasterxml.jackson.annotation.JsonAnyGetter;
-import com.fasterxml.jackson.annotation.JsonAnySetter;
 /**
  * An incident as stored by incident-service.
  */
@@ -37,7 +36,7 @@ public class Incident {
 
   private String title;
 
-  private @Nullable String description;
+  private JsonNullable<String> description = JsonNullable.<String>undefined();
 
   private IncidentStatus status;
 
@@ -47,7 +46,7 @@ public class Incident {
   private OffsetDateTime createdAt;
 
   @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
-  private @Nullable OffsetDateTime resolvedAt;
+  private JsonNullable<OffsetDateTime> resolvedAt = JsonNullable.<OffsetDateTime>undefined();
 
   public Incident() {
     super();
@@ -104,8 +103,8 @@ public class Incident {
     this.title = title;
   }
 
-  public Incident description(@Nullable String description) {
-    this.description = description;
+  public Incident description(String description) {
+    this.description = JsonNullable.of(description);
     return this;
   }
 
@@ -116,11 +115,11 @@ public class Incident {
 
   @Schema(name = "description", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   @JsonProperty("description")
-  public @Nullable String getDescription() {
+  public JsonNullable<String> getDescription() {
     return description;
   }
 
-  public void setDescription(@Nullable String description) {
+  public void setDescription(JsonNullable<String> description) {
     this.description = description;
   }
 
@@ -184,8 +183,8 @@ public class Incident {
     this.createdAt = createdAt;
   }
 
-  public Incident resolvedAt(@Nullable OffsetDateTime resolvedAt) {
-    this.resolvedAt = resolvedAt;
+  public Incident resolvedAt(OffsetDateTime resolvedAt) {
+    this.resolvedAt = JsonNullable.of(resolvedAt);
     return this;
   }
 
@@ -196,50 +195,13 @@ public class Incident {
   @Valid
   @Schema(name = "resolvedAt", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   @JsonProperty("resolvedAt")
-  public @Nullable OffsetDateTime getResolvedAt() {
+  public JsonNullable<OffsetDateTime> getResolvedAt() {
     return resolvedAt;
   }
 
-  public void setResolvedAt(@Nullable OffsetDateTime resolvedAt) {
+  public void setResolvedAt(JsonNullable<OffsetDateTime> resolvedAt) {
     this.resolvedAt = resolvedAt;
   }
-    /**
-    * A container for additional, undeclared properties.
-    * This is a holder for any undeclared properties as specified with
-    * the 'additionalProperties' keyword in the OAS document.
-    */
-    private Map<String, Object> additionalProperties;
-
-    /**
-    * Set the additional (undeclared) property with the specified name and value.
-    * If the property does not already exist, create it otherwise replace it.
-    */
-    @JsonAnySetter
-    public Incident putAdditionalProperty(String key, Object value) {
-        if (this.additionalProperties == null) {
-            this.additionalProperties = new HashMap<String, Object>();
-        }
-        this.additionalProperties.put(key, value);
-        return this;
-    }
-
-    /**
-    * Return the additional (undeclared) property.
-    */
-    @JsonAnyGetter
-    public Map<String, Object> getAdditionalProperties() {
-        return additionalProperties;
-    }
-
-    /**
-    * Return the additional (undeclared) property with the specified name.
-    */
-    public Object getAdditionalProperty(String key) {
-        if (this.additionalProperties == null) {
-            return null;
-        }
-        return this.additionalProperties.get(key);
-    }
 
   @Override
   public boolean equals(Object o) {
@@ -252,17 +214,27 @@ public class Incident {
     Incident incident = (Incident) o;
     return Objects.equals(this.id, incident.id) &&
         Objects.equals(this.title, incident.title) &&
-        Objects.equals(this.description, incident.description) &&
+        equalsNullable(this.description, incident.description) &&
         Objects.equals(this.status, incident.status) &&
         Objects.equals(this.severity, incident.severity) &&
         Objects.equals(this.createdAt, incident.createdAt) &&
-        Objects.equals(this.resolvedAt, incident.resolvedAt) &&
-    Objects.equals(this.additionalProperties, incident.additionalProperties);
+        equalsNullable(this.resolvedAt, incident.resolvedAt);
+  }
+
+  private static <T> boolean equalsNullable(JsonNullable<T> a, JsonNullable<T> b) {
+    return a == b || (a != null && b != null && a.isPresent() && b.isPresent() && Objects.deepEquals(a.get(), b.get()));
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(id, title, description, status, severity, createdAt, resolvedAt, additionalProperties);
+    return Objects.hash(id, title, hashCodeNullable(description), status, severity, createdAt, hashCodeNullable(resolvedAt));
+  }
+
+  private static <T> int hashCodeNullable(JsonNullable<T> a) {
+    if (a == null) {
+      return 1;
+    }
+    return a.isPresent() ? Arrays.deepHashCode(new Object[]{a.get()}) : 31;
   }
 
   @Override
@@ -276,8 +248,6 @@ public class Incident {
     sb.append("    severity: ").append(toIndentedString(severity)).append("\n");
     sb.append("    createdAt: ").append(toIndentedString(createdAt)).append("\n");
     sb.append("    resolvedAt: ").append(toIndentedString(resolvedAt)).append("\n");
-
-    sb.append("    additionalProperties: ").append(toIndentedString(additionalProperties)).append("\n");
     sb.append("}");
     return sb.toString();
   }

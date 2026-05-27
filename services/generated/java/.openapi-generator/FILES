@@ -1,6 +1,10 @@
 src/main/java/org/openapitools/api/ApiUtil.java
 src/main/java/org/openapitools/api/GenaiApi.java
 src/main/java/org/openapitools/api/HealthApi.java
+src/main/java/org/openapitools/api/IncidentsApi.java
+src/main/java/org/openapitools/model/Comment.java
+src/main/java/org/openapitools/model/CreateCommentRequest.java
+src/main/java/org/openapitools/model/CreateIncidentRequest.java
 src/main/java/org/openapitools/model/GenaiHealthResponse.java
 src/main/java/org/openapitools/model/HealthCheck200Response.java
 src/main/java/org/openapitools/model/Incident.java
@@ -12,3 +16,4 @@ src/main/java/org/openapitools/model/Severity.java
 src/main/java/org/openapitools/model/SeverityResponse.java
 src/main/java/org/openapitools/model/SolutionsResponse.java
 src/main/java/org/openapitools/model/SummaryResponse.java
+src/main/java/org/openapitools/model/UpdateIncidentRequest.java
