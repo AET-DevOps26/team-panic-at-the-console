@@ -11,6 +11,8 @@ info:
 tags:
   - name: health
     description: Service health and readiness.
+  - name: incidents
+    description: Incident lifecycle management (incident-service).
   - name: genai
     description: AI-assisted incident analysis (on-demand regeneration triggers).
 
@@ -60,6 +62,148 @@ paths:
                 $ref: "#/components/schemas/GenaiHealthResponse"
         "503":
           description: Ollama unreachable
+
+  /incidents:
+    get:
+      operationId: listIncidents
+      summary: List all incidents
+      tags: [incidents]
+      parameters:
+        - name: status
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/IncidentStatus"
+        - name: severity
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/Severity"
+      responses:
+        "200":
+          description: Incidents in reverse-chronological order
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Incident"
+    post:
+      operationId: createIncident
+      summary: Manually create a new incident
+      tags: [incidents]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateIncidentRequest"
+      responses:
+        "201":
+          description: Incident created; starts in open state
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Incident"
+        "400":
+          description: Validation failed
+
+  /incidents/{incidentId}:
+    get:
+      operationId: getIncident
+      summary: Get a single incident by ID
+      tags: [incidents]
+      parameters:
+        - $ref: "#/components/parameters/IncidentIdParam"
+      responses:
+        "200":
+          description: Incident found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Incident"
+        "404":
+          $ref: "#/components/responses/IncidentNotFound"
+    patch:
+      operationId: updateIncident
+      summary: Update incident status or severity
+      tags: [incidents]
+      parameters:
+        - $ref: "#/components/parameters/IncidentIdParam"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateIncidentRequest"
+      responses:
+        "200":
+          description: Updated incident
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Incident"
+        "404":
+          $ref: "#/components/responses/IncidentNotFound"
+
+  /incidents/{incidentId}/events:
+    get:
+      operationId: listIncidentEvents
+      summary: Get the event log for an incident
+      tags: [incidents]
+      parameters:
+        - $ref: "#/components/parameters/IncidentIdParam"
+      responses:
+        "200":
+          description: Event log entries in chronological order
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/IncidentEvent"
+        "404":
+          $ref: "#/components/responses/IncidentNotFound"
+
+  /incidents/{incidentId}/comments:
+    get:
+      operationId: listComments
+      summary: List comments on an incident
+      tags: [incidents]
+      parameters:
+        - $ref: "#/components/parameters/IncidentIdParam"
+      responses:
+        "200":
+          description: Comments in chronological order
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Comment"
+        "404":
+          $ref: "#/components/responses/IncidentNotFound"
+    post:
+      operationId: addComment
+      summary: Add a comment to an incident
+      tags: [incidents]
+      parameters:
+        - $ref: "#/components/parameters/IncidentIdParam"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateCommentRequest"
+      responses:
+        "201":
+          description: Comment created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Comment"
+        "404":
+          $ref: "#/components/responses/IncidentNotFound"
 
   /incidents/{incidentId}/genai/summary:
     post:
@@ -278,6 +422,65 @@ components:
           example:
             - Roll back payment-service to v2.3.9
             - Scale checkout-api replicas to 6
+
+    CreateIncidentRequest:
+      type: object
+      description: Payload for manually creating a new incident.
+      required: [title, severity]
+      additionalProperties: false
+      properties:
+        title:
+          type: string
+          example: Checkout 5xx spike
+        description:
+          type: [string, "null"]
+          example: High error rate on checkout API after deploy v2.4.1
+        severity:
+          $ref: "#/components/schemas/Severity"
+
+    UpdateIncidentRequest:
+      type: object
+      description: Partial update for an incident's mutable fields.
+      additionalProperties: false
+      minProperties: 1
+      properties:
+        status:
+          $ref: "#/components/schemas/IncidentStatus"
+        severity:
+          $ref: "#/components/schemas/Severity"
+
+    Comment:
+      type: object
+      description: An immutable comment left on an incident.
+      required: [id, incidentId, authorId, content, createdAt]
+      additionalProperties: false
+      properties:
+        id:
+          type: string
+          format: uuid
+        incidentId:
+          type: string
+          format: uuid
+        authorId:
+          type: string
+          format: uuid
+        content:
+          type: string
+          example: Possible root cause is the connection pool configuration in v2.4.1
+        createdAt:
+          type: string
+          format: date-time
+
+    CreateCommentRequest:
+      type: object
+      description: Payload for adding a comment to an incident.
+      required: [content]
+      additionalProperties: false
+      properties:
+        content:
+          type: string
+          minLength: 1
+          example: Possible root cause is the connection pool configuration in v2.4.1
 
     PostmortemResponse:
       type: object
