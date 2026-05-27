@@ -53,7 +53,6 @@ build/
 
 # Generated API clients (regenerate with: pixi run gen-all)
 # services/generated/ is committed: updated automatically by post-checkout/post-merge hooks
-services/frontend/src/api/schema.d.ts
 openapitools.json
 
 # Monitoring
