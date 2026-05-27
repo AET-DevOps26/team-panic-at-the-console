@@ -1,0 +1,16 @@
+# Terraform state files
+*.tfstate
+*.tfstate.*
+.terraform.lock.hcl
+.terraform/
+
+# Local overrides
+terraform.tfvars
+!terraform.tfvars.example
+
+# IDE
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store

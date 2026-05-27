@@ -1,0 +1,8 @@
+# Copy this file to terraform.tfvars and fill in your values
+# Do NOT commit terraform.tfvars to git
+
+subscription_id      = "your-subscription-id-here"
+resource_group_name = "ims-rg"
+location            = "Germany West Central"
+vm_name             = "ims-vm"
+admin_username      = "azureuser"
