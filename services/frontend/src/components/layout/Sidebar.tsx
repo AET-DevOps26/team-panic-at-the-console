@@ -3,10 +3,11 @@ import { AlertTriangle, Settings, Webhook, LayoutDashboard, LogOut } from "lucid
 import { cn } from "@/lib/utils";
 import { Separator } from "@/components/ui/separator";
 
-const navItems = [
-  { to: "/incidents", label: "Incidents", icon: AlertTriangle },
-  { to: "/sources", label: "Sources", icon: Webhook },
-  { to: "/settings", label: "Settings", icon: Settings },
+const linkedNavItems = [{ to: "/incidents", label: "Incidents", icon: AlertTriangle }];
+
+const disabledNavItems = [
+  { label: "Sources", icon: Webhook },
+  { label: "Settings", icon: Settings },
 ];
 
 export default function Sidebar() {
@@ -26,7 +27,7 @@ export default function Sidebar() {
       {/* Navigation */}
       <nav className="flex-1 px-3 py-4 space-y-1">
         <p className="px-2 pb-1 text-xs font-semibold uppercase tracking-wider text-slate-500">Main</p>
-        {navItems.map(({ to, label, icon: Icon }) => (
+        {linkedNavItems.map(({ to, label, icon: Icon }) => (
           <NavLink
             key={to}
             to={to}
@@ -37,6 +38,16 @@ export default function Sidebar() {
             <Icon className="h-4 w-4 shrink-0" />
             {label}
           </NavLink>
+        ))}
+        {disabledNavItems.map(({ label, icon: Icon }) => (
+          <button
+            key={label}
+            disabled
+            className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-slate-300 opacity-40 cursor-not-allowed"
+          >
+            <Icon className="h-4 w-4 shrink-0" />
+            {label}
+          </button>
         ))}
       </nav>
 

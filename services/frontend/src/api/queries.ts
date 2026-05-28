@@ -97,7 +97,7 @@ export function useIncident(id: string) {
   return useQuery({
     queryKey: ["incidents", id],
     queryFn: async () => {
-      if (MOCK) return MOCK_INCIDENTS.find((i) => i.id === id) ?? MOCK_INCIDENTS[0];
+      if (MOCK) return MOCK_INCIDENTS.find((i) => i.id === id) ?? undefined;
       const { data, error } = await apiClient.GET("/incidents/{incidentId}", {
         params: { path: { incidentId: id } },
       });

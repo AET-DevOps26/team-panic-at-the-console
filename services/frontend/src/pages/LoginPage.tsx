@@ -75,9 +75,9 @@ export default function LoginPage() {
 
         <p className="text-center text-sm text-muted-foreground">
           No account?{" "}
-          <a href="/register" className="font-medium text-primary hover:underline">
+          <span className="font-medium text-primary">
             Create one
-          </a>
+          </span>
         </p>
       </div>
     </div>
