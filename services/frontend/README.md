@@ -32,11 +32,11 @@ pixi run gen-all   # from the repo root
 
 `VITE_MOCK=true` short-circuits all API queries to return hardcoded data from `src/api/queries.ts`. No backend required.
 
-| Context                   | How mock mode is set                                                        |
-| ------------------------- | --------------------------------------------------------------------------- |
-| Local dev (`npm run dev`) | `.env.development` sets `VITE_MOCK=true`                                    |
-| Docker image              | `ARG VITE_MOCK=true` in `Dockerfile` (default, override with `--build-arg`) |
-| Production / compose      | Set `VITE_MOCK=false`                                                       |
+| Context                    | How mock mode is set                                                        |
+| -------------------------- | --------------------------------------------------------------------------- |
+| Local dev (`pixi run dev`) | `.env.development` sets `VITE_MOCK=true`                                    |
+| Docker image               | `ARG VITE_MOCK=true` in `Dockerfile` (default, override with `--build-arg`) |
+| Production / compose       | Set `VITE_MOCK=false`                                                       |
 
 The flag is baked into the bundle at build time — it cannot be changed at runtime.
 
@@ -44,13 +44,12 @@ The flag is baked into the bundle at build time — it cannot be changed at runt
 
 ```bash
 cd services/frontend
-npm install
-npm run dev     # dev server on :3000, hot reload, mock mode on
+pixi run install   # install node_modules (once)
+pixi run dev       # dev server on :3000, hot reload, mock mode on
 ```
 
 To verify the production bundle locally (`VITE_MOCK=false`):
 
 ```bash
-npm run build
-npm run preview    # serves dist/ on :3000, no hot reload
+pixi run prod   # builds dist/ then serves it on :3000, no hot reload
 ```
