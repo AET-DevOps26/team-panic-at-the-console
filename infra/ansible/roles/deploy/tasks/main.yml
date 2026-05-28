@@ -5,7 +5,7 @@
     state: directory
     owner: "{{ ansible_user | default('azureuser') }}"
     group: "{{ ansible_user | default('azureuser') }}"
-    mode: '0755'
+    mode: "0755"
 
 - name: Clone repository to the Azure VM
   ansible.builtin.git:
@@ -27,33 +27,36 @@
     remote_src: true
     owner: "{{ ansible_user | default('azureuser') }}"
     group: "{{ ansible_user | default('azureuser') }}"
-    mode: '0644'
+    mode: "0644"
   when: not env_file.stat.exists
 
-- name: Pull Compose images if published
+- name: Log in to GHCR if credentials are provided
+  ansible.builtin.command:
+    cmd: docker login ghcr.io -u "{{ ghcr_username }}" -p "{{ ghcr_password }}"
+    chdir: "{{ deploy_dir }}"
+  when: ghcr_username != '' and ghcr_password != ''
+
+- name: Pull Compose images from registry
   ansible.builtin.command:
     cmd: docker compose -f "{{ compose_file }}" pull
     chdir: "{{ deploy_dir }}"
-  register: pull_result
-  failed_when: false
-
-# debatable
-- name: Build Compose images if pull is unavailable
-  ansible.builtin.command:
-    cmd: docker compose -f "{{ compose_file }}" build
-    chdir: "{{ deploy_dir }}"
-  when: pull_result.rc != 0
+  environment:
+    IMAGE_TAG: "{{ image_tag }}"
 
 - name: Start the Docker Compose stack
   ansible.builtin.command:
     cmd: docker compose -f "{{ compose_file }}" up -d
     chdir: "{{ deploy_dir }}"
+  environment:
+    IMAGE_TAG: "{{ image_tag }}"
 
 - name: Print Docker Compose status
   ansible.builtin.command:
     cmd: docker compose -f "{{ compose_file }}" ps
     chdir: "{{ deploy_dir }}"
   register: compose_status
+  environment:
+    IMAGE_TAG: "{{ image_tag }}"
 
 - name: Show compose status output
   ansible.builtin.debug:

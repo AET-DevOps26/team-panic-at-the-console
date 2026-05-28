@@ -38,7 +38,7 @@ terraform output -raw public_ip
 
 ```bash
 cd /home/florianp/uni/devops/team-panic-at-the-console
-ansible-playbook -i infra/ansible/inventory/hosts.ini infra/ansible/site.yml
+ansible-playbook -i infra/ansible/inventory/hosts.ini infra/ansible/site.yml -e image_tag=main
 ```
 
 ## Notes
@@ -46,4 +46,5 @@ ansible-playbook -i infra/ansible/inventory/hosts.ini infra/ansible/site.yml
 - The VM is created by Terraform in `infra/terraform`.
 - The playbook assumes the VM user is `azureuser` and that SSH key auth is already configured in Terraform.
 - If the repository is already cloned on the VM, the playbook will update it.
-- If published images are available on GHCR, the playbook will attempt `docker compose pull`; otherwise it falls back to `docker compose build`.
+- The compose stack uses the GHCR registry `ghcr.io/aet-devops26/team-panic-at-the-console` and pulls the images tagged by `IMAGE_TAG`.
+- If you deploy private GHCR images, set `ghcr_username` and `ghcr_password` in inventory or extra vars.

@@ -5,3 +5,9 @@ deploy_dir: /opt/team-panic-at-the-console
 compose_file: "{{ deploy_dir }}/infra/compose/docker-compose.yml"
 env_source: "{{ deploy_dir }}/.env.example"
 env_target: "{{ deploy_dir }}/.env"
+image_registry: ghcr.io/aet-devops26/team-panic-at-the-console
+image_tag: main
+
+# If the registry requires auth, set these values by extra-vars or inventory.
+ghcr_username: ""
+ghcr_password: ""

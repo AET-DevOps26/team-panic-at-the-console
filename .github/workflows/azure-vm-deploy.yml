@@ -2,15 +2,27 @@ name: Azure VM Docker deployment
 
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - main
+    inputs:
+      image_tag:
+        description: "Registry image tag to deploy"
+        required: false
+        default: "main"
 
 jobs:
+  build-images:
+    uses: ./.github/workflows/_build-images.yml
+    with:
+      push: true
+      primary_tag: ${{ inputs.image_tag }}
+      sha_tag: sha-${{ github.sha }}
+
   deploy:
+    name: Deploy to Azure VM
     runs-on: ubuntu-latest
+    needs: build-images
     permissions:
       contents: read
+      packages: write
 
     steps:
       - name: Checkout repository
@@ -52,6 +64,11 @@ jobs:
         working-directory: infra/terraform
         run: terraform apply -auto-approve -var-file=terraform.tfvars
 
+      - name: Get Azure VM public IP
+        id: ip
+        working-directory: infra/terraform
+        run: echo "public_ip=$(terraform output -raw public_ip)" >> $GITHUB_OUTPUT
+
       - name: Wait for SSH
         run: |
           for i in {1..30}; do
@@ -60,11 +77,6 @@ jobs:
                 azureuser@${{ steps.ip.outputs.public_ip }} "echo SSH ready" && break
             sleep 10
           done
-
-      - name: Get Azure VM public IP
-        id: ip
-        working-directory: infra/terraform
-        run: echo "public_ip=$(terraform output -raw public_ip)" >> $GITHUB_OUTPUT
 
       - name: Install Ansible dependencies
         run: |
@@ -77,4 +89,4 @@ jobs:
           [azure]
           azure-vm ansible_host=${{ steps.ip.outputs.public_ip }} ansible_user=${{ secrets.AZURE_ADMIN_USERNAME }} ansible_ssh_private_key_file=~/.ssh/id_ed25519 ansible_python_interpreter=/usr/bin/python3
           EOF
-          ansible-playbook -i azure-hosts.ini infra/ansible/site.yml
+          ansible-playbook -i azure-hosts.ini infra/ansible/site.yml -e image_tag=${{ inputs.image_tag }}
