@@ -38,6 +38,7 @@ node_modules/
 dist/
 build/
 .next/
+*.tsbuildinfo
 
 # IDE
 .idea/
