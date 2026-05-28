@@ -1,0 +1,17 @@
+---
+- name: Ensure apt cache is updated
+  ansible.builtin.apt:
+    update_cache: yes
+    cache_valid_time: 3600
+
+- name: Install base packages
+  ansible.builtin.apt:
+    name:
+      - git
+      - curl
+      - apt-transport-https
+      - ca-certificates
+      - gnupg
+      - lsb-release
+    state: present
+    update_cache: yes

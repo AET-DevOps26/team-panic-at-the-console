@@ -1,0 +1,9 @@
+- name: Provision Azure VM and deploy incident management stack
+  hosts: azure
+  become: true
+  vars_files:
+    - group_vars/all.yml
+  roles:
+    - common
+    - docker
+    - deploy

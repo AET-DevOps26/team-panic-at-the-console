@@ -1,0 +1,80 @@
+name: Azure VM Docker deployment
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keygen -y -f ~/.ssh/id_ed25519 > ~/.ssh/id_ed25519.pub
+
+      - name: Log in to Azure
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.5.0
+
+      - name: Write Terraform variables
+        run: |
+          cat > infra/terraform/terraform.tfvars <<'EOF'
+          subscription_id = "${{ secrets.AZURE_SUBSCRIPTION_ID }}"
+          resource_group_name = "${{ secrets.AZURE_RESOURCE_GROUP_NAME }}"
+          location = "${{ secrets.AZURE_LOCATION }}"
+          vm_name = "${{ secrets.AZURE_VM_NAME }}"
+          admin_username = "${{ secrets.AZURE_ADMIN_USERNAME }}"
+          public_key_path = "~/.ssh/id_ed25519.pub"
+          EOF
+
+      - name: Terraform init
+        working-directory: infra/terraform
+        run: terraform init
+
+      - name: Terraform apply
+        working-directory: infra/terraform
+        run: terraform apply -auto-approve -var-file=terraform.tfvars
+
+      - name: Wait for SSH
+        run: |
+          for i in {1..30}; do
+            ssh -o StrictHostKeyChecking=no \
+                -i ~/.ssh/id_ed25519 \
+                azureuser@${{ steps.ip.outputs.public_ip }} "echo SSH ready" && break
+            sleep 10
+          done
+
+      - name: Get Azure VM public IP
+        id: ip
+        working-directory: infra/terraform
+        run: echo "public_ip=$(terraform output -raw public_ip)" >> $GITHUB_OUTPUT
+
+      - name: Install Ansible dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ansible openssh-client
+
+      - name: Deploy stack with Ansible
+        run: |
+          cat > azure-hosts.ini <<EOF
+          [azure]
+          azure-vm ansible_host=${{ steps.ip.outputs.public_ip }} ansible_user=${{ secrets.AZURE_ADMIN_USERNAME }} ansible_ssh_private_key_file=~/.ssh/id_ed25519 ansible_python_interpreter=/usr/bin/python3
+          EOF
+          ansible-playbook -i azure-hosts.ini infra/ansible/site.yml

@@ -1,0 +1,7 @@
+repo_url: https://github.com/aet-devops26/team-panic-at-the-console.git
+repo_version: main
+
+deploy_dir: /opt/team-panic-at-the-console
+compose_file: "{{ deploy_dir }}/infra/compose/docker-compose.yml"
+env_source: "{{ deploy_dir }}/.env.example"
+env_target: "{{ deploy_dir }}/.env"

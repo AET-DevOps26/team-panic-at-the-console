@@ -1,0 +1,60 @@
+---
+- name: Ensure deployment directory exists
+  ansible.builtin.file:
+    path: "{{ deploy_dir }}"
+    state: directory
+    owner: "{{ ansible_user | default('azureuser') }}"
+    group: "{{ ansible_user | default('azureuser') }}"
+    mode: '0755'
+
+- name: Clone repository to the Azure VM
+  ansible.builtin.git:
+    repo: "{{ repo_url }}"
+    dest: "{{ deploy_dir }}"
+    version: "{{ repo_version }}"
+    accept_hostkey: yes
+    update: yes
+
+- name: Check whether .env already exists
+  ansible.builtin.stat:
+    path: "{{ env_target }}"
+  register: env_file
+
+- name: Create .env from the example if missing
+  ansible.builtin.copy:
+    src: "{{ env_source }}"
+    dest: "{{ env_target }}"
+    remote_src: true
+    owner: "{{ ansible_user | default('azureuser') }}"
+    group: "{{ ansible_user | default('azureuser') }}"
+    mode: '0644'
+  when: not env_file.stat.exists
+
+- name: Pull Compose images if published
+  ansible.builtin.command:
+    cmd: docker compose -f "{{ compose_file }}" pull
+    chdir: "{{ deploy_dir }}"
+  register: pull_result
+  failed_when: false
+
+# debatable
+- name: Build Compose images if pull is unavailable
+  ansible.builtin.command:
+    cmd: docker compose -f "{{ compose_file }}" build
+    chdir: "{{ deploy_dir }}"
+  when: pull_result.rc != 0
+
+- name: Start the Docker Compose stack
+  ansible.builtin.command:
+    cmd: docker compose -f "{{ compose_file }}" up -d
+    chdir: "{{ deploy_dir }}"
+
+- name: Print Docker Compose status
+  ansible.builtin.command:
+    cmd: docker compose -f "{{ compose_file }}" ps
+    chdir: "{{ deploy_dir }}"
+  register: compose_status
+
+- name: Show compose status output
+  ansible.builtin.debug:
+    msg: "{{ compose_status.stdout }}"
