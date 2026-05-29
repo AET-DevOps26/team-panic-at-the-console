@@ -1,0 +1,207 @@
+name: Deploy to Azure VM
+
+on:
+  push:
+    tags: ["v*"]
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      action:
+        description: "deploy=Ansible only | provision=Terraform only | full=Terraform+Ansible | plan=dry-run"
+        type: choice
+        options:
+          - deploy
+          - provision
+          - full
+          - plan
+        default: deploy
+        required: true
+      image_tag:
+        description: "Docker image tag to deploy (e.g. main, v1.2.3, sha-abc1234)"
+        default: main
+        required: false
+
+concurrency:
+  group: azure-vm-deployment
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  id-token: write # Required for OIDC authentication with Azure
+
+# ── Required GitHub Secrets ────────────────────────────────────────────────────
+# AZURE_CLIENT_ID       — App Registration client ID (for OIDC, no secret rotation needed)
+# AZURE_TENANT_ID       — Azure Active Directory tenant ID
+# AZURE_SUBSCRIPTION_ID — Azure subscription ID
+# VM_SSH_PUBLIC_KEY     — Public key placed on the VM by Terraform
+# VM_SSH_PRIVATE_KEY    — Matching private key used by Ansible to connect
+# POSTGRES_PASSWORD     — Strong password for the shared Postgres instance
+# (no GHCR_TOKEN needed — images at ghcr.io/aet-devops26/team-panic-at-the-console are public)
+#
+# ── Required GitHub Variables ──────────────────────────────────────────────────
+# TF_BACKEND_STORAGE_ACCOUNT — Storage account name printed by bootstrap-state.sh
+#
+# ── Azure OIDC setup (one-time, ~5 minutes) ────────────────────────────────────
+# 1. Create an App Registration:
+#      az ad app create --display-name "github-actions-team-panic"
+# 2. Create a Service Principal:
+#      az ad sp create --id <appId>
+# 3. Add Federated Credential on the App Registration (in Azure Portal or CLI):
+#      Entity type: GitHub Actions
+#      Organisation: aet-devops26 | Repository: team-panic-at-the-console | Environment: production
+# 4. Assign the Contributor role (subscription or resource group scope):
+#      az role assignment create \
+#        --assignee <appId> \
+#        --role Contributor \
+#        --scope /subscriptions/<subscriptionId>
+# 5. Store values as GitHub Secrets:
+#      AZURE_CLIENT_ID     = <appId>
+#      AZURE_TENANT_ID     = <tenantId>
+#      AZURE_SUBSCRIPTION_ID = <subscriptionId>
+
+env:
+  TF_DIR: infra/terraform
+  ARM_USE_OIDC: "true"
+  ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+  ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+  ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+jobs:
+  # ── Resolve tag and action ───────────────────────────────────────────────────
+  resolve:
+    name: Resolve tag and action
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.resolve.outputs.tag }}
+      action: ${{ steps.resolve.outputs.action }}
+    steps:
+      - name: Resolve
+        id: resolve
+        run: |
+          if [ "${{ github.event_name }}" = "release" ]; then
+            echo "tag=${{ github.event.release.tag_name }}" >> "$GITHUB_OUTPUT"
+            echo "action=full" >> "$GITHUB_OUTPUT"
+          elif [ "${{ github.event_name }}" = "push" ]; then
+            echo "tag=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
+            echo "action=full" >> "$GITHUB_OUTPUT"
+          else
+            echo "tag=${{ inputs.image_tag || 'main' }}" >> "$GITHUB_OUTPUT"
+            echo "action=${{ inputs.action }}" >> "$GITHUB_OUTPUT"
+          fi
+
+  # ── Terraform ───────────────────────────────────────────────────────────────
+  terraform:
+    name: Terraform
+    needs: resolve
+    runs-on: ubuntu-latest
+    environment: production
+    outputs:
+      vm_ip: ${{ steps.vm_ip.outputs.ip }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "~1.9"
+          terraform_wrapper: false
+
+      - name: Terraform Init
+        run: |
+          terraform init \
+            -backend-config="storage_account_name=${{ vars.TF_BACKEND_STORAGE_ACCOUNT }}"
+        working-directory: ${{ env.TF_DIR }}
+
+      - name: Terraform Plan
+        if: needs.resolve.outputs.action == 'provision' || needs.resolve.outputs.action == 'full' || needs.resolve.outputs.action == 'plan'
+        run: terraform plan -out=tfplan
+        working-directory: ${{ env.TF_DIR }}
+        env:
+          TF_VAR_ssh_public_key: ${{ secrets.VM_SSH_PUBLIC_KEY }}
+
+      - name: Terraform Apply
+        if: needs.resolve.outputs.action == 'provision' || needs.resolve.outputs.action == 'full'
+        run: terraform apply -auto-approve tfplan
+        working-directory: ${{ env.TF_DIR }}
+
+      - name: Get VM public IP from state
+        id: vm_ip
+        if: needs.resolve.outputs.action != 'plan'
+        run: |
+          ip=$(terraform output -raw vm_public_ip 2>/dev/null || true)
+          if [ -z "${ip}" ]; then
+            echo "::error::No VM IP in Terraform state. Run the 'provision' or 'full' action first."
+            exit 1
+          fi
+          echo "ip=${ip}" >> "$GITHUB_OUTPUT"
+        working-directory: ${{ env.TF_DIR }}
+
+  # ── Ansible ─────────────────────────────────────────────────────────────────
+  ansible:
+    name: Ansible Deploy
+    needs: [resolve, terraform]
+    if: needs.terraform.result == 'success' && needs.resolve.outputs.action != 'plan'
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Ansible
+        run: pip install --quiet ansible
+
+      - name: Configure SSH key
+        run: |
+          install -m 0700 -d "${HOME}/.ssh"
+          install -m 0600 /dev/null "${HOME}/.ssh/vm_key"
+          printf '%s\n' "${{ secrets.VM_SSH_PRIVATE_KEY }}" > "${HOME}/.ssh/vm_key"
+
+      - name: Write inventory
+        run: |
+          cat > /tmp/inventory.ini <<EOF
+          [vm]
+          ${{ needs.terraform.outputs.vm_ip }} ansible_user=azureuser ansible_ssh_private_key_file=${HOME}/.ssh/vm_key ansible_ssh_common_args='-o StrictHostKeyChecking=accept-new -o ConnectTimeout=30'
+          EOF
+
+      - name: Wait for SSH to become available
+        run: |
+          echo "Waiting for SSH on ${{ needs.terraform.outputs.vm_ip }}..."
+          for i in $(seq 1 30); do
+            if ssh \
+              -o StrictHostKeyChecking=no \
+              -o ConnectTimeout=5 \
+              -i "${HOME}/.ssh/vm_key" \
+              "azureuser@${{ needs.terraform.outputs.vm_ip }}" \
+              true 2>/dev/null; then
+              echo "SSH ready after ${i} attempt(s)"
+              break
+            fi
+            echo "  attempt ${i}/30, retrying in 10s..."
+            sleep 10
+          done
+
+      - name: Write Ansible variables
+        run: |
+          python3 - <<'EOF'
+          import os, yaml
+          v = {
+            "image_tag":         os.environ["IMAGE_TAG"],
+            "postgres_password": os.environ["POSTGRES_PASSWORD"],
+          }
+          with open("/tmp/ansible-vars.yml", "w") as f:
+            yaml.dump(v, f)
+          EOF
+        env:
+          IMAGE_TAG: ${{ needs.resolve.outputs.tag }}
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+
+      - name: Run Ansible playbook
+        run: |
+          ansible-playbook \
+            -i /tmp/inventory.ini \
+            infra/ansible/playbook.yml \
+            --extra-vars "@/tmp/ansible-vars.yml"
