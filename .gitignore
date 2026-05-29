@@ -65,3 +65,15 @@ infra/helm/monitoring/charts/*.tgz
 
 # Helm / SOPS decrypted secrets
 infra/helm/secrets/*.dec.yaml
+
+# Terraform
+infra/terraform/.terraform/
+infra/terraform/terraform.tfvars
+infra/terraform/backend.tfvars
+infra/terraform/tfplan
+infra/terraform/terraform.tfstate
+infra/terraform/terraform.tfstate.backup
+infra/terraform/*.tfstate*
+
+# Ansible
+infra/ansible/inventory.ini
