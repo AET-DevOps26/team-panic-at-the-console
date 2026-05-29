@@ -46,7 +46,7 @@ variable "ssh_source_cidr" {
 }
 
 variable "os_disk_size_gb" {
-  description = "OS disk size in GB. 25 GB covers OS, Docker images, Postgres data, and the Ollama qwen2.5:3b model."
+  description = "OS disk size in GB. Covers OS, Docker images, Postgres data, and the Ollama qwen2.5:3b model."
   type        = number
-  default     = 25
+  default     = 40
 }
