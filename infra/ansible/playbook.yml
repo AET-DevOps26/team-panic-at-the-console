@@ -1,0 +1,147 @@
+---
+- name: Configure Azure VM and deploy application
+  hosts: vm
+  become: true
+
+  vars:
+    app_dir: /opt/app
+    compose_file: "{{ app_dir }}/infra/compose/docker-compose.yml"
+    # Resolve the repo root relative to this playbook file (infra/ansible/ → repo root)
+    local_repo_root: "{{ playbook_dir }}/../.."
+
+  pre_tasks:
+    - name: Wait for cloud-init to complete
+      ansible.builtin.wait_for:
+        path: /var/lib/cloud/instance/boot-finished
+        timeout: 120
+
+    - name: Update apt cache
+      ansible.builtin.apt:
+        update_cache: true
+        cache_valid_time: 3600
+
+  tasks:
+    # ── Docker installation ────────────────────────────────────────────────────
+
+    - name: Install Docker prerequisites
+      ansible.builtin.apt:
+        name:
+          - ca-certificates
+          - curl
+        state: present
+
+    - name: Create /etc/apt/keyrings
+      ansible.builtin.file:
+        path: /etc/apt/keyrings
+        state: directory
+        mode: "0755"
+
+    - name: Download Docker GPG key
+      ansible.builtin.get_url:
+        url: https://download.docker.com/linux/ubuntu/gpg
+        dest: /etc/apt/keyrings/docker.asc
+        mode: "0644"
+        force: false
+
+    - name: Add Docker apt repository
+      ansible.builtin.apt_repository:
+        repo: >-
+          deb [arch={{ 'amd64' if ansible_architecture == 'x86_64' else ansible_architecture }}
+          signed-by=/etc/apt/keyrings/docker.asc]
+          https://download.docker.com/linux/ubuntu
+          {{ ansible_distribution_release }} stable
+        filename: docker
+        state: present
+
+    - name: Install Docker CE and Compose plugin
+      ansible.builtin.apt:
+        name:
+          - docker-ce
+          - docker-ce-cli
+          - containerd.io
+          - docker-buildx-plugin
+          - docker-compose-plugin
+        state: present
+        update_cache: true
+
+    - name: Enable and start Docker
+      ansible.builtin.systemd:
+        name: docker
+        enabled: true
+        state: started
+
+    - name: Add admin user to docker group
+      ansible.builtin.user:
+        name: "{{ ansible_user }}"
+        groups: docker
+        append: true
+
+    # ── App directory and config ───────────────────────────────────────────────
+
+    - name: Create app directory structure
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        owner: root
+        group: root
+        mode: "0755"
+      loop:
+        - "{{ app_dir }}"
+        - "{{ app_dir }}/infra/compose"
+        - "{{ app_dir }}/infra/helm/devops-platform/files"
+        - "{{ app_dir }}/api"
+
+    - name: Copy docker-compose.yml
+      ansible.builtin.copy:
+        src: "{{ local_repo_root }}/infra/compose/docker-compose.yml"
+        dest: "{{ app_dir }}/infra/compose/docker-compose.yml"
+        mode: "0644"
+
+    - name: Copy init-dbs.sh
+      ansible.builtin.copy:
+        src: "{{ local_repo_root }}/infra/helm/devops-platform/files/init-dbs.sh"
+        dest: "{{ app_dir }}/infra/helm/devops-platform/files/init-dbs.sh"
+        mode: "0755"
+
+    - name: Copy openapi.yaml
+      ansible.builtin.copy:
+        src: "{{ local_repo_root }}/api/openapi.yaml"
+        dest: "{{ app_dir }}/api/openapi.yaml"
+        mode: "0644"
+
+    - name: Create .env file
+      ansible.builtin.template:
+        src: templates/env.j2
+        dest: "{{ app_dir }}/.env"
+        mode: "0600"
+
+    # ── Docker Compose deploy ─────────────────────────────────────────────────
+
+    - name: Pull Docker images
+      ansible.builtin.shell: |
+        docker compose \
+          --project-directory {{ app_dir }} \
+          -f {{ compose_file }} \
+          --env-file {{ app_dir }}/.env \
+          pull
+      register: pull_result
+      changed_when: "'Pulled' in pull_result.stdout"
+
+    - name: Start services
+      ansible.builtin.shell: |
+        docker compose \
+          --project-directory {{ app_dir }} \
+          -f {{ compose_file }} \
+          --env-file {{ app_dir }}/.env \
+          up -d --remove-orphans
+      register: up_result
+      changed_when: "'Started' in up_result.stdout or 'Created' in up_result.stdout"
+
+    - name: Show running containers
+      ansible.builtin.shell: docker compose --project-directory {{ app_dir }} -f {{ compose_file }} ps
+      register: ps_result
+      changed_when: false
+
+    - name: Print container status
+      ansible.builtin.debug:
+        msg: "{{ ps_result.stdout_lines }}"
