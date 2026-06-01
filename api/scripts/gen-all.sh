@@ -36,16 +36,15 @@ mkdir -p "$GEN_ROOT"
 # language while the importable package keeps its short name.
 mv "$GEN_ROOT/client" "$GEN_ROOT/python-client"
 
-echo "==> Generating TypeScript SDK (frontend)"
-mkdir -p "$REPO_ROOT/services/frontend/src/api"
+echo "==> Generating TypeScript types (frontend / openapi-fetch)"
+mkdir -p "$REPO_ROOT/services/generated/typescript"
 npx --yes openapi-typescript@7.4.4 "$SPEC" \
-  -o "$REPO_ROOT/services/frontend/src/api/schema.d.ts"
+  -o "$REPO_ROOT/services/generated/typescript/schema.d.ts"
 
 echo "==> Formatting generated files via pre-commit hooks"
 _find_generated() {
   find \
     "$REPO_ROOT/services/generated" \
-    "$REPO_ROOT/services/frontend/src/api" \
     \( -type d \( -name target -o -name .ruff_cache -o -name __pycache__ -o -name node_modules \) -prune \) \
     -o -type f ! -name '*.class' -print0 2>/dev/null
 }
