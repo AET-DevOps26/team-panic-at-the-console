@@ -163,7 +163,7 @@ services:
       - name: SWAGGER_JSON
         value: /openapi.yaml
       - name: BASE_URL
-        value: /swagger/
+        value: /swagger
 
   ollama:
     enabled: true
