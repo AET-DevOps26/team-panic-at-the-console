@@ -52,6 +52,7 @@ ingress:
   paths:
     frontend: /
     api: /api
+    swagger: /swagger
 
 services:
   frontend:
@@ -156,6 +157,18 @@ services:
         value: *ollamaModel
       - name: INCIDENT_SERVICE_URL
         value: http://incident-service:8081
+
+  swagger-ui:
+    enabled: true
+    port: 8080
+    image:
+      override: swaggerapi/swagger-ui:v5.32.6
+    openapiConfigMap: true
+    env:
+      - name: SWAGGER_JSON
+        value: /openapi.yaml
+      - name: BASE_URL
+        value: /swagger/
 
   ollama:
     enabled: true

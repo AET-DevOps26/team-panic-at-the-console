@@ -209,7 +209,7 @@ pixi run -e deploy helm-uninstall
 
 Optional: `VALUES_FILE=path/to/other.enc.yaml` when running `helm-deploy`.
 
-**Cluster URL:** `https://team-panic-at-the-console-devops26.stud.k8s.aet.cit.tum.de/` (frontend `/`, API `/api`).
+**Cluster URL:** `https://team-panic-at-the-console-devops26.stud.k8s.aet.cit.tum.de/` (frontend `/`, API `/api`, Swagger `/swagger/`).
 
 Ingress uses cert-manager (`letsencrypt-prod`) and TLS secret `devops-platform-tls`.
 
@@ -227,11 +227,12 @@ Use a kubeconfig/context that points at the stud cluster (`kubectl config curren
 # Lint (all services, same as CI)
 pixi run lint
 
-# incident-service unit tests
+# Java service unit tests
 pixi run --manifest-path services/incident-service/pixi.toml test
+pixi run --manifest-path services/user-service/pixi.toml test
 
-# genai-service currently does not provide a Pixi manifest/test task
-# (services/genai-service contains a Dockerfile only)
+# genai-service (Python)
+pixi run test-genai
 ```
 
 ## Local Runtime
@@ -244,6 +245,12 @@ pixi run compose-up
 Starts all services plus shared infrastructure (Postgres, NATS). Service env vars (`DATABASE_URL`, `NATS_URL`) are pre-wired.
 
 The compose file lives at `infra/compose/docker-compose.yml`. `pixi run compose-up` passes the correct `--project-directory`, `--env-file`, and `-f` flags automatically.
+
+Local URLs (same path layout as the Helm ingress):
+
+- API gateway: `http://localhost:8080/api/v1/` (e.g. `http://localhost:8080/api/v1/health`)
+- Swagger UI: `http://localhost:8080/swagger/`
+- Frontend: `http://localhost:3000/` (unchanged)
 
 Shared non-secret defaults (for example `NATS_URL`) are defined once in `.env.example` and referenced from service-specific environment sections.
 

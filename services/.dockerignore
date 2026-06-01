@@ -4,6 +4,7 @@
 !gateway/
 !incident-service/
 !genai-service/
+!user-service/
 !generated/
 
 # Within the allowed dirs, prune dev artifacts
