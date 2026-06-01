@@ -64,8 +64,13 @@ chmod 600 "$SOPS_AGE_KEY_FILE"
 unset SOPS_AGE_KEY
 sops --decrypt "$ENC_VALUES" > "$DEC_VALUES"
 
+CHART_STAGE="$WORK_DIR/chart"
+mkdir -p "$CHART_STAGE/files"
+cp -r "$CHART_DIR"/. "$CHART_STAGE/"
+cp "$REPO_ROOT/api/openapi.yaml" "$CHART_STAGE/files/openapi.yaml"
+
 echo ">> helm upgrade --install (namespace=$DEPLOY_NAMESPACE tag=$TAG)"
-helm upgrade --install devops-platform "$CHART_DIR" \
+helm upgrade --install devops-platform "$CHART_STAGE" \
   --namespace "$DEPLOY_NAMESPACE" \
   --create-namespace \
   --wait \
