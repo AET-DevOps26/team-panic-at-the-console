@@ -134,49 +134,59 @@ class IncidentHandlers:
         events: list[IncidentEvent],
         task: PromptTask,
     ) -> None:
-        if task is PromptTask.POSTMORTEM:
-            await self._generate_postmortem(incident_id, incident, events)
-            return
+        match task:
+            case PromptTask.POSTMORTEM:
+                await self._generate_postmortem(incident_id, incident, events)
+            case PromptTask.SUMMARY:
+                await self._patch_summary(incident_id, incident, events)
+            case PromptTask.SEVERITY_SUGGESTION:
+                await self._patch_severity_suggestion(incident_id, incident, events)
+            case PromptTask.SOLUTION_SUGGESTIONS:
+                await self._patch_solutions(incident_id, incident, events)
+            case _:
+                raise ValueError(f"unsupported prompt task: {task}")
 
-        prompt = self._prompts.build(incident, events, task)
-        if task is PromptTask.SUMMARY:
-            result = await self._ollama.generate(
-                prompt.user,
-                system=prompt.system,
-                response_model=SummaryResponse,
-            )
-            response = await write_incident_summary.asyncio_detailed(
-                incident_id=_uuid(incident_id),
-                client=self._client,
-                body=SummaryPatch(summary=result.summary),
-            )
-            _expect_no_content(response, operation="write summary")
-        elif task is PromptTask.SEVERITY_SUGGESTION:
-            result = await self._ollama.generate(
-                prompt.user,
-                system=prompt.system,
-                response_model=SeverityResponse,
-            )
-            response = await write_incident_severity_suggestion.asyncio_detailed(
-                incident_id=_uuid(incident_id),
-                client=self._client,
-                body=SeverityPatch(severity=result.severity, reason=result.reason),
-            )
-            _expect_no_content(response, operation="write severity suggestion")
-        elif task is PromptTask.SOLUTION_SUGGESTIONS:
-            result = await self._ollama.generate(
-                prompt.user,
-                system=prompt.system,
-                response_model=SolutionsResponse,
-            )
-            response = await write_incident_solutions.asyncio_detailed(
-                incident_id=_uuid(incident_id),
-                client=self._client,
-                body=SolutionsPatch(solutions=list(result.solutions)),
-            )
-            _expect_no_content(response, operation="write solutions")
-        else:
-            raise ValueError(f"unsupported prompt task: {task}")
+    async def _patch_summary(
+        self, incident_id: str, incident: Incident, events: list[IncidentEvent]
+    ) -> None:
+        prompt = self._prompts.build(incident, events, PromptTask.SUMMARY)
+        result = await self._ollama.generate(
+            prompt.user, system=prompt.system, response_model=SummaryResponse
+        )
+        response = await write_incident_summary.asyncio_detailed(
+            incident_id=_uuid(incident_id),
+            client=self._client,
+            body=SummaryPatch(summary=result.summary),
+        )
+        _expect_no_content(response, operation="write summary")
+
+    async def _patch_severity_suggestion(
+        self, incident_id: str, incident: Incident, events: list[IncidentEvent]
+    ) -> None:
+        prompt = self._prompts.build(incident, events, PromptTask.SEVERITY_SUGGESTION)
+        result = await self._ollama.generate(
+            prompt.user, system=prompt.system, response_model=SeverityResponse
+        )
+        response = await write_incident_severity_suggestion.asyncio_detailed(
+            incident_id=_uuid(incident_id),
+            client=self._client,
+            body=SeverityPatch(severity=result.severity, reason=result.reason),
+        )
+        _expect_no_content(response, operation="write severity suggestion")
+
+    async def _patch_solutions(
+        self, incident_id: str, incident: Incident, events: list[IncidentEvent]
+    ) -> None:
+        prompt = self._prompts.build(incident, events, PromptTask.SOLUTION_SUGGESTIONS)
+        result = await self._ollama.generate(
+            prompt.user, system=prompt.system, response_model=SolutionsResponse
+        )
+        response = await write_incident_solutions.asyncio_detailed(
+            incident_id=_uuid(incident_id),
+            client=self._client,
+            body=SolutionsPatch(solutions=list(result.solutions)),
+        )
+        _expect_no_content(response, operation="write solutions")
 
     async def _generate_postmortem(
         self,
