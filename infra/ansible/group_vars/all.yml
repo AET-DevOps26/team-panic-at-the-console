@@ -1,0 +1,5 @@
+# Non-sensitive defaults for the playbook.
+# postgres_password must be supplied at runtime via --extra-vars or Ansible Vault.
+
+app_dir: /opt/app
+image_tag: main

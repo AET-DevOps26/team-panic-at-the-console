@@ -55,6 +55,20 @@ services:
 
   # ── Application Services ──────────────────────────────────────────────────
 
+  # Routes :8080 like cluster ingress (/api, /swagger). See nginx.conf.
+  edge:
+    image: nginx:1.27-alpine
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./infra/compose/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      gateway:
+        condition: service_started
+      swagger-ui:
+        condition: service_started
+    restart: unless-stopped
+
   frontend:
     image: ghcr.io/aet-devops26/team-panic-at-the-console/frontend:${IMAGE_TAG:-main}
     build:
@@ -71,8 +85,6 @@ services:
       dockerfile: Dockerfile
     environment:
       NATS_URL: ${NATS_URL:-nats://nats:4222}
-    ports:
-      - "8080:8080"
     depends_on:
       nats:
         condition: service_started
@@ -138,8 +150,8 @@ services:
   user-service:
     image: ghcr.io/aet-devops26/team-panic-at-the-console/user-service:${IMAGE_TAG:-main}
     build:
-      context: ./services/user-service
-      dockerfile: Dockerfile
+      context: ./services
+      dockerfile: user-service/Dockerfile
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/users
       SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-devops}
@@ -213,12 +225,11 @@ services:
 
   swagger-ui:
     image: swaggerapi/swagger-ui:v5.32.6
-    ports:
-      - "8090:8080"
     volumes:
       - ./api/openapi.yaml:/openapi.yaml:ro
     environment:
       SWAGGER_JSON: /openapi.yaml
+      BASE_URL: /swagger/
     restart: unless-stopped
 
 volumes:

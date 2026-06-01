@@ -177,10 +177,194 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/auth/register": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Create a new user account
+         * @description Public self-registration. New accounts receive the `MEMBER` role.
+         *     Passwords are stored hashed server-side; the cleartext password is never returned.
+         *
+         */
+        post: operations["registerUser"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/login": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Authenticate and start a session
+         * @description On success, user-service sets an httpOnly `session` cookie containing a signed JWT
+         *     (`SameSite=Strict`). The gateway validates this cookie and injects `X-User-Id` /
+         *     `X-User-Role` on downstream requests. Do not send credentials on subsequent API calls.
+         *
+         */
+        post: operations["loginUser"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/logout": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * End the current session
+         * @description Clears the `session` cookie via `Set-Cookie`. Always returns 204, even when no cookie
+         *     was sent (idempotent logout).
+         *
+         */
+        post: operations["logoutUser"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/users/me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get the authenticated user profile
+         * @description Requires a valid `session` cookie (browser) or prior login via `POST /auth/login` on the same HTTP client.
+         *     Python callers should use `Client` and pass cookies (e.g. `client.with_cookies({"session": "<jwt>"})`), not
+         *     `AuthenticatedClient` / `Authorization: Bearer`.
+         *
+         */
+        get: operations["getCurrentUser"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/users": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List users (directory)
+         * @description Returns all users for assignment pickers and mention lists. Requires a valid `session` cookie (see
+         *     `GET /users/me`). Python callers use `Client` + cookies, not Bearer auth.
+         *
+         */
+        get: operations["listUsers"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /**
+         * @description Platform role aligned with the analysis object model.
+         *     `MEMBER` maps to TeamMember, `RESPONDER` to IncidentResponder, `COMMANDER` to IncidentCommander.
+         *
+         * @example MEMBER
+         * @enum {string}
+         */
+        UserRole: "MEMBER" | "RESPONDER" | "COMMANDER";
+        /** @description Public user profile (no credentials). */
+        User: {
+            /**
+             * Format: uuid
+             * @example 018e2c5f-1234-7abc-8def-0000000000aa
+             */
+            id: string;
+            /**
+             * Format: email
+             * @example responder@example.com
+             */
+            email: string;
+            /** @example Alex Responder */
+            displayName: string;
+            role: components["schemas"]["UserRole"];
+            /**
+             * Format: date-time
+             * @example 2026-05-08T10:00:00Z
+             */
+            createdAt: string;
+        };
+        RegisterRequest: {
+            /**
+             * Format: email
+             * @example new.user@example.com
+             */
+            email: string;
+            /**
+             * Format: password
+             * @example change-me-8+
+             */
+            password: string;
+            /** @example New User */
+            displayName: string;
+        };
+        LoginRequest: {
+            /**
+             * Format: email
+             * @example responder@example.com
+             */
+            email: string;
+            /**
+             * Format: password
+             * @example change-me-8+
+             */
+            password: string;
+        };
+        UserListResponse: {
+            items: components["schemas"]["User"][];
+            /**
+             * @description Total users matching the query (ignoring pagination).
+             * @example 2
+             */
+            total: number;
+            /** @example 50 */
+            limit: number;
+            /** @example 0 */
+            offset: number;
+        };
+        /** @description Simple error payload for auth and validation failures. */
+        ErrorResponse: {
+            /** @example Invalid email or password */
+            message: string;
+        };
         /** @description GenAI service health status including Ollama reachability. */
         GenaiHealthResponse: {
             /** @example ok */
@@ -358,6 +542,10 @@ export interface components {
         };
     };
     parameters: {
+        /** @description Maximum number of users to return (default 50, max 100). */
+        UserListLimitParam: number;
+        /** @description Number of users to skip for pagination. */
+        UserListOffsetParam: number;
         /** @description UUID of the target incident. */
         IncidentIdParam: string;
     };
@@ -676,6 +864,175 @@ export interface operations {
             202: components["responses"]["RegenAccepted"];
             404: components["responses"]["IncidentNotFound"];
             409: components["responses"]["IncidentNotResolved"];
+        };
+    };
+    registerUser: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RegisterRequest"];
+            };
+        };
+        responses: {
+            /** @description Account created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["User"];
+                };
+            };
+            /** @description Invalid request (validation failed) */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Email already registered */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    loginUser: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LoginRequest"];
+            };
+        };
+        responses: {
+            /** @description Authenticated */
+            200: {
+                headers: {
+                    /** @description httpOnly session JWT (`session` cookie) */
+                    "Set-Cookie"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["User"];
+                };
+            };
+            /** @description Invalid request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Invalid email or password */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    logoutUser: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Logged out (or already logged out) */
+            204: {
+                headers: {
+                    /** @description Clears the session cookie */
+                    "Set-Cookie"?: string;
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getCurrentUser: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Current user */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["User"];
+                };
+            };
+            /** @description Not authenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    listUsers: {
+        parameters: {
+            query?: {
+                /** @description Maximum number of users to return (default 50, max 100). */
+                limit?: components["parameters"]["UserListLimitParam"];
+                /** @description Number of users to skip for pagination. */
+                offset?: components["parameters"]["UserListOffsetParam"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description User directory page */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserListResponse"];
+                };
+            };
+            /** @description Not authenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
         };
     };
 }
