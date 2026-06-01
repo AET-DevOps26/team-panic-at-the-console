@@ -37,9 +37,11 @@ class NatsConsumer:
 
     async def start(self) -> None:
         self._nc = NatsClient()
+        # nats-py expects an int (seconds); round up so sub-second values are not truncated to 0.
+        connect_timeout_s = max(1, round(self._connect_timeout))
         await self._nc.connect(
             servers=[self._url],
-            connect_timeout=int(self._connect_timeout),
+            connect_timeout=connect_timeout_s,
             max_reconnect_attempts=-1,
         )
 

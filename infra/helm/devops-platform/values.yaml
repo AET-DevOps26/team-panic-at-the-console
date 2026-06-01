@@ -3,7 +3,7 @@ global:
     registry: ghcr.io/aet-devops26/team-panic-at-the-console
     tag: main
   namespace: default
-  # Shared Ollama model tag: genai-service (GENAI_OLLAMA_*) and ollama pull (postStart).
+  # Shared Ollama model tag: genai-service and ollama pull (postStart).
   ollamaModel: &ollamaModel qwen2.5:3b
   env:
     - name: NATS_URL
@@ -146,9 +146,9 @@ services:
     image:
       repository: genai-service
     env:
-      - name: GENAI_OLLAMA_URL
+      - name: OLLAMA_URL
         value: http://ollama:11434
-      - name: GENAI_OLLAMA_MODEL
+      - name: OLLAMA_MODEL
         value: *ollamaModel
       - name: INCIDENT_SERVICE_URL
         value: http://incident-service:8081
@@ -172,7 +172,7 @@ services:
       override: "ollama/ollama:0.9.0"
     command: ["ollama", "serve"]
     env:
-      - name: GENAI_OLLAMA_MODEL
+      - name: OLLAMA_MODEL
         value: *ollamaModel
     lifecycle:
       postStart:
@@ -180,7 +180,7 @@ services:
           command:
             - "/bin/sh"
             - "-c"
-            - "until ollama list >/dev/null 2>&1; do sleep 2; done; ollama pull ${GENAI_OLLAMA_MODEL:-qwen2.5:3b}"
+            - "until ollama list >/dev/null 2>&1; do sleep 2; done; ollama pull ${OLLAMA_MODEL:-qwen2.5:3b}"
     persistence:
       size: 10Gi
       mountPath: /root/.ollama

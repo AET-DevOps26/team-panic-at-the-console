@@ -66,6 +66,16 @@ public class IncidentService {
                 .orElseThrow(() -> new NoSuchElementException("Incident not found: " + incidentId));
     }
 
+    /**
+     * Timeline entries for genai prompts and internal reads.
+     * event-service is not wired yet; synthesize from incident state and comments until then.
+     */
+    public List<org.openapitools.model.IncidentEvent> listIncidentEvents(UUID incidentId) {
+        Incident incident = getIncident(incidentId);
+        List<Comment> comments = commentRepository.findByIncident_IdOrderByCreatedAtAsc(incidentId);
+        return IncidentMapper.toApiEvents(incident, comments);
+    }
+
 
     public Incident updateIncidentStatus(UUID incidentId, IncidentStatus newStatus) {
         Incident incident = getIncident(incidentId);

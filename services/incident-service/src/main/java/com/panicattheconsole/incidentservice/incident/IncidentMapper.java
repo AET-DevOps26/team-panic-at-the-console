@@ -2,6 +2,8 @@ package com.panicattheconsole.incidentservice.incident;
 
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 
 import org.openapitools.jackson.nullable.JsonNullable;
@@ -40,7 +42,30 @@ final class IncidentMapper {
         return Severity.fromValue(severity.name());
     }
 
-    static List<IncidentEvent> emptyEvents() {
-        return List.of();
+    static List<IncidentEvent> toApiEvents(Incident incident, List<Comment> comments) {
+        List<IncidentEvent> events = new ArrayList<>();
+
+        String title = incident.getTitle() != null ? incident.getTitle() : "(no title)";
+        events.add(new IncidentEvent(
+                OffsetDateTime.ofInstant(incident.getCreatedAt(), ZoneOffset.UTC),
+                "incident_created",
+                "Incident created: " + title + " (" + incident.getSeverity() + ")"));
+
+        for (Comment comment : comments) {
+            events.add(new IncidentEvent(
+                    OffsetDateTime.ofInstant(comment.getCreatedAt(), ZoneOffset.UTC),
+                    "comment_added",
+                    comment.getContent()));
+        }
+
+        if (incident.getResolvedAt() != null) {
+            events.add(new IncidentEvent(
+                    OffsetDateTime.ofInstant(incident.getResolvedAt(), ZoneOffset.UTC),
+                    "incident_resolved",
+                    "status: " + incident.getStatus().name().toLowerCase()));
+        }
+
+        events.sort(Comparator.comparing(IncidentEvent::getTimestamp));
+        return List.copyOf(events);
     }
 }

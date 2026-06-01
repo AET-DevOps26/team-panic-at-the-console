@@ -1,3 +1,4 @@
+from http import HTTPStatus
 from uuid import UUID
 
 import structlog
@@ -17,6 +18,7 @@ from client.models import (
     SolutionsPatch,
     SummaryPatch,
 )
+from client.types import Response
 from genai_service.ollama_client import OllamaClient
 from genai_service.prompts import (
     PostmortemResponse,
@@ -62,7 +64,7 @@ class IncidentHandlers:
             result = await self._ollama.generate(
                 prompt.user, system=prompt.system, response_model=PostmortemResponse
             )
-            await write_incident_postmortem.asyncio_detailed(
+            response = await write_incident_postmortem.asyncio_detailed(
                 incident_id=_uuid(incident_id),
                 client=self._client,
                 body=PostmortemPatch(
@@ -71,6 +73,7 @@ class IncidentHandlers:
                     action_items=result.action_items,
                 ),
             )
+            _expect_no_content(response, operation="write postmortem")
             log.info("postmortem_generated")
         except Exception as exc:
             log.error("postmortem_failed", error=str(exc))
@@ -91,11 +94,12 @@ class IncidentHandlers:
                 system=summary_prompt.system,
                 response_model=SummaryResponse,
             )
-            await write_incident_summary.asyncio_detailed(
+            summary_response = await write_incident_summary.asyncio_detailed(
                 incident_id=_uuid(incident_id),
                 client=self._client,
                 body=SummaryPatch(summary=summary.summary),
             )
+            _expect_no_content(summary_response, operation="write summary")
 
             solutions_prompt = self._prompts.build(
                 incident, events, PromptTask.SOLUTION_SUGGESTIONS
@@ -105,11 +109,12 @@ class IncidentHandlers:
                 system=solutions_prompt.system,
                 response_model=SolutionsResponse,
             )
-            await write_incident_solutions.asyncio_detailed(
+            solutions_response = await write_incident_solutions.asyncio_detailed(
                 incident_id=_uuid(incident_id),
                 client=self._client,
                 body=SolutionsPatch(solutions=list(solutions.solutions)),
             )
+            _expect_no_content(solutions_response, operation="write solutions")
 
             log.info("summary_and_solutions_generated")
         except Exception as exc:
@@ -135,3 +140,11 @@ def _uuid(incident_id: str) -> UUID:
     # NATS payloads carry incidentId as a string; incident-service uses UUIDs.
     # Generated client expects UUID; fail fast if the payload is malformed.
     return UUID(incident_id)
+
+
+def _expect_no_content(response: Response[object], *, operation: str) -> None:
+    if response.status_code == HTTPStatus.NO_CONTENT:
+        return
+    raise RuntimeError(
+        f"{operation} failed for incident-service: HTTP {response.status_code}"
+    )

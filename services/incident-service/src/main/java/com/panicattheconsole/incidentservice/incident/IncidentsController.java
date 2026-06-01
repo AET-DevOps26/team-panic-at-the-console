@@ -35,8 +35,7 @@ class IncidentsController implements IncidentsApi {
 
     @Override
     public ResponseEntity<List<IncidentEvent>> listIncidentEvents(UUID incidentId) {
-        incidentService.getIncident(incidentId);
-        return ResponseEntity.ok(IncidentMapper.emptyEvents());
+        return ResponseEntity.ok(incidentService.listIncidentEvents(incidentId));
     }
 
     @Override

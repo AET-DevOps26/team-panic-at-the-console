@@ -178,3 +178,26 @@ async def test_handler_rejects_non_uuid_incident_id(ollama):
     await handlers.on_incident_created("not-a-uuid")
 
     ollama.generate.assert_not_awaited()
+
+
+async def test_on_created_does_not_log_success_when_patch_returns_404(ollama):
+    def handler(request: httpx.Request) -> httpx.Response:
+        path = request.url.path
+        if request.method == "GET" and path.endswith(f"/incidents/{INCIDENT_ID}"):
+            return httpx.Response(200, json=_incident_json())
+        if request.method == "GET" and path.endswith("/events"):
+            return httpx.Response(200, json=_events_json())
+        if request.method == "PATCH":
+            return httpx.Response(404)
+        return httpx.Response(404)
+
+    c = Client(
+        base_url="http://incident-service",
+        httpx_args={"transport": httpx.MockTransport(handler)},
+    )
+    ollama.generate.return_value = SummaryResponse(summary="s")
+    handlers = IncidentHandlers(c, ollama, PromptBuilder())
+
+    await handlers.on_incident_created(str(INCIDENT_ID))
+
+    assert ollama.generate.await_count == 1

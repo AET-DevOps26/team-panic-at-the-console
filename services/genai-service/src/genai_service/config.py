@@ -2,8 +2,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    # Env vars are unprefixed to match the repo's compose/helm convention (NATS_URL, OLLAMA_URL, ...).
-    # global.env inheritance in the Helm chart only works for unprefixed names.
+    # Env vars are unprefixed (OLLAMA_URL, NATS_URL, ...) to match compose/Helm and global.env inheritance.
     model_config = SettingsConfigDict(extra="ignore")
 
     ollama_url: str = "http://localhost:11434"
