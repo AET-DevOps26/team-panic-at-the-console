@@ -13,6 +13,15 @@ tags:
     description: Service health and readiness.
   - name: genai
     description: AI-assisted incident analysis (on-demand regeneration triggers).
+  - name: auth
+    description: |
+      Registration, login, and logout (user-service). On login, user-service sets an httpOnly `session`
+      cookie (JWT, `SameSite=Strict`) per ADR 0007. User routes use `security: []` in the spec so generated
+      Python clients accept `Client` + cookies instead of mandatory Bearer tokens (see ADR 0007).
+  - name: users
+    description: |
+      User profiles and directory (user-service). Runtime auth uses the `session` cookie or gateway-injected
+      `X-User-Id` / `X-User-Role`; OpenAPI marks operations `security: []` for codegen only.
 
 servers:
   - url: http://localhost:4010
@@ -115,8 +124,175 @@ paths:
         "409":
           $ref: "#/components/responses/IncidentNotResolved"
 
+  /auth/register:
+    post:
+      operationId: registerUser
+      summary: Create a new user account
+      description: |
+        Public self-registration. New accounts receive the `MEMBER` role.
+        Passwords are stored hashed server-side; the cleartext password is never returned.
+      tags: [auth]
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterRequest"
+      responses:
+        "201":
+          description: Account created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "400":
+          description: Invalid request (validation failed)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Email already registered
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/login:
+    post:
+      operationId: loginUser
+      summary: Authenticate and start a session
+      description: |
+        On success, user-service sets an httpOnly `session` cookie containing a signed JWT
+        (`SameSite=Strict`). The gateway validates this cookie and injects `X-User-Id` /
+        `X-User-Role` on downstream requests. Do not send credentials on subsequent API calls.
+      tags: [auth]
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+      responses:
+        "200":
+          description: Authenticated
+          headers:
+            Set-Cookie:
+              description: httpOnly session JWT (`session` cookie)
+              schema:
+                type: string
+                example: session=eyJhbG...; Path=/; HttpOnly; SameSite=Strict
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "400":
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Invalid email or password
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/logout:
+    post:
+      operationId: logoutUser
+      summary: End the current session
+      description: |
+        Clears the `session` cookie via `Set-Cookie`. Always returns 204, even when no cookie
+        was sent (idempotent logout).
+      tags: [auth]
+      security: []
+      responses:
+        "204":
+          description: Logged out (or already logged out)
+          headers:
+            Set-Cookie:
+              description: Clears the session cookie
+              schema:
+                type: string
+                example: session=; Path=/; HttpOnly; SameSite=Strict; Max-Age=0
+
+  /users/me:
+    get:
+      operationId: getCurrentUser
+      summary: Get the authenticated user profile
+      description: |
+        Requires a valid `session` cookie (browser) or prior login via `POST /auth/login` on the same HTTP client.
+        Python callers should use `Client` and pass cookies (e.g. `client.with_cookies({"session": "<jwt>"})`), not
+        `AuthenticatedClient` / `Authorization: Bearer`.
+      tags: [users]
+      security: []
+      responses:
+        "200":
+          description: Current user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /users:
+    get:
+      operationId: listUsers
+      summary: List users (directory)
+      description: |
+        Returns all users for assignment pickers and mention lists. Requires a valid `session` cookie (see
+        `GET /users/me`). Python callers use `Client` + cookies, not Bearer auth.
+      tags: [users]
+      security: []
+      parameters:
+        - $ref: "#/components/parameters/UserListLimitParam"
+        - $ref: "#/components/parameters/UserListOffsetParam"
+      responses:
+        "200":
+          description: User directory page
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserListResponse"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
 components:
   parameters:
+    UserListLimitParam:
+      name: limit
+      in: query
+      required: false
+      description: Maximum number of users to return (default 50, max 100).
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 50
+
+    UserListOffsetParam:
+      name: offset
+      in: query
+      required: false
+      description: Number of users to skip for pagination.
+      schema:
+        type: integer
+        minimum: 0
+        default: 0
+
     IncidentIdParam:
       name: incidentId
       in: path
@@ -140,6 +316,112 @@ components:
       description: Postmortem operations require the incident to be in resolved state
 
   schemas:
+    UserRole:
+      type: string
+      description: |
+        Platform role aligned with the analysis object model.
+        `MEMBER` maps to TeamMember, `RESPONDER` to IncidentResponder, `COMMANDER` to IncidentCommander.
+      enum: [MEMBER, RESPONDER, COMMANDER]
+      example: MEMBER
+
+    User:
+      type: object
+      description: Public user profile (no credentials).
+      required: [id, email, displayName, role, createdAt]
+      additionalProperties: false
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: 018e2c5f-1234-7abc-8def-0000000000aa
+        email:
+          type: string
+          format: email
+          example: responder@example.com
+        displayName:
+          type: string
+          minLength: 1
+          maxLength: 100
+          example: Alex Responder
+        role:
+          $ref: "#/components/schemas/UserRole"
+        createdAt:
+          type: string
+          format: date-time
+          example: "2026-05-08T10:00:00Z"
+
+    RegisterRequest:
+      type: object
+      required: [email, password, displayName]
+      additionalProperties: false
+      properties:
+        email:
+          type: string
+          format: email
+          example: new.user@example.com
+        password:
+          type: string
+          format: password
+          minLength: 8
+          maxLength: 128
+          writeOnly: true
+          example: "change-me-8+"
+        displayName:
+          type: string
+          minLength: 1
+          maxLength: 100
+          example: New User
+
+    LoginRequest:
+      type: object
+      required: [email, password]
+      additionalProperties: false
+      properties:
+        email:
+          type: string
+          format: email
+          example: responder@example.com
+        password:
+          type: string
+          format: password
+          minLength: 8
+          writeOnly: true
+          example: "change-me-8+"
+
+    UserListResponse:
+      type: object
+      required: [items, total, limit, offset]
+      additionalProperties: false
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/User"
+        total:
+          type: integer
+          minimum: 0
+          description: Total users matching the query (ignoring pagination).
+          example: 2
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 100
+          example: 50
+        offset:
+          type: integer
+          minimum: 0
+          example: 0
+
+    ErrorResponse:
+      type: object
+      description: Simple error payload for auth and validation failures.
+      required: [message]
+      additionalProperties: false
+      properties:
+        message:
+          type: string
+          example: Invalid email or password
+
     GenaiHealthResponse:
       type: object
       description: GenAI service health status including Ollama reachability.
