@@ -4,6 +4,7 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 
 from genai_service.nats_consumer import NatsConsumer
+from genai_service.regen_task import RegenTask
 
 
 @pytest.fixture()
@@ -58,3 +59,33 @@ async def test_callback_swallows_handler_exception(consumer):
     await cb(_msg({"incidentId": "inc-1", "timestamp": "now"}))
 
     handlers.on_incident_created.assert_awaited_once()
+
+
+async def test_regen_callback_extracts_task(consumer):
+    nc, handlers = consumer
+
+    cb = nc._make_regen_callback(
+        "incident.regen.requested", handlers.on_regen_requested
+    )
+    await cb(
+        _msg(
+            {
+                "incidentId": "inc-1",
+                "timestamp": "2026-05-20T09:00:00Z",
+                "task": "SUMMARY",
+            }
+        )
+    )
+
+    handlers.on_regen_requested.assert_awaited_once_with("inc-1", RegenTask.SUMMARY)
+
+
+async def test_regen_callback_ignores_payload_missing_task(consumer):
+    nc, handlers = consumer
+
+    cb = nc._make_regen_callback(
+        "incident.regen.requested", handlers.on_regen_requested
+    )
+    await cb(_msg({"incidentId": "inc-1", "timestamp": "2026-05-20T09:00:00Z"}))
+
+    handlers.on_regen_requested.assert_not_awaited()

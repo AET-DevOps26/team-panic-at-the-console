@@ -11,9 +11,11 @@ from genai_service.handlers import IncidentHandlers
 from genai_service.prompts import (
     PostmortemResponse,
     PromptBuilder,
+    SeverityResponse,
     SolutionsResponse,
     SummaryResponse,
 )
+from genai_service.regen_task import RegenTask
 
 INCIDENT_ID = UUID("018e2c5f-1234-7abc-8def-000000000001")
 
@@ -78,24 +80,28 @@ def ollama() -> AsyncMock:
     return AsyncMock()
 
 
-async def test_on_created_generates_summary_and_solutions_and_patches(ollama):
+async def test_on_created_generates_summary_severity_solutions_and_patches(ollama):
     patches: list[dict] = []
     c = _client_with(incident=_incident_json(), events=_events_json(), patches=patches)
     ollama.generate.side_effect = [
         SummaryResponse(summary="things are bad"),
+        SeverityResponse(severity=Severity.SEV1, reason="checkout down"),
         SolutionsResponse(solutions=["restart", "rollback"]),
     ]
     handlers = IncidentHandlers(c, ollama, PromptBuilder())
 
     await handlers.on_incident_created(str(INCIDENT_ID))
 
-    paths = [p["path"] for p in patches]
-    assert any(p.endswith("/genai/summary/result") for p in paths)
-    assert any(p.endswith("/genai/solutions/result") for p in paths)
+    suffixes = {p["path"].rsplit("/", 2)[-2] for p in patches}
+    assert suffixes == {"summary", "severity", "solutions"}
     by_path = {p["path"].rsplit("/", 2)[-2]: p["body"] for p in patches}
     assert by_path["summary"] == {"summary": "things are bad"}
+    assert by_path["severity"] == {
+        "severity": "SEV1",
+        "reason": "checkout down",
+    }
     assert by_path["solutions"] == {"solutions": ["restart", "rollback"]}
-    assert ollama.generate.await_count == 2
+    assert ollama.generate.await_count == 3
 
 
 async def test_on_resolved_generates_postmortem(ollama):
@@ -123,19 +129,37 @@ async def test_on_resolved_generates_postmortem(ollama):
     }
 
 
-async def test_on_regen_requested_runs_summary_path(ollama):
+async def test_on_regen_requested_runs_only_requested_task(ollama):
     patches: list[dict] = []
     c = _client_with(incident=_incident_json(), events=_events_json(), patches=patches)
-    ollama.generate.side_effect = [
-        SummaryResponse(summary="s"),
-        SolutionsResponse(solutions=["a"]),
-    ]
+    ollama.generate.return_value = SummaryResponse(summary="s")
     handlers = IncidentHandlers(c, ollama, PromptBuilder())
 
-    await handlers.on_regen_requested(str(INCIDENT_ID))
+    await handlers.on_regen_requested(str(INCIDENT_ID), RegenTask.SUMMARY)
 
-    suffixes = {p["path"].rsplit("/", 2)[-2] for p in patches}
-    assert suffixes == {"summary", "solutions"}
+    assert len(patches) == 1
+    assert patches[0]["path"].endswith("/genai/summary/result")
+    assert ollama.generate.await_count == 1
+
+
+async def test_on_regen_postmortem_runs_postmortem_only(ollama):
+    patches: list[dict] = []
+    c = _client_with(
+        incident=_incident_json(
+            status=IncidentStatus.RESOLVED, resolved_at="2026-05-20T10:00:00+00:00"
+        ),
+        events=_events_json(),
+        patches=patches,
+    )
+    ollama.generate.return_value = PostmortemResponse(
+        root_cause="x", timeline=["t"], action_items=["a"]
+    )
+    handlers = IncidentHandlers(c, ollama, PromptBuilder())
+
+    await handlers.on_regen_requested(str(INCIDENT_ID), RegenTask.POSTMORTEM)
+
+    assert len(patches) == 1
+    assert patches[0]["path"].endswith("/genai/postmortem/result")
 
 
 async def test_handler_swallows_errors(ollama):
@@ -180,24 +204,35 @@ async def test_handler_rejects_non_uuid_incident_id(ollama):
     ollama.generate.assert_not_awaited()
 
 
-async def test_on_created_does_not_log_success_when_patch_returns_404(ollama):
+async def test_on_created_continues_after_summary_patch_fails(ollama):
+    call = 0
+
     def handler(request: httpx.Request) -> httpx.Response:
+        nonlocal call
         path = request.url.path
         if request.method == "GET" and path.endswith(f"/incidents/{INCIDENT_ID}"):
             return httpx.Response(200, json=_incident_json())
         if request.method == "GET" and path.endswith("/events"):
             return httpx.Response(200, json=_events_json())
-        if request.method == "PATCH":
+        if request.method == "PATCH" and path.endswith("/summary/result"):
             return httpx.Response(404)
+        if request.method == "PATCH":
+            call += 1
+            return httpx.Response(204)
         return httpx.Response(404)
 
     c = Client(
         base_url="http://incident-service",
         httpx_args={"transport": httpx.MockTransport(handler)},
     )
-    ollama.generate.return_value = SummaryResponse(summary="s")
+    ollama.generate.side_effect = [
+        SummaryResponse(summary="s"),
+        SeverityResponse(severity=Severity.SEV2, reason="r"),
+        SolutionsResponse(solutions=["a"]),
+    ]
     handlers = IncidentHandlers(c, ollama, PromptBuilder())
 
     await handlers.on_incident_created(str(INCIDENT_ID))
 
-    assert ollama.generate.await_count == 1
+    assert ollama.generate.await_count == 3
+    assert call == 2

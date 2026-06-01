@@ -5,6 +5,7 @@ import java.util.Map;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.InstanceOfAssertFactories.MAP;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -63,8 +64,12 @@ class IncidentsControllerIntegrationTest {
     @Autowired
     IncidentRepository incidentRepository;
 
+    @Autowired
+    CommentRepository commentRepository;
+
     @BeforeEach
     void seedIncident() {
+        commentRepository.deleteAll();
         incidentRepository.deleteAll();
         incidentService.createIncident(INCIDENT_ID, Severity.SEV2, "Checkout 5xx spike", null);
     }
@@ -98,9 +103,11 @@ class IncidentsControllerIntegrationTest {
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(response.getBody()).hasSize(2);
         assertThat(response.getBody().get(0))
+                .asInstanceOf(MAP)
                 .containsEntry("type", "incident_created")
                 .containsEntry("description", "Incident created: Checkout 5xx spike (SEV2)");
         assertThat(response.getBody().get(1))
+                .asInstanceOf(MAP)
                 .containsEntry("type", "comment_added")
                 .containsEntry("description", "looking into it");
     }

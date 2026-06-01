@@ -10,11 +10,11 @@ FastAPI scaffold:
 
 On startup the service connects to NATS (`NATS_URL`) and subscribes — in the `genai-service` queue group — to:
 
-| Subject                    | Action                                                       |
-| -------------------------- | ------------------------------------------------------------ |
-| `incident.created`         | Generate Summary + Solutions; PATCH back to incident-service |
-| `incident.resolved`        | Generate Postmortem; PATCH back to incident-service          |
-| `incident.regen.requested` | Re-run Summary + Solutions for the incident                  |
+| Subject                    | Action                                                               |
+| -------------------------- | -------------------------------------------------------------------- |
+| `incident.created`         | Generate Summary, Severity suggestion, and Solutions; PATCH back     |
+| `incident.resolved`        | Generate Postmortem; PATCH back to incident-service                  |
+| `incident.regen.requested` | Re-run one task (`task` in payload: SUMMARY, SEVERITY_SUGGESTION, …) |
 
 For each message the service reads `incidentId` from the payload, fetches the incident and its event log from `incident-service` (`INCIDENT_SERVICE_URL`), builds a prompt via `PromptBuilder`, generates a structured response with `OllamaClient.generate(... response_model=...)`, and PATCHes the result back. Handler errors are logged and swallowed so a single bad message does not stop the consumer.
 

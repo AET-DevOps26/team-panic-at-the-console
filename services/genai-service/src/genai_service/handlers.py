@@ -1,3 +1,4 @@
+import asyncio
 from http import HTTPStatus
 from uuid import UUID
 
@@ -8,13 +9,16 @@ from client.api.incidents import (
     get_incident,
     list_incident_events,
     write_incident_postmortem,
+    write_incident_severity_suggestion,
     write_incident_solutions,
     write_incident_summary,
 )
 from client.models import (
     Incident,
     IncidentEvent,
+    IncidentStatus,
     PostmortemPatch,
+    SeverityPatch,
     SolutionsPatch,
     SummaryPatch,
 )
@@ -24,19 +28,23 @@ from genai_service.prompts import (
     PostmortemResponse,
     PromptBuilder,
     PromptTask,
+    SeverityResponse,
     SolutionsResponse,
     SummaryResponse,
 )
+from genai_service.regen_task import RegenTask
 
 logger = structlog.get_logger(__name__)
+
+_POSTMORTEM_RESOLVE_RETRIES = 3
+_POSTMORTEM_RESOLVE_DELAY_SECONDS = 0.5
 
 
 class IncidentHandlers:
     """Orchestrates NATS events -> fetch incident -> build prompt -> generate -> patch back.
 
-    Each handler corresponds to one NATS subject. Errors are logged and swallowed so
-    a poisoned event does not crash the consumer; we rely on incident-service to
-    retry (e.g. by republishing) if a generation fails.
+    Each handler corresponds to one NATS subject. Errors are logged and swallowed per task so
+    a poisoned event does not crash the consumer.
 
     Talks to incident-service through the generated OpenAPI client
     (services/generated/python-client) instead of a hand-written facade, so the
@@ -54,71 +62,142 @@ class IncidentHandlers:
         self._prompts = prompt_builder
 
     async def on_incident_created(self, incident_id: str) -> None:
-        await self._summary_and_solutions(incident_id, trigger="incident.created")
+        await self._run_tasks(
+            incident_id,
+            (
+                PromptTask.SUMMARY,
+                PromptTask.SEVERITY_SUGGESTION,
+                PromptTask.SOLUTION_SUGGESTIONS,
+            ),
+            trigger="incident.created",
+        )
 
     async def on_incident_resolved(self, incident_id: str) -> None:
         log = logger.bind(incident_id=incident_id, trigger="incident.resolved")
-        try:
-            incident, events = await self._fetch(incident_id)
-            prompt = self._prompts.build(incident, events, PromptTask.POSTMORTEM)
-            result = await self._ollama.generate(
-                prompt.user, system=prompt.system, response_model=PostmortemResponse
-            )
-            response = await write_incident_postmortem.asyncio_detailed(
-                incident_id=_uuid(incident_id),
-                client=self._client,
-                body=PostmortemPatch(
-                    root_cause=result.root_cause,
-                    timeline=result.timeline,
-                    action_items=result.action_items,
-                ),
-            )
-            _expect_no_content(response, operation="write postmortem")
-            log.info("postmortem_generated")
-        except Exception as exc:
-            log.error("postmortem_failed", error=str(exc))
+        for attempt in range(_POSTMORTEM_RESOLVE_RETRIES):
+            try:
+                incident, events = await self._fetch(incident_id)
+                if incident.status is not IncidentStatus.RESOLVED:
+                    if attempt < _POSTMORTEM_RESOLVE_RETRIES - 1:
+                        await asyncio.sleep(_POSTMORTEM_RESOLVE_DELAY_SECONDS)
+                        continue
+                    log.warning(
+                        "postmortem_skipped_not_resolved",
+                        status=incident.status.value,
+                    )
+                    return
+                await self._generate_postmortem(incident_id, incident, events)
+                log.info("postmortem_generated")
+                return
+            except Exception as exc:
+                log.error("postmortem_failed", error=str(exc))
+                return
 
-    async def on_regen_requested(self, incident_id: str) -> None:
-        await self._summary_and_solutions(
-            incident_id, trigger="incident.regen.requested"
+    async def on_regen_requested(self, incident_id: str, task: RegenTask) -> None:
+        prompt_task = _REGEN_TO_PROMPT[task]
+        await self._run_tasks(
+            incident_id,
+            (prompt_task,),
+            trigger="incident.regen.requested",
+            regen_task=task.value,
         )
 
-    async def _summary_and_solutions(self, incident_id: str, *, trigger: str) -> None:
-        log = logger.bind(incident_id=incident_id, trigger=trigger)
+    async def _run_tasks(
+        self,
+        incident_id: str,
+        tasks: tuple[PromptTask, ...],
+        *,
+        trigger: str,
+        regen_task: str | None = None,
+    ) -> None:
+        log = logger.bind(
+            incident_id=incident_id, trigger=trigger, regen_task=regen_task
+        )
         try:
             incident, events = await self._fetch(incident_id)
+        except Exception as exc:
+            log.error("fetch_failed", error=str(exc))
+            return
 
-            summary_prompt = self._prompts.build(incident, events, PromptTask.SUMMARY)
-            summary = await self._ollama.generate(
-                summary_prompt.user,
-                system=summary_prompt.system,
+        for task in tasks:
+            try:
+                await self._generate_and_patch(incident_id, incident, events, task)
+            except Exception as exc:
+                log.error("task_failed", task=task.value, error=str(exc))
+
+        log.info("tasks_completed", tasks=[t.value for t in tasks])
+
+    async def _generate_and_patch(
+        self,
+        incident_id: str,
+        incident: Incident,
+        events: list[IncidentEvent],
+        task: PromptTask,
+    ) -> None:
+        if task is PromptTask.POSTMORTEM:
+            await self._generate_postmortem(incident_id, incident, events)
+            return
+
+        prompt = self._prompts.build(incident, events, task)
+        if task is PromptTask.SUMMARY:
+            result = await self._ollama.generate(
+                prompt.user,
+                system=prompt.system,
                 response_model=SummaryResponse,
             )
-            summary_response = await write_incident_summary.asyncio_detailed(
+            response = await write_incident_summary.asyncio_detailed(
                 incident_id=_uuid(incident_id),
                 client=self._client,
-                body=SummaryPatch(summary=summary.summary),
+                body=SummaryPatch(summary=result.summary),
             )
-            _expect_no_content(summary_response, operation="write summary")
-
-            solutions_prompt = self._prompts.build(
-                incident, events, PromptTask.SOLUTION_SUGGESTIONS
+            _expect_no_content(response, operation="write summary")
+        elif task is PromptTask.SEVERITY_SUGGESTION:
+            result = await self._ollama.generate(
+                prompt.user,
+                system=prompt.system,
+                response_model=SeverityResponse,
             )
-            solutions = await self._ollama.generate(
-                solutions_prompt.user,
-                system=solutions_prompt.system,
+            response = await write_incident_severity_suggestion.asyncio_detailed(
+                incident_id=_uuid(incident_id),
+                client=self._client,
+                body=SeverityPatch(severity=result.severity, reason=result.reason),
+            )
+            _expect_no_content(response, operation="write severity suggestion")
+        elif task is PromptTask.SOLUTION_SUGGESTIONS:
+            result = await self._ollama.generate(
+                prompt.user,
+                system=prompt.system,
                 response_model=SolutionsResponse,
             )
-            solutions_response = await write_incident_solutions.asyncio_detailed(
+            response = await write_incident_solutions.asyncio_detailed(
                 incident_id=_uuid(incident_id),
                 client=self._client,
-                body=SolutionsPatch(solutions=list(solutions.solutions)),
+                body=SolutionsPatch(solutions=list(result.solutions)),
             )
-            _expect_no_content(solutions_response, operation="write solutions")
+            _expect_no_content(response, operation="write solutions")
+        else:
+            raise ValueError(f"unsupported prompt task: {task}")
 
-            log.info("summary_and_solutions_generated")
-        except Exception as exc:
-            log.error("summary_and_solutions_failed", error=str(exc))
+    async def _generate_postmortem(
+        self,
+        incident_id: str,
+        incident: Incident,
+        events: list[IncidentEvent],
+    ) -> None:
+        prompt = self._prompts.build(incident, events, PromptTask.POSTMORTEM)
+        result = await self._ollama.generate(
+            prompt.user, system=prompt.system, response_model=PostmortemResponse
+        )
+        response = await write_incident_postmortem.asyncio_detailed(
+            incident_id=_uuid(incident_id),
+            client=self._client,
+            body=PostmortemPatch(
+                root_cause=result.root_cause,
+                timeline=result.timeline,
+                action_items=result.action_items,
+            ),
+        )
+        _expect_no_content(response, operation="write postmortem")
 
     async def _fetch(self, incident_id: str) -> tuple[Incident, list[IncidentEvent]]:
         incident = await get_incident.asyncio(
@@ -134,6 +213,14 @@ class IncidentHandlers:
         if not isinstance(events, list):
             raise RuntimeError(f"incident-service returned no events for {incident_id}")
         return incident, events
+
+
+_REGEN_TO_PROMPT: dict[RegenTask, PromptTask] = {
+    RegenTask.SUMMARY: PromptTask.SUMMARY,
+    RegenTask.SEVERITY_SUGGESTION: PromptTask.SEVERITY_SUGGESTION,
+    RegenTask.SOLUTION_SUGGESTIONS: PromptTask.SOLUTION_SUGGESTIONS,
+    RegenTask.POSTMORTEM: PromptTask.POSTMORTEM,
+}
 
 
 def _uuid(incident_id: str) -> UUID:
