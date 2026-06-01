@@ -54,7 +54,7 @@ See `CONTEXT.md` for full architectural decisions and `docs/adr/` for key trade-
 | `notification-service` | 8085 | Notifies users on incident events       |
 | `webhook-service`      | 8086 | Receives CI/CD webhook events           |
 | `genai-service`        | 8087 | AI summaries, triage, postmortem drafts |
-| `swagger-ui`           | 8090 | Swagger UI serving `api/openapi.yaml`   |
+| `swagger-ui`           | (via `:8080/swagger/`) | OpenAPI explorer; routed by compose `edge` / Helm ingress |
 
 ### Infrastructure
 

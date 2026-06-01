@@ -26,6 +26,8 @@ tags:
 servers:
   - url: http://localhost:4010
     description: Local mock server (pixi run mock-api)
+  - url: http://localhost:8080/api/v1
+    description: Local gateway and Swagger UI (pixi run compose-up, same paths as Helm)
   - url: /api/v1
     description: API gateway (relative, in-cluster)
 

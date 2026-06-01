@@ -77,3 +77,6 @@ infra/terraform/*.tfstate*
 
 # Ansible
 infra/ansible/inventory.ini
+
+# Swagger UI
+infra/helm/devops-platform/files/openapi.yaml
