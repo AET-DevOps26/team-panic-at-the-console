@@ -3,5 +3,4 @@
 pixi.lock merge=binary linguist-language=YAML linguist-generated=true
 services/*/pixi.lock merge=binary linguist-language=YAML linguist-generated=true
 
-# linguist-generated: exclude from GitHub language stats; merge=binary: no line-by-line automerge (re-run gen-all after merge)
 services/generated/** linguist-generated=true merge=binary
