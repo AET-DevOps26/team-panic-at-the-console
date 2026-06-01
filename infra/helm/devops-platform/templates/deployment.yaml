@@ -44,7 +44,23 @@ spec:
           {{- $mergedEnv = concat $mergedEnv $serviceEnv }}
           {{- if $mergedEnv }}
           env:
-            {{- toYaml $mergedEnv | nindent 12 }}
+            {{- range $mergedEnv }}
+            {{- if eq .name "SPRING_DATASOURCE_PASSWORD" }}
+            - name: SPRING_DATASOURCE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "devops-platform.postgresSecretName" $ }}
+                  key: password
+            {{- else }}
+            - name: {{ .name }}
+              {{- if .value }}
+              value: {{ .value | quote }}
+              {{- else if .valueFrom }}
+              valueFrom:
+                {{- toYaml .valueFrom | nindent 16 }}
+              {{- end }}
+            {{- end }}
+            {{- end }}
           {{- end }}
           {{- if $svc.command }}
           command: {{ $svc.command | toJson }}
@@ -56,16 +72,31 @@ spec:
           lifecycle:
             {{- toYaml $svc.lifecycle | nindent 12 }}
           {{- end }}
-          {{- with $svc.persistence }}
+          {{- if or $svc.persistence $svc.openapiConfigMap }}
           volumeMounts:
+            {{- with $svc.persistence }}
             - name: data
               mountPath: {{ required "persistence.mountPath is required" .mountPath }}
+            {{- end }}
+            {{- if $svc.openapiConfigMap }}
+            - name: openapi-spec
+              mountPath: /openapi.yaml
+              subPath: openapi.yaml
+              readOnly: true
+            {{- end }}
           {{- end }}
-      {{- with $svc.persistence }}
+      {{- if or $svc.persistence $svc.openapiConfigMap }}
       volumes:
+        {{- with $svc.persistence }}
         - name: data
           persistentVolumeClaim:
             claimName: {{ $name }}-data
+        {{- end }}
+        {{- if $svc.openapiConfigMap }}
+        - name: openapi-spec
+          configMap:
+            name: openapi-spec
+        {{- end }}
       {{- end }}
 ---
 {{- end }}

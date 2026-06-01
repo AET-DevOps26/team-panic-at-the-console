@@ -1,0 +1,12 @@
+{{- $swaggerUi := index .Values.services "swagger-ui" }}
+{{- if and $swaggerUi $swaggerUi.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: openapi-spec
+  labels:
+    app.kubernetes.io/name: swagger-ui
+data:
+  openapi.yaml: |
+{{- required "files/openapi.yaml missing: copy api/openapi.yaml or run infra/helm/scripts/deploy.sh" (.Files.Get "files/openapi.yaml") | nindent 4 }}
+{{- end }}
