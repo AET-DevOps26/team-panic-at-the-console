@@ -1,12 +1,19 @@
 package com.panicattheconsole.gateway.config;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.validation.annotation.Validated;
 
+import jakarta.validation.constraints.NotBlank;
+
+@Validated
 @ConfigurationProperties(prefix = "gateway")
 public class GatewayProperties {
 
-    private String incidentServiceUrl = "http://localhost:8081";
-    private String genaiServiceUrl = "http://localhost:8087";
+    @NotBlank
+    private String incidentServiceUrl;
+
+    @NotBlank
+    private String genaiServiceUrl;
 
     public String getIncidentServiceUrl() {
         return incidentServiceUrl;

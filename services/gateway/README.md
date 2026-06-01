@@ -16,10 +16,12 @@ Ingress (and local compose `edge` on port 8080) sends traffic with prefix `/api`
 
 ## Configuration
 
-| Property / env                                                  | Default                 |
-| --------------------------------------------------------------- | ----------------------- |
-| `gateway.incident-service-url` / `GATEWAY_INCIDENT_SERVICE_URL` | `http://localhost:8081` |
-| `gateway.genai-service-url` / `GATEWAY_GENAI_SERVICE_URL`       | `http://localhost:8087` |
+Downstream base URLs are required (`@NotBlank` on `GatewayProperties`). Local defaults live in `application.properties`; compose and Helm set `GATEWAY_*` env vars for deployed environments.
+
+| Property / env                                                  | Local default (`application.properties`) |
+| --------------------------------------------------------------- | ---------------------------------------- |
+| `gateway.incident-service-url` / `GATEWAY_INCIDENT_SERVICE_URL` | `http://localhost:8081`                  |
+| `gateway.genai-service-url` / `GATEWAY_GENAI_SERVICE_URL`       | `http://localhost:8087`                  |
 
 ## Local development
 
