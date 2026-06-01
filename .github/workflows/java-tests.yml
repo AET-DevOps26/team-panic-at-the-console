@@ -12,19 +12,25 @@ on:
     branches: [main]
     paths:
       - "services/incident-service/**"
+      - "services/user-service/**"
       - "services/generated/java/**"
       - "api/openapi.yaml"
   pull_request:
     paths:
       - "services/incident-service/**"
+      - "services/user-service/**"
       - "services/generated/java/**"
       - "api/openapi.yaml"
   merge_group:
 
 jobs:
   test:
-    name: incident-service
+    name: ${{ matrix.service }}
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        service: [incident-service, user-service]
 
     steps:
       - name: Checkout branch
@@ -35,7 +41,7 @@ jobs:
       - name: Set up pixi
         uses: prefix-dev/setup-pixi@1b2de7f3351f171c8b4dfeb558c639cb58ed4ec0 # v0.9.5
         with:
-          manifest-path: services/incident-service/pixi.toml
+          manifest-path: services/${{ matrix.service }}/pixi.toml
           frozen: true
           cache: true
 
@@ -43,10 +49,11 @@ jobs:
         uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
         with:
           path: ~/.m2/repository
-          key: maven-${{ runner.os }}-jdk25-${{ hashFiles('services/incident-service/pom.xml') }}
+          key: maven-${{ runner.os }}-jdk25-${{ matrix.service }}-${{ hashFiles(format('services/{0}/pom.xml', matrix.service)) }}
           restore-keys: |
+            maven-${{ runner.os }}-jdk25-${{ matrix.service }}-
             maven-${{ runner.os }}-jdk25-
             maven-${{ runner.os }}-
 
       - name: Build and test
-        run: pixi run --manifest-path services/incident-service/pixi.toml test
+        run: pixi run --manifest-path services/${{ matrix.service }}/pixi.toml test
