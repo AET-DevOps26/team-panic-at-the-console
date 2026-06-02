@@ -37,6 +37,9 @@ jobs:
           - webhook-service
           - genai-service
         include:
+          - service: frontend
+            build_context: ./services
+            build_dockerfile: ./services/frontend/Dockerfile
           - service: incident-service
             build_context: ./services
             build_dockerfile: ./services/incident-service/Dockerfile

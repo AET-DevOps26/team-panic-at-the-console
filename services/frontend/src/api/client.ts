@@ -1,5 +1,5 @@
 import createClient from "openapi-fetch";
-import type { paths } from "./schema";
+import type { paths } from "@openapi/schema";
 
 const BASE_URL = (import.meta.env.VITE_API_URL as string | undefined) ?? "/api/v1";
 
