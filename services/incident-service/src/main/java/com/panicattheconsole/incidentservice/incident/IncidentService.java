@@ -5,12 +5,15 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.Set;
 import java.util.UUID;
 
 import org.openapitools.model.RegenAccepted;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -246,5 +249,68 @@ public class IncidentService {
             throw new IllegalStateException(
                     "Cannot regenerate postmortem for non-resolved incident: " + incidentId);
         }
+    }
+
+    /**
+     * List all incidents with optional filtering by status and severity.
+     */
+    public List<Incident> listIncidents(IncidentStatus status, Severity severity, int limit, int offset) {
+        Pageable pageable = PageRequest.of(offset / limit, limit);
+
+        if (status != null && severity != null) {
+            return incidentRepository.findByStatusAndSeverity(status, severity, pageable).getContent();
+        } else if (status != null) {
+            return incidentRepository.findByStatus(status, pageable).getContent();
+        } else if (severity != null) {
+            return incidentRepository.findBySeverity(severity, pageable).getContent();
+        } else {
+            return incidentRepository.findAll(pageable).getContent();
+        }
+    }
+
+    /**
+     * Get total count of incidents matching filters.
+     */
+    public long countIncidents(IncidentStatus status, Severity severity) {
+        if (status != null && severity != null) {
+            return incidentRepository.countByStatusAndSeverity(status, severity);
+        } else if (status != null) {
+            return incidentRepository.countByStatus(status);
+        } else if (severity != null) {
+            return incidentRepository.countBySeverity(severity);
+        } else {
+            return incidentRepository.count();
+        }
+    }
+
+    /**
+     * Update assigned users for an incident.
+     * Replaces the current assignment set with the provided one.
+     * Publishes incident.updated event.
+     */
+    public Incident updateAssignedUsers(UUID incidentId, Set<UUID> userIds) {
+        Incident incident = getIncident(incidentId);
+        incident.setAssignedUsers(userIds);
+        Incident saved = incidentRepository.save(incident);
+        publishAfterCommit("incident.updated", createBaseEvent(incidentId));
+        log.info("Updated assigned users for incident [id={}, count={}]", incidentId, userIds.size());
+        return saved;
+    }
+
+    /**
+     * List comments for an incident.
+     */
+    public List<Comment> listComments(UUID incidentId, int limit, int offset) {
+        // Validate incident exists
+        getIncident(incidentId);
+        Pageable pageable = PageRequest.of(offset / limit, limit);
+        return commentRepository.findByIncident_Id(incidentId, pageable).getContent();
+    }
+
+    /**
+     * Count comments for an incident.
+     */
+    public long countComments(UUID incidentId) {
+        return commentRepository.countByIncident_Id(incidentId);
     }
 }
