@@ -1,8 +1,6 @@
 name: Deploy to Azure VM
 
 on:
-  push:
-    tags: ["v*"]
   release:
     types: [published]
   workflow_dispatch:
@@ -18,9 +16,9 @@ on:
         default: deploy
         required: true
       image_tag:
-        description: "Docker image tag to deploy (e.g. main, v1.2.3, sha-abc1234)"
-        default: main
-        required: false
+        description: "Docker image tag to deploy (e.g. latest, v1.2.3, sha-abc1234)"
+        default: latest
+        required: true
 
 concurrency:
   group: azure-vm-deployment
@@ -82,20 +80,25 @@ jobs:
           if [ "${{ github.event_name }}" = "release" ]; then
             echo "tag=${{ github.event.release.tag_name }}" >> "$GITHUB_OUTPUT"
             echo "action=full" >> "$GITHUB_OUTPUT"
-          elif [ "${{ github.event_name }}" = "push" ]; then
-            echo "tag=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
-            echo "action=full" >> "$GITHUB_OUTPUT"
           else
-            echo "tag=${{ inputs.image_tag || 'main' }}" >> "$GITHUB_OUTPUT"
+            echo "tag=${{ inputs.image_tag }}" >> "$GITHUB_OUTPUT"
             echo "action=${{ inputs.action }}" >> "$GITHUB_OUTPUT"
           fi
+
+  # ── Approval gate ───────────────────────────────────────────────────────────
+  gate:
+    name: Await approval
+    needs: resolve
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - run: echo "Approved"
 
   # ── Terraform ───────────────────────────────────────────────────────────────
   terraform:
     name: Terraform
-    needs: resolve
+    needs: [resolve, gate]
     runs-on: ubuntu-latest
-    environment: production
     outputs:
       vm_ip: ${{ steps.vm_ip.outputs.ip }}
 
@@ -142,10 +145,9 @@ jobs:
   # ── Ansible ─────────────────────────────────────────────────────────────────
   ansible:
     name: Ansible Deploy
-    needs: [resolve, terraform]
-    if: needs.terraform.result == 'success' && needs.resolve.outputs.action != 'plan'
+    needs: [resolve, gate, terraform]
+    if: needs.terraform.result == 'success' && (needs.resolve.outputs.action == 'deploy' || needs.resolve.outputs.action == 'full')
     runs-on: ubuntu-latest
-    environment: production
 
     steps:
       - name: Checkout
@@ -198,6 +200,19 @@ jobs:
         env:
           IMAGE_TAG: ${{ needs.resolve.outputs.tag }}
           POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+
+      - name: Wait for images to be available
+        if: github.event_name == 'release'
+        run: |
+          image="ghcr.io/aet-devops26/team-panic-at-the-console/gateway:${{ needs.resolve.outputs.tag }}"
+          for i in $(seq 1 20); do
+            if docker manifest inspect "${image}" > /dev/null 2>&1; then
+              echo "Images available after ${i} attempt(s)"; exit 0
+            fi
+            echo "  attempt ${i}/20, retrying in 30s..."
+            sleep 30
+          done
+          echo "::error::Images not available after 10 minutes"; exit 1
 
       - name: Run Ansible playbook
         run: |

@@ -12,7 +12,7 @@ on:
         type: string
         required: true
       sha_tag:
-        description: Secondary image tag (typically commit-sha-derived).
+        description: Secondary image tag (e.g. "latest" on release, or "sha-<sha>" on CI builds).
         type: string
         required: true
 

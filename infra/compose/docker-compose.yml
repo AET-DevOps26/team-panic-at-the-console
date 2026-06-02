@@ -70,7 +70,7 @@ services:
     restart: unless-stopped
 
   frontend:
-    image: ghcr.io/aet-devops26/team-panic-at-the-console/frontend:${IMAGE_TAG:-main}
+    image: ghcr.io/aet-devops26/team-panic-at-the-console/frontend:${IMAGE_TAG:-latest}
     build:
       context: ./services/frontend
       dockerfile: Dockerfile
@@ -79,7 +79,7 @@ services:
     restart: unless-stopped
 
   gateway:
-    image: ghcr.io/aet-devops26/team-panic-at-the-console/gateway:${IMAGE_TAG:-main}
+    image: ghcr.io/aet-devops26/team-panic-at-the-console/gateway:${IMAGE_TAG:-latest}
     build:
       context: ./services/gateway
       dockerfile: Dockerfile
@@ -91,7 +91,7 @@ services:
     restart: unless-stopped
 
   incident-service:
-    image: ghcr.io/aet-devops26/team-panic-at-the-console/incident-service:${IMAGE_TAG:-main}
+    image: ghcr.io/aet-devops26/team-panic-at-the-console/incident-service:${IMAGE_TAG:-latest}
     build:
       context: ./services
       dockerfile: incident-service/Dockerfile
@@ -110,7 +110,7 @@ services:
     restart: unless-stopped
 
   event-service:
-    image: ghcr.io/aet-devops26/team-panic-at-the-console/event-service:${IMAGE_TAG:-main}
+    image: ghcr.io/aet-devops26/team-panic-at-the-console/event-service:${IMAGE_TAG:-latest}
     build:
       context: ./services/event-service
       dockerfile: Dockerfile
@@ -129,7 +129,7 @@ services:
     restart: unless-stopped
 
   rule-engine:
-    image: ghcr.io/aet-devops26/team-panic-at-the-console/rule-engine:${IMAGE_TAG:-main}
+    image: ghcr.io/aet-devops26/team-panic-at-the-console/rule-engine:${IMAGE_TAG:-latest}
     build:
       context: ./services/rule-engine
       dockerfile: Dockerfile
@@ -148,7 +148,7 @@ services:
     restart: unless-stopped
 
   user-service:
-    image: ghcr.io/aet-devops26/team-panic-at-the-console/user-service:${IMAGE_TAG:-main}
+    image: ghcr.io/aet-devops26/team-panic-at-the-console/user-service:${IMAGE_TAG:-latest}
     build:
       context: ./services
       dockerfile: user-service/Dockerfile
@@ -164,7 +164,7 @@ services:
     restart: unless-stopped
 
   notification-service:
-    image: ghcr.io/aet-devops26/team-panic-at-the-console/notification-service:${IMAGE_TAG:-main}
+    image: ghcr.io/aet-devops26/team-panic-at-the-console/notification-service:${IMAGE_TAG:-latest}
     build:
       context: ./services/notification-service
       dockerfile: Dockerfile
@@ -183,7 +183,7 @@ services:
     restart: unless-stopped
 
   webhook-service:
-    image: ghcr.io/aet-devops26/team-panic-at-the-console/webhook-service:${IMAGE_TAG:-main}
+    image: ghcr.io/aet-devops26/team-panic-at-the-console/webhook-service:${IMAGE_TAG:-latest}
     build:
       context: ./services/webhook-service
       dockerfile: Dockerfile
@@ -197,7 +197,7 @@ services:
     restart: unless-stopped
 
   genai-service:
-    image: ghcr.io/aet-devops26/team-panic-at-the-console/genai-service:${IMAGE_TAG:-main}
+    image: ghcr.io/aet-devops26/team-panic-at-the-console/genai-service:${IMAGE_TAG:-latest}
     build:
       context: ./services
       dockerfile: ./genai-service/Dockerfile

@@ -1,7 +1,7 @@
 global:
   image:
     registry: ghcr.io/aet-devops26/team-panic-at-the-console
-    tag: main
+    tag: latest
   namespace: default
   # Shared Ollama model tag: genai-service (GENAI_OLLAMA_*) and ollama pull (postStart).
   ollamaModel: &ollamaModel qwen2.5:3b

@@ -1,0 +1,71 @@
+name: Deploy to Kubernetes Cluster
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Image tag to deploy (e.g. latest, v1.2.3, sha-abc1234)"
+        default: latest
+        required: true
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  resolve-tag:
+    name: Resolve tag
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.tag.outputs.value }}
+    steps:
+      - name: Resolve tag
+        id: tag
+        run: |
+          if [ "${{ github.event_name }}" = "release" ]; then
+            echo "value=${{ github.event.release.tag_name }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "value=${{ inputs.tag }}" >> "$GITHUB_OUTPUT"
+          fi
+
+  deploy:
+    name: Deploy to Kubernetes
+    runs-on: ubuntu-latest
+    needs: resolve-tag
+    environment: production
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+
+      - name: Set up pixi
+        uses: prefix-dev/setup-pixi@1b2de7f3351f171c8b4dfeb558c639cb58ed4ec0 # v0.9.5
+        with:
+          environments: deploy
+
+      - name: Wait for images to be available
+        if: github.event_name == 'release'
+        run: |
+          image="ghcr.io/aet-devops26/team-panic-at-the-console/gateway:${{ needs.resolve-tag.outputs.tag }}"
+          for i in $(seq 1 20); do
+            if docker manifest inspect "${image}" > /dev/null 2>&1; then
+              echo "Images available after ${i} attempt(s)"; exit 0
+            fi
+            echo "  attempt ${i}/20, retrying in 30s..."
+            sleep 30
+          done
+          echo "::error::Images not available after 10 minutes"; exit 1
+
+      - name: Run helm-deploy task
+        env:
+          KUBECONFIG_B64: ${{ secrets.KUBECONFIG_B64 }}
+          SOPS_AGE_KEY: ${{ secrets.SOPS_AGE_KEY }}
+          DEPLOY_NAMESPACE: ${{ vars.DEPLOY_NAMESPACE }}
+          TAG: ${{ needs.resolve-tag.outputs.tag }}
+        run: pixi run -e deploy helm-deploy

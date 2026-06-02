@@ -3,9 +3,8 @@ name: Container CI
 on:
   pull_request:
   merge_group:
-  push:
-    branches:
-      - main
+  release:
+    types: [published]
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -50,6 +49,6 @@ jobs:
       contents: read
       packages: write
     with:
-      push: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
-      primary_tag: main
-      sha_tag: ${{ github.sha }}
+      push: ${{ github.event_name == 'release' }}
+      primary_tag: ${{ github.event.release.tag_name || 'dev' }}
+      sha_tag: ${{ github.event_name == 'release' && 'latest' || format('sha-{0}', github.sha) }}

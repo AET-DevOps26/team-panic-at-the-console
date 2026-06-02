@@ -81,14 +81,15 @@ See [.github/workflows/](.github/workflows/).
 | Workflow | Trigger | Uses SOPS? |
 | -------- | ------- | ---------- |
 | `ci.yml` / `compose-validate.yml` | PR, merge queue | No (lint/compose only) |
-| `release-deploy.yml` | Git tag `v*` or GitHub Release | Yes: deploy after image build |
-| `deploy-helm-sops.yml` | Manual (`workflow_dispatch`) | Yes: deploy only |
+| `container-ci.yml` | PR, merge queue, GitHub Release | No (builds only; pushes on release) |
+| `deploy-k8s.yml` | GitHub Release, manual (`workflow_dispatch`) | Yes: deploy to Kubernetes |
+| `deploy-azure-vm.yml` | GitHub Release, manual (`workflow_dispatch`) | No (uses OIDC + Ansible) |
 
 **PR CI does not decrypt SOPS or deploy to the cluster** (no cluster credentials on PRs). Deploy workflows run only on the GitHub `production` environment with the secrets below.
 
 ### Release tags
 
-Push a tag like `v0.1.0` (or publish a GitHub Release) to run `release-deploy.yml`: build/push images to GHCR, then `pixi run -e deploy helm-deploy` with that tag.
+Publish a GitHub Release to trigger the full release pipeline: `container-ci.yml` builds and pushes all images to GHCR tagged with the release version and `latest`, then `deploy-k8s.yml` deploys to Kubernetes and `deploy-azure-vm.yml` deploys to the Azure VM.
 
 ### Helm + SOPS
 
@@ -129,7 +130,7 @@ Configure under **Settings → Environments → production**:
 | `SOPS_AGE_KEY` | Secret | Full AGE private key file (same as `keys.txt`) |
 | `DEPLOY_NAMESPACE` | Variable | e.g. `team-panic-at-the-console-devops26` |
 
-Both deploy workflows run `pixi run -e deploy helm-deploy` with these values.
+`deploy-k8s.yml` runs `pixi run -e deploy helm-deploy` with these values.
 
 #### New team member access
 
@@ -183,7 +184,7 @@ Expected decrypted shape:
 ```yaml
 global:
   image:
-    tag: main
+    tag: latest
 secrets:
   postgresPassword: "<cluster-postgres-password>"
 ```
