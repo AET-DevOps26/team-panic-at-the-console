@@ -49,13 +49,13 @@ class IncidentsController implements IncidentsApi {
     }
 
     @Override
-    public ResponseEntity<IncidentListResponse> listIncidents(org.openapitools.model.IncidentStatus status, 
-                                                               org.openapitools.model.Severity severity, 
+    public ResponseEntity<IncidentListResponse> listIncidents(org.openapitools.model.IncidentStatus status,
+                                                               org.openapitools.model.Severity severity,
                                                                Integer limit, Integer offset) {
         int limitVal = limit != null ? limit : 50;
         int offsetVal = offset != null ? offset : 0;
 
-        IncidentStatus statusEnum = status != null ? IncidentStatus.valueOf(status.getValue()) : null;
+        IncidentStatus statusEnum = status != null ? IncidentStatus.fromValue(status.getValue()) : null;
         Severity severityEnum = severity != null ? Severity.valueOf(severity.getValue()) : null;
 
         List<Incident> incidents = incidentService.listIncidents(statusEnum, severityEnum, limitVal, offsetVal);
@@ -83,7 +83,7 @@ class IncidentsController implements IncidentsApi {
 
     @Override
     public ResponseEntity<org.openapitools.model.Incident> updateIncidentStatus(UUID incidentId, UpdateStatusRequest updateStatusRequest) {
-        IncidentStatus status = IncidentStatus.valueOf(updateStatusRequest.getStatus().getValue());
+        IncidentStatus status = IncidentStatus.fromValue(updateStatusRequest.getStatus().getValue());
         Incident incident = incidentService.updateIncidentStatus(incidentId, status);
         return ResponseEntity.ok(IncidentMapper.toApi(incident));
     }
@@ -108,7 +108,7 @@ class IncidentsController implements IncidentsApi {
         UUID commentId = UUID.randomUUID();
         UUID authorId = UUID.randomUUID(); // TODO: Extract from security context
 
-        com.panicattheconsole.incidentservice.incident.Comment comment = 
+        com.panicattheconsole.incidentservice.incident.Comment comment =
             incidentService.addComment(incidentId, commentId, authorId, createCommentRequest.getText());
         return ResponseEntity.status(HttpStatus.CREATED).body(IncidentMapper.commentToApi(comment));
     }
@@ -118,7 +118,7 @@ class IncidentsController implements IncidentsApi {
         int limitVal = limit != null ? limit : 50;
         int offsetVal = offset != null ? offset : 0;
 
-        List<com.panicattheconsole.incidentservice.incident.Comment> comments = 
+        List<com.panicattheconsole.incidentservice.incident.Comment> comments =
             incidentService.listComments(incidentId, limitVal, offsetVal);
         long total = incidentService.countComments(incidentId);
 

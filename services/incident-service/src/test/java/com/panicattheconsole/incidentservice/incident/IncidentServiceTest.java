@@ -2,6 +2,7 @@ package com.panicattheconsole.incidentservice.incident;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -10,6 +11,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import static org.mockito.Mockito.never;
@@ -19,6 +21,8 @@ import static org.mockito.Mockito.when;
 import org.mockito.ArgumentCaptor;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 
 import org.openapitools.model.RegenAccepted;
 
@@ -66,7 +70,7 @@ class IncidentServiceTest {
         when(incidentRepository.findById(incidentId)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> incidentService.requestRegeneration(
-                        incidentId, RegenAccepted.TaskEnum.SUMMARY))
+                incidentId, RegenAccepted.TaskEnum.SUMMARY))
                 .isInstanceOf(java.util.NoSuchElementException.class)
                 .hasMessageContaining("Incident not found");
 
@@ -193,5 +197,58 @@ class IncidentServiceTest {
                 .hasMessageContaining("Cannot set postmortem for non-resolved incident");
 
         verify(applicationEventPublisher, never()).publishEvent(any());
+    }
+
+    @Test
+    void listIncidents_filtersByStatusAndSeverity() {
+        when(incidentRepository.findByStatusAndSeverity(eq(IncidentStatus.OPEN), eq(Severity.SEV2),
+                any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of(incident)));
+
+        List<Incident> result = incidentService.listIncidents(IncidentStatus.OPEN, Severity.SEV2, 10, 0);
+
+        assertThat(result).containsExactly(incident);
+    }
+
+    @Test
+    void countIncidents_returnsMatchingCount() {
+        when(incidentRepository.countByStatusAndSeverity(IncidentStatus.OPEN, Severity.SEV2)).thenReturn(5L);
+
+        long count = incidentService.countIncidents(IncidentStatus.OPEN, Severity.SEV2);
+
+        assertThat(count).isEqualTo(5L);
+    }
+
+    @Test
+    void updateAssignedUsers_replacesExistingUsers() {
+        when(incidentRepository.findById(incidentId)).thenReturn(Optional.of(incident));
+        when(incidentRepository.save(incident)).thenReturn(incident);
+
+        Incident saved = incidentService.updateAssignedUsers(incidentId, Set.of(UUID.randomUUID()));
+
+        assertThat(saved.getAssignedUsers()).hasSize(1);
+        verify(applicationEventPublisher).publishEvent(any(IncidentNatsEvent.class));
+    }
+
+    @Test
+    void listComments_returnsCommentsFromRepository() {
+        Comment comment = new Comment(UUID.randomUUID(), UUID.randomUUID(), "Note");
+        comment.setIncident(incident);
+        when(incidentRepository.findById(incidentId)).thenReturn(Optional.of(incident));
+        when(commentRepository.findByIncident_Id(eq(incidentId), any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of(comment)));
+
+        List<Comment> comments = incidentService.listComments(incidentId, 10, 0);
+
+        assertThat(comments).containsExactly(comment);
+    }
+
+    @Test
+    void countComments_returnsCorrectTotal() {
+        when(commentRepository.countByIncident_Id(incidentId)).thenReturn(7L);
+
+        long total = incidentService.countComments(incidentId);
+
+        assertThat(total).isEqualTo(7L);
     }
 }
