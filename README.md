@@ -82,6 +82,7 @@ See [.github/workflows/](.github/workflows/).
 | -------- | ------- | ---------- |
 | `ci.yml` / `compose-validate.yml` | PR, merge queue | No (lint/compose only) |
 | `release-deploy.yml` | GitHub Release published | Yes: deploy after image build |
+| `deploy-azure-vm.yml` | GitHub Release published or manual | No: Terraform/Ansible (see below) |
 | `deploy-helm-sops.yml` | Manual (`workflow_dispatch`) | Yes: deploy only |
 
 **PR CI does not decrypt SOPS or deploy to the cluster** (no cluster credentials on PRs). Deploy workflows run only on the GitHub `production` environment with the secrets below.
@@ -89,6 +90,29 @@ See [.github/workflows/](.github/workflows/).
 ### Release tags
 
 Publish a GitHub Release (e.g. tag `v0.1.0`) to run `release-deploy.yml`: build/push images to GHCR, then `pixi run -e deploy helm-deploy` with that tag.
+
+### Azure VM deploy
+
+`deploy-azure-vm.yml` deploys the Docker Compose stack to an Azure VM provisioned by Terraform (`infra/terraform/`). Ansible (`infra/ansible/`) SSHs into the VM, pulls images from GHCR, and runs `docker compose up`.
+
+**First-time setup** (no VM in Terraform state yet):
+
+1. Actions → **Deploy to Azure VM** → Run workflow
+2. Action: **`full`** (Terraform provision + Ansible deploy)
+3. Image tag: e.g. `main` or your release tag
+
+**Routine releases:** publishing a GitHub Release runs action **`deploy`** (Ansible only). Terraform is not re-applied; the workflow reads the VM public IP from remote state and updates the app.
+
+**Manual actions** (`workflow_dispatch`):
+
+| Action | Terraform | Ansible | When to use |
+| ------ | --------- | ------- | ----------- |
+| `deploy` | read IP from state only | yes | App update on an existing VM |
+| `full` | plan + apply | yes | First deploy or infra + app changes |
+| `provision` | plan + apply | no | Infra only |
+| `plan` | plan only | no | Dry-run |
+
+See workflow comments in [`.github/workflows/deploy-azure-vm.yml`](.github/workflows/deploy-azure-vm.yml) for required Azure OIDC secrets and SSH key setup.
 
 ### Helm + SOPS
 
