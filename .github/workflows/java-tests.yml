@@ -13,12 +13,14 @@ on:
     paths:
       - "services/incident-service/**"
       - "services/user-service/**"
+      - "services/gateway/**"
       - "services/generated/java/**"
       - "api/openapi.yaml"
   pull_request:
     paths:
       - "services/incident-service/**"
       - "services/user-service/**"
+      - "services/gateway/**"
       - "services/generated/java/**"
       - "api/openapi.yaml"
   merge_group:
@@ -30,7 +32,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        service: [incident-service, user-service]
+        service: [incident-service, user-service, gateway]
 
     steps:
       - name: Checkout branch

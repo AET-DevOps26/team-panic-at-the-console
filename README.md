@@ -210,7 +210,7 @@ pixi run -e deploy helm-uninstall
 
 Optional: `VALUES_FILE=path/to/other.enc.yaml` when running `helm-deploy`.
 
-**Cluster URL:** `https://team-panic-at-the-console-devops26.stud.k8s.aet.cit.tum.de/` (frontend `/`, API `/api`, Swagger `/swagger/`).
+**Cluster URL:** `https://team-panic-at-the-console-devops26.stud.k8s.aet.cit.tum.de/` (frontend `/`, API `/api`, Swagger `/swagger`).
 
 Ingress uses cert-manager (`letsencrypt-prod`) and TLS secret `devops-platform-tls`.
 
@@ -250,7 +250,7 @@ The compose file lives at `infra/compose/docker-compose.yml`. `pixi run compose-
 Local URLs (same path layout as the Helm ingress):
 
 - API gateway: `http://localhost:8080/api/v1/` (e.g. `http://localhost:8080/api/v1/health`)
-- Swagger UI: `http://localhost:8080/swagger/`
+- Swagger UI: `http://localhost:8080/swagger`
 - Frontend: `http://localhost:3000/` (unchanged)
 
 Shared non-secret defaults (for example `NATS_URL`) are defined once in `.env.example` and referenced from service-specific environment sections.

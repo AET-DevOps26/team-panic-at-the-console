@@ -15,7 +15,7 @@ API gateway:
 {{ if and $swaggerUi $swaggerUi.enabled }}
 
 Swagger UI (OpenAPI):
-  http(s)://<ingress-address>{{ .Values.ingress.paths.swagger }}/
+  http(s)://<ingress-address>{{ .Values.ingress.paths.swagger }}
 {{ end }}
 
 NATS (cluster-internal):
