@@ -70,18 +70,52 @@ jobs:
   resolve:
     name: Resolve tag and action
     runs-on: ubuntu-latest
+    environment: production
     outputs:
-      tag: ${{ steps.resolve.outputs.tag }}
-      action: ${{ steps.resolve.outputs.action }}
+      tag: ${{ steps.tag.outputs.tag }}
+      action: ${{ steps.action.outputs.action }}
     steps:
-      - name: Resolve
-        id: resolve
+      - name: Resolve tag
+        id: tag
         run: |
           if [ "${{ github.event_name }}" = "release" ]; then
             echo "tag=${{ github.event.release.tag_name }}" >> "$GITHUB_OUTPUT"
-            echo "action=deploy" >> "$GITHUB_OUTPUT"
           else
             echo "tag=${{ inputs.image_tag || 'main' }}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Checkout
+        if: github.event_name == 'release'
+        uses: actions/checkout@v6
+
+      - name: Setup Terraform
+        if: github.event_name == 'release'
+        uses: hashicorp/setup-terraform@v4
+        with:
+          terraform_version: "~1.9"
+          terraform_wrapper: false
+
+      - name: Terraform Init
+        if: github.event_name == 'release'
+        run: |
+          terraform init \
+            -backend-config="storage_account_name=${{ vars.TF_BACKEND_STORAGE_ACCOUNT }}"
+        working-directory: ${{ env.TF_DIR }}
+
+      - name: Resolve action
+        id: action
+        run: |
+          if [ "${{ github.event_name }}" = "release" ]; then
+            cd "${{ env.TF_DIR }}"
+            ip=$(terraform output -raw vm_public_ip 2>/dev/null || true)
+            if [ -z "${ip}" ]; then
+              echo "No VM in Terraform state; using action=full"
+              echo "action=full" >> "$GITHUB_OUTPUT"
+            else
+              echo "VM ${ip} found in state; using action=deploy"
+              echo "action=deploy" >> "$GITHUB_OUTPUT"
+            fi
+          else
             echo "action=${{ inputs.action }}" >> "$GITHUB_OUTPUT"
           fi
 

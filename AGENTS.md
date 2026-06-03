@@ -77,7 +77,7 @@ infra/helm/devops-platform/files/  # Postgres DB init script (compose + Helm)
 - PRs run: lint, lockfile check, container build validation, semantic PR title check
 - Merges to `main` build and push all images to GHCR tagged `:main` and `:<full-commit-sha>`
 - Publishing a GitHub Release triggers `release-deploy.yml`: builds versioned images + deploys via Helm to the `production` environment
-- Publishing a GitHub Release also triggers `deploy-azure-vm.yml` with action `deploy` (Ansible only; VM must exist in Terraform state). First-time VM setup: run `deploy-azure-vm.yml` manually with action `full`
+- Publishing a GitHub Release also triggers `deploy-azure-vm.yml`: auto-detects VM in Terraform state and runs `full` (provision + deploy) or `deploy` (Ansible only)
 - Manual Helm deploys: `deploy-helm-sops.yml` (workflow_dispatch, requires `KUBECONFIG_B64` and `SOPS_AGE_KEY` secrets)
 
 ## Code Review

@@ -95,20 +95,14 @@ Publish a GitHub Release (e.g. tag `v0.1.0`) to run `release-deploy.yml`: build/
 
 `deploy-azure-vm.yml` deploys the Docker Compose stack to an Azure VM provisioned by Terraform (`infra/terraform/`). Ansible (`infra/ansible/`) SSHs into the VM, pulls images from GHCR, and runs `docker compose up`.
 
-**First-time setup** (no VM in Terraform state yet):
-
-1. Actions → **Deploy to Azure VM** → Run workflow
-2. Action: **`full`** (Terraform provision + Ansible deploy)
-3. Image tag: e.g. `main` or your release tag
-
-**Routine releases:** publishing a GitHub Release runs action **`deploy`** (Ansible only). Terraform is not re-applied; the workflow reads the VM public IP from remote state and updates the app.
+**Routine releases:** publishing a GitHub Release auto-detects whether the VM exists in Terraform state. If not, it runs **`full`** (provision + deploy); otherwise **`deploy`** (Ansible only).
 
 **Manual actions** (`workflow_dispatch`):
 
 | Action | Terraform | Ansible | When to use |
 | ------ | --------- | ------- | ----------- |
 | `deploy` | read IP from state only | yes | App update on an existing VM |
-| `full` | plan + apply | yes | First deploy or infra + app changes |
+| `full` | plan + apply | yes | Infra + app changes (also used automatically on first release) |
 | `provision` | plan + apply | no | Infra only |
 | `plan` | plan only | no | Dry-run |
 
