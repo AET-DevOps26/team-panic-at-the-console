@@ -10,6 +10,7 @@ OpenAPI exploration uses the standalone **swagger-ui** service (`api/openapi.yam
 | ------------------------------------- | ------------------------------------------- |
 | `GET /api/v1/health`                  | Gateway liveness (local)                    |
 | `POST /api/v1/incidents/{id}/genai/*` | Proxy to `incident-service` regen endpoints |
+| `GET/POST/PATCH /api/v1/incidents*`   | Proxy to `incident-service` incident REST API |
 
 GenAI compute runs via NATS (`genai-service`); Ollama reachability is checked on that service (`/api/v1/genai/ollama/health`), not exposed on the gateway.
 
@@ -38,4 +39,5 @@ With compose (`pixi run compose-up`), use the `edge` proxy on port **8080** (`/a
 
 - JWT cookie validation and `X-User-Id` / `X-User-Role` injection
 - NATS → SSE fan-out to browsers
-- Routes for user-service, event-service, and remaining incident CRUD APIs
+- Routes for user-service and event-service
+- Genai write-back `PATCH .../genai/*/result` (cluster-internal; gateway returns 403)
