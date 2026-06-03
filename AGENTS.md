@@ -76,7 +76,7 @@ infra/helm/devops-platform/files/  # Postgres DB init script (compose + Helm)
 
 - PRs run: lint, lockfile check, container build validation, semantic PR title check
 - Merges to `main` build and push all images to GHCR tagged `:main` and `:<full-commit-sha>`
-- Semantic tags (`v*`) trigger `release-deploy.yml`: builds versioned images + deploys via Helm to the `production` environment
+- Publishing a GitHub Release triggers `release-deploy.yml`: builds versioned images + deploys via Helm to the `production` environment
 - Manual deploys: `deploy-helm-sops.yml` (workflow_dispatch, requires `KUBECONFIG_B64` and `SOPS_AGE_KEY` secrets)
 
 ## Code Review

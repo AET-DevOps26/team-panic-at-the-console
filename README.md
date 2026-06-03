@@ -81,14 +81,14 @@ See [.github/workflows/](.github/workflows/).
 | Workflow | Trigger | Uses SOPS? |
 | -------- | ------- | ---------- |
 | `ci.yml` / `compose-validate.yml` | PR, merge queue | No (lint/compose only) |
-| `release-deploy.yml` | Git tag `v*` or GitHub Release | Yes: deploy after image build |
+| `release-deploy.yml` | GitHub Release published | Yes: deploy after image build |
 | `deploy-helm-sops.yml` | Manual (`workflow_dispatch`) | Yes: deploy only |
 
 **PR CI does not decrypt SOPS or deploy to the cluster** (no cluster credentials on PRs). Deploy workflows run only on the GitHub `production` environment with the secrets below.
 
 ### Release tags
 
-Push a tag like `v0.1.0` (or publish a GitHub Release) to run `release-deploy.yml`: build/push images to GHCR, then `pixi run -e deploy helm-deploy` with that tag.
+Publish a GitHub Release (e.g. tag `v0.1.0`) to run `release-deploy.yml`: build/push images to GHCR, then `pixi run -e deploy helm-deploy` with that tag.
 
 ### Helm + SOPS
 

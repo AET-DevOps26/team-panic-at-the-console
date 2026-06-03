@@ -1,9 +1,6 @@
 name: Release Deploy
 
 on:
-  push:
-    tags:
-      - "v*"
   release:
     types: [published]
 
@@ -24,12 +21,7 @@ jobs:
     steps:
       - name: Resolve release tag
         id: tag
-        run: |
-          if [ "${{ github.event_name }}" = "release" ]; then
-            echo "value=${GITHUB_EVENT_RELEASE_TAG_NAME}" >> "$GITHUB_OUTPUT"
-          else
-            echo "value=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
-          fi
+        run: echo "value=${GITHUB_EVENT_RELEASE_TAG_NAME}" >> "$GITHUB_OUTPUT"
         env:
           GITHUB_EVENT_RELEASE_TAG_NAME: ${{ github.event.release.tag_name }}
 
