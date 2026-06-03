@@ -85,13 +85,10 @@ services:
       dockerfile: gateway/Dockerfile
     environment:
       GATEWAY_INCIDENT_SERVICE_URL: http://incident-service:8081
-      GATEWAY_GENAI_SERVICE_URL: http://genai-service:8087
       NATS_URL: ${NATS_URL:-nats://nats:4222}
     depends_on:
       incident-service:
         condition: service_started
-      genai-service:
-        condition: service_healthy
     restart: unless-stopped
 
   incident-service:

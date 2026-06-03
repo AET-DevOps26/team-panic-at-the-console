@@ -11,7 +11,6 @@ import org.springframework.web.client.RestClient;
 public class MockDownstreamClientsConfig {
 
     private final ClientPair incident = ClientPair.create("http://localhost:8081");
-    private final ClientPair genai = ClientPair.create("http://localhost:8087");
 
     @Bean
     RestClient incidentServiceClient() {
@@ -21,16 +20,6 @@ public class MockDownstreamClientsConfig {
     @Bean
     MockRestServiceServer incidentServer() {
         return incident.server();
-    }
-
-    @Bean
-    RestClient genaiServiceClient() {
-        return genai.client();
-    }
-
-    @Bean
-    MockRestServiceServer genaiServer() {
-        return genai.server();
     }
 
     private record ClientPair(RestClient client, MockRestServiceServer server) {

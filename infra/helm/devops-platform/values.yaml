@@ -70,8 +70,6 @@ services:
     env:
       - name: GATEWAY_INCIDENT_SERVICE_URL
         value: "http://incident-service:8081"
-      - name: GATEWAY_GENAI_SERVICE_URL
-        value: "http://genai-service:8087"
 
   incident-service:
     enabled: true

@@ -5,7 +5,6 @@
  */
 package org.openapitools.api;
 
-import org.openapitools.model.GenaiHealthResponse;
 import org.openapitools.model.RegenAccepted;
 import java.util.UUID;
 import io.swagger.v3.oas.annotations.ExternalDocumentation;
@@ -44,46 +43,6 @@ public interface GenaiApi {
     default Optional<NativeWebRequest> getRequest() {
         return Optional.empty();
     }
-
-    /**
-     * GET /genai/health : GenAI service health check
-     *
-     * @return GenAI service and Ollama reachability status (status code 200)
-     *         or Ollama unreachable (status code 503)
-     */
-    @Operation(
-        operationId = "genaiHealth",
-        summary = "GenAI service health check",
-        tags = { "genai" },
-        responses = {
-            @ApiResponse(responseCode = "200", description = "GenAI service and Ollama reachability status", content = {
-                @Content(mediaType = "application/json", schema = @Schema(implementation = GenaiHealthResponse.class))
-            }),
-            @ApiResponse(responseCode = "503", description = "Ollama unreachable")
-        }
-    )
-    @RequestMapping(
-        method = RequestMethod.GET,
-        value = "/genai/health",
-        produces = { "application/json" }
-    )
-
-    default ResponseEntity<GenaiHealthResponse> genaiHealth(
-
-    ) {
-        getRequest().ifPresent(request -> {
-            for (MediaType mediaType: MediaType.parseMediaTypes(request.getHeader("Accept"))) {
-                if (mediaType.isCompatibleWith(MediaType.valueOf("application/json"))) {
-                    String exampleString = "{ \"ollamaReachable\" : true, \"model\" : \"qwen2.5:3b\", \"status\" : \"ok\" }";
-                    ApiUtil.setExampleResponse(request, "application/json", exampleString);
-                    break;
-                }
-            }
-        });
-        return new ResponseEntity<>(HttpStatus.NOT_IMPLEMENTED);
-
-    }
-
 
     /**
      * POST /incidents/{incidentId}/genai/postmortem : Trigger postmortem regeneration for a resolved incident

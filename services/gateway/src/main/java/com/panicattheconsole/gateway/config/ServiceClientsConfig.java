@@ -15,11 +15,4 @@ class ServiceClientsConfig {
                 .baseUrl(properties.getIncidentServiceUrl())
                 .build();
     }
-
-    @Bean
-    RestClient genaiServiceClient(GatewayProperties properties) {
-        return RestClient.builder()
-                .baseUrl(properties.getGenaiServiceUrl())
-                .build();
-    }
 }

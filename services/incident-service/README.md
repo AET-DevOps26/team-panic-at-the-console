@@ -13,7 +13,7 @@ Port: **8081**
 | `POST` | `/incidents/{id}/genai/solutions`  | Trigger solution suggestions regeneration                 |
 | `POST` | `/incidents/{id}/genai/postmortem` | Trigger postmortem regeneration (resolved incidents only) |
 
-All regen endpoints return `202 Accepted`. Persistence, NATS publishing (`incident.regen.requested`), and state validation (e.g. postmortem requires resolved status) are not yet implemented; they will land in follow-up PRs that introduce the relevant deps.
+All regen endpoints return `202 Accepted` and publish `incident.regen.requested` (with task) after commit.
 
 ## Local dev
 
