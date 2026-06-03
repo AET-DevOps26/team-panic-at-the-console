@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "./client";
-import type { components } from "./schema";
+import type { components } from "@openapi/schema";
 
 // Re-export domain types from generated schema
 export type Incident = components["schemas"]["Incident"];

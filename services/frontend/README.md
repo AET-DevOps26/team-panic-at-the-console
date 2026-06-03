@@ -20,7 +20,7 @@ React SPA for the incident management platform. Served by nginx on port **3000**
 
 ## OpenAPI integration
 
-`src/api/schema.d.ts` is generated from `api/openapi.yaml` by `api/scripts/gen-all.sh`, never edit it by hand.
+`services/generated/typescript/schema.d.ts` is generated from `api/openapi.yaml` by `api/scripts/gen-all.sh` (import as `@openapi/schema`), never edit it by hand.
 
 To regenerate after changing the spec:
 
