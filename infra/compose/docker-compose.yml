@@ -229,7 +229,7 @@ services:
       - ./api/openapi.yaml:/openapi.yaml:ro
     environment:
       SWAGGER_JSON: /openapi.yaml
-      BASE_URL: /swagger/
+      BASE_URL: /swagger
     restart: unless-stopped
 
 volumes:
