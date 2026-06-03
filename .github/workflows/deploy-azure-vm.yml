@@ -157,10 +157,16 @@ jobs:
         run: pip install --quiet ansible
 
       - name: Configure SSH key
+        env:
+          VM_SSH_PRIVATE_KEY: ${{ secrets.VM_SSH_PRIVATE_KEY }}
         run: |
           install -m 0700 -d "${HOME}/.ssh"
-          install -m 0600 /dev/null "${HOME}/.ssh/vm_key"
-          printf '%s\n' "${{ secrets.VM_SSH_PRIVATE_KEY }}" > "${HOME}/.ssh/vm_key"
+          printf '%s\n' "${VM_SSH_PRIVATE_KEY}" > "${HOME}/.ssh/vm_key"
+          chmod 600 "${HOME}/.ssh/vm_key"
+          ssh-keygen -lf "${HOME}/.ssh/vm_key" >/dev/null || {
+            echo "::error::VM_SSH_PRIVATE_KEY secret is not a valid private key"
+            exit 1
+          }
 
       - name: Write inventory
         run: |
@@ -171,20 +177,42 @@ jobs:
 
       - name: Wait for SSH to become available
         run: |
-          echo "Waiting for SSH on ${{ needs.terraform.outputs.vm_ip }}..."
-          for i in $(seq 1 30); do
-            if ssh \
-              -o StrictHostKeyChecking=no \
-              -o ConnectTimeout=5 \
-              -i "${HOME}/.ssh/vm_key" \
-              "azureuser@${{ needs.terraform.outputs.vm_ip }}" \
-              true 2>/dev/null; then
+          vm_ip="${{ needs.terraform.outputs.vm_ip }}"
+          ssh_key="${HOME}/.ssh/vm_key"
+          max_attempts=60
+          ssh_opts=(
+            -o StrictHostKeyChecking=no
+            -o ConnectTimeout=10
+            -i "${ssh_key}"
+          )
+
+          echo "Waiting for SSH on ${vm_ip}..."
+          ready=false
+          for i in $(seq 1 "${max_attempts}"); do
+            if ssh "${ssh_opts[@]}" "azureuser@${vm_ip}" true 2>/dev/null; then
               echo "SSH ready after ${i} attempt(s)"
+              ready=true
               break
             fi
-            echo "  attempt ${i}/30, retrying in 10s..."
+
+            if [ $((i % 10)) -eq 0 ] || [ "${i}" -eq "${max_attempts}" ]; then
+              echo "  attempt ${i}/${max_attempts} — diagnostics:"
+              if nc -z -w 5 "${vm_ip}" 22 2>/dev/null; then
+                echo "    port 22 is open"
+              else
+                echo "    port 22 is closed or filtered"
+              fi
+              ssh "${ssh_opts[@]}" "azureuser@${vm_ip}" true 2>&1 | tail -5 || true
+            else
+              echo "  attempt ${i}/${max_attempts}, retrying in 10s..."
+            fi
             sleep 10
           done
+
+          if [ "${ready}" != true ]; then
+            echo "::error::SSH not available on ${vm_ip} after ${max_attempts} attempts (~10 min)"
+            exit 1
+          fi
 
       - name: Write Ansible variables
         run: |
