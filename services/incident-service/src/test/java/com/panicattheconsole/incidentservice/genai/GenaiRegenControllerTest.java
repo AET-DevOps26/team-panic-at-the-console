@@ -58,7 +58,9 @@ class GenaiRegenControllerTest {
     void summary_returns404_whenNotFound() throws Exception {
         org.mockito.Mockito.doThrow(new NoSuchElementException("incident missing"))
                 .when(incidentService)
-                .requestRegeneration(java.util.UUID.fromString(INCIDENT_ID));
+                .requestRegeneration(
+                    java.util.UUID.fromString(INCIDENT_ID),
+                    org.openapitools.model.RegenAccepted.TaskEnum.SUMMARY);
 
         mvc.perform(post("/incidents/{id}/genai/summary", INCIDENT_ID))
                 .andExpect(status().isNotFound())

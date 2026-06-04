@@ -21,21 +21,23 @@ class GenaiRegenController implements GenaiApi {
 
     @Override
     public ResponseEntity<RegenAccepted> regenerateSummary(UUID incidentId) {
-        incidentService.requestRegeneration(incidentId);
+        incidentService.requestRegeneration(incidentId, RegenAccepted.TaskEnum.SUMMARY);
         return ResponseEntity.status(HttpStatus.ACCEPTED)
                 .body(new RegenAccepted(true, RegenAccepted.TaskEnum.SUMMARY));
     }
 
     @Override
     public ResponseEntity<RegenAccepted> regenerateSeverity(UUID incidentId) {
-        incidentService.requestRegeneration(incidentId);
+        incidentService.requestRegeneration(
+                incidentId, RegenAccepted.TaskEnum.SEVERITY_SUGGESTION);
         return ResponseEntity.status(HttpStatus.ACCEPTED)
                 .body(new RegenAccepted(true, RegenAccepted.TaskEnum.SEVERITY_SUGGESTION));
     }
 
     @Override
     public ResponseEntity<RegenAccepted> regenerateSolutions(UUID incidentId) {
-        incidentService.requestRegeneration(incidentId);
+        incidentService.requestRegeneration(
+                incidentId, RegenAccepted.TaskEnum.SOLUTION_SUGGESTIONS);
         return ResponseEntity.status(HttpStatus.ACCEPTED)
                 .body(new RegenAccepted(true, RegenAccepted.TaskEnum.SOLUTION_SUGGESTIONS));
     }
