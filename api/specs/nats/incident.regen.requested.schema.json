@@ -1,12 +1,16 @@
 {
   "$schema": "https://json-schema.org/draft-07/schema",
   "$id": "https://github.com/aet-devops26/team-panic-at-the-console/api/specs/nats/incident.regen.requested.schema.json",
-  "description": "Published by incident-service when a user requests on-demand AI regeneration. genai-service subscribes and regenerates the Summary (and Solutions) for the incident.",
+  "description": "Published by incident-service when a user requests on-demand AI regeneration. genai-service runs the task named in the payload.",
   "type": "object",
-  "required": ["incidentId", "timestamp"],
+  "required": ["incidentId", "timestamp", "task"],
   "additionalProperties": false,
   "properties": {
     "incidentId": { "type": "string", "format": "uuid" },
-    "timestamp": { "type": "string", "format": "date-time" }
+    "timestamp": { "type": "string", "format": "date-time" },
+    "task": {
+      "type": "string",
+      "enum": ["SUMMARY", "SEVERITY_SUGGESTION", "SOLUTION_SUGGESTIONS", "POSTMORTEM"]
+    }
   }
 }

@@ -3,8 +3,22 @@
 FastAPI scaffold:
 
 - **`GET /health`**: process is up; **no Ollama call** (use this for Docker / Kubernetes probes when Ollama is optional).
-- **`GET /api/v1/genai/ollama/health`**: checks a local [Ollama](https://ollama.com) instance (`GENAI_OLLAMA_URL`, default `http://localhost:11434`); JSON **`status`: `"ok"`** when Ollama answers, **`"degraded"`** with **503** when it does not (for monitoring, not for liveness).
-- **`POST /api/v1/genai/_debug/generate`** _(opt-in)_: manual smoke test that calls Ollama with a free-form prompt. Mounted only when `GENAI_DEBUG_ENDPOINTS=true`. Never enable in production — the service's real surface is NATS (see [ADR-0002](../../docs/adr/0002-genai-service-stateless.md)).
+- **`GET /api/v1/genai/ollama/health`**: checks a local [Ollama](https://ollama.com) instance (`OLLAMA_URL`, default `http://localhost:11434`); JSON **`status`: `"ok"`** when Ollama answers, **`"degraded"`** with **503** when it does not (for monitoring, not for liveness).
+- **`POST /api/v1/genai/_debug/generate`** _(opt-in)_: manual smoke test that calls Ollama with a free-form prompt. Mounted only when `DEBUG_ENDPOINTS=true`. Never enable in production — the service's real surface is NATS (see [ADR-0002](../../docs/adr/0002-genai-service-stateless.md)).
+
+## NATS consumer
+
+On startup the service connects to NATS (`NATS_URL`) and subscribes — in the `genai-service` queue group — to:
+
+| Subject                    | Action                                                               |
+| -------------------------- | -------------------------------------------------------------------- |
+| `incident.created`         | Generate Summary, Severity suggestion, and Solutions; PATCH back     |
+| `incident.resolved`        | Generate Postmortem; PATCH back to incident-service                  |
+| `incident.regen.requested` | Re-run one task (`task` in payload: SUMMARY, SEVERITY_SUGGESTION, …) |
+
+For each message the service reads `incidentId` from the payload, fetches the incident and its event log from `incident-service` (`INCIDENT_SERVICE_URL`), builds a prompt via `PromptBuilder`, generates a structured response with `OllamaClient.generate(... response_model=...)`, and PATCHes the result back. Handler errors are logged and swallowed so a single bad message does not stop the consumer.
+
+Set `NATS_ENABLED=false` to skip the subscription on startup (useful when running the service without infrastructure).
 
 ## Ollama client
 

@@ -177,6 +177,79 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/incidents/{incidentId}/genai/summary/result": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * (internal) Write AI-generated Summary back to incident-service
+         * @description Called by genai-service after an Ollama generation completes.
+         *     Cluster-internal only; not exposed via the gateway.
+         *
+         */
+        patch: operations["writeIncidentSummary"];
+        trace?: never;
+    };
+    "/incidents/{incidentId}/genai/severity/result": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** (internal) Write AI-suggested Severity back to incident-service */
+        patch: operations["writeIncidentSeveritySuggestion"];
+        trace?: never;
+    };
+    "/incidents/{incidentId}/genai/solutions/result": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** (internal) Write AI-generated Solution Suggestions back to incident-service */
+        patch: operations["writeIncidentSolutions"];
+        trace?: never;
+    };
+    "/incidents/{incidentId}/genai/postmortem/result": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** (internal) Write AI-generated Postmortem back to incident-service */
+        patch: operations["writeIncidentPostmortem"];
+        trace?: never;
+    };
     "/auth/register": {
         parameters: {
             query?: never;
@@ -513,6 +586,21 @@ export interface components {
              *       "Add pool-size validation to deploy checklist",
              *       "Alert on checkout latency SLO burn"
              *     ] */
+            actionItems: string[];
+        };
+        SummaryPatch: {
+            summary: string;
+        };
+        SeverityPatch: {
+            severity: components["schemas"]["Severity"];
+            reason: string;
+        };
+        SolutionsPatch: {
+            solutions: string[];
+        };
+        PostmortemPatch: {
+            rootCause: string;
+            timeline: string[];
             actionItems: string[];
         };
     };
@@ -864,6 +952,141 @@ export interface operations {
             202: components["responses"]["RegenAccepted"];
             404: components["responses"]["IncidentNotFound"];
             409: components["responses"]["IncidentNotResolved"];
+        };
+    };
+    writeIncidentSummary: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description UUID of the target incident. */
+                incidentId: components["parameters"]["IncidentIdParam"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SummaryPatch"];
+            };
+        };
+        responses: {
+            /** @description Saved */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Incident not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    writeIncidentSeveritySuggestion: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description UUID of the target incident. */
+                incidentId: components["parameters"]["IncidentIdParam"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SeverityPatch"];
+            };
+        };
+        responses: {
+            /** @description Saved */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Incident not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    writeIncidentSolutions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description UUID of the target incident. */
+                incidentId: components["parameters"]["IncidentIdParam"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SolutionsPatch"];
+            };
+        };
+        responses: {
+            /** @description Saved */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Incident not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    writeIncidentPostmortem: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description UUID of the target incident. */
+                incidentId: components["parameters"]["IncidentIdParam"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PostmortemPatch"];
+            };
+        };
+        responses: {
+            /** @description Saved */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Incident not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Incident not in resolved state */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
         };
     };
     registerUser: {

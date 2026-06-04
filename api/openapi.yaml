@@ -270,6 +270,87 @@ paths:
         "409":
           $ref: "#/components/responses/IncidentNotResolved"
 
+  /incidents/{incidentId}/genai/summary/result:
+    patch:
+      operationId: writeIncidentSummary
+      summary: (internal) Write AI-generated Summary back to incident-service
+      description: |
+        Called by genai-service after an Ollama generation completes.
+        Cluster-internal only; not exposed via the gateway.
+      tags: [incidents]
+      parameters:
+        - $ref: "#/components/parameters/IncidentIdParam"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SummaryPatch"
+      responses:
+        "204":
+          description: Saved
+        "404":
+          description: Incident not found
+
+  /incidents/{incidentId}/genai/severity/result:
+    patch:
+      operationId: writeIncidentSeveritySuggestion
+      summary: (internal) Write AI-suggested Severity back to incident-service
+      tags: [incidents]
+      parameters:
+        - $ref: "#/components/parameters/IncidentIdParam"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SeverityPatch"
+      responses:
+        "204":
+          description: Saved
+        "404":
+          description: Incident not found
+
+  /incidents/{incidentId}/genai/solutions/result:
+    patch:
+      operationId: writeIncidentSolutions
+      summary: (internal) Write AI-generated Solution Suggestions back to incident-service
+      tags: [incidents]
+      parameters:
+        - $ref: "#/components/parameters/IncidentIdParam"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SolutionsPatch"
+      responses:
+        "204":
+          description: Saved
+        "404":
+          description: Incident not found
+
+  /incidents/{incidentId}/genai/postmortem/result:
+    patch:
+      operationId: writeIncidentPostmortem
+      summary: (internal) Write AI-generated Postmortem back to incident-service
+      tags: [incidents]
+      parameters:
+        - $ref: "#/components/parameters/IncidentIdParam"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PostmortemPatch"
+      responses:
+        "204":
+          description: Saved
+        "404":
+          description: Incident not found
+        "409":
+          description: Incident not in resolved state
+
   /auth/register:
     post:
       operationId: registerUser
@@ -799,3 +880,54 @@ components:
           example:
             - Add pool-size validation to deploy checklist
             - Alert on checkout latency SLO burn
+
+    SummaryPatch:
+      type: object
+      required: [summary]
+      additionalProperties: false
+      properties:
+        summary:
+          type: string
+          minLength: 1
+
+    SeverityPatch:
+      type: object
+      required: [severity, reason]
+      additionalProperties: false
+      properties:
+        severity:
+          $ref: "#/components/schemas/Severity"
+        reason:
+          type: string
+          minLength: 1
+
+    SolutionsPatch:
+      type: object
+      required: [solutions]
+      additionalProperties: false
+      properties:
+        solutions:
+          type: array
+          minItems: 1
+          items:
+            type: string
+            minLength: 1
+
+    PostmortemPatch:
+      type: object
+      required: [rootCause, timeline, actionItems]
+      additionalProperties: false
+      properties:
+        rootCause:
+          type: string
+          minLength: 1
+        timeline:
+          type: array
+          minItems: 1
+          items:
+            type: string
+        actionItems:
+          type: array
+          minItems: 1
+          items:
+            type: string

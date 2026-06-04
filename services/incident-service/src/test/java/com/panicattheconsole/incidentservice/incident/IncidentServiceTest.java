@@ -20,6 +20,8 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationEventPublisher;
 
+import org.openapitools.model.RegenAccepted;
+
 import com.panicattheconsole.incidentservice.nats.IncidentNatsEvent;
 
 @ExtendWith(MockitoExtension.class)
@@ -47,19 +49,24 @@ class IncidentServiceTest {
     }
 
     @Test
-    void requestRegeneration_publishesEvent_whenIncidentExists() {
+    void requestRegeneration_publishesEventWithTask_whenIncidentExists() {
         when(incidentRepository.findById(incidentId)).thenReturn(Optional.of(incident));
 
-        incidentService.requestRegeneration(incidentId);
+        incidentService.requestRegeneration(incidentId, RegenAccepted.TaskEnum.SUMMARY);
 
-        verify(applicationEventPublisher).publishEvent(any(IncidentNatsEvent.class));
+        ArgumentCaptor<IncidentNatsEvent> captor = ArgumentCaptor.forClass(IncidentNatsEvent.class);
+        verify(applicationEventPublisher).publishEvent(captor.capture());
+        assertThat(captor.getValue().getSubject()).isEqualTo("incident.regen.requested");
+        assertThat(captor.getValue().getPayload())
+                .containsEntry("task", RegenAccepted.TaskEnum.SUMMARY.getValue());
     }
 
     @Test
     void requestRegeneration_throwsNotFound_whenIncidentMissing() {
         when(incidentRepository.findById(incidentId)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> incidentService.requestRegeneration(incidentId))
+        assertThatThrownBy(() -> incidentService.requestRegeneration(
+                        incidentId, RegenAccepted.TaskEnum.SUMMARY))
                 .isInstanceOf(java.util.NoSuchElementException.class)
                 .hasMessageContaining("Incident not found");
 
@@ -85,13 +92,16 @@ class IncidentServiceTest {
     }
 
     @Test
-    void requestPostmortemRegeneration_publishesEvent_whenIncidentResolved() {
+    void requestPostmortemRegeneration_publishesPostmortemTask_whenIncidentResolved() {
         incident.setStatus(IncidentStatus.RESOLVED);
         when(incidentRepository.findById(incidentId)).thenReturn(Optional.of(incident));
 
         incidentService.requestPostmortemRegeneration(incidentId);
 
-        verify(applicationEventPublisher).publishEvent(any(IncidentNatsEvent.class));
+        ArgumentCaptor<IncidentNatsEvent> captor = ArgumentCaptor.forClass(IncidentNatsEvent.class);
+        verify(applicationEventPublisher).publishEvent(captor.capture());
+        assertThat(captor.getValue().getPayload())
+                .containsEntry("task", RegenAccepted.TaskEnum.POSTMORTEM.getValue());
     }
 
     @Test

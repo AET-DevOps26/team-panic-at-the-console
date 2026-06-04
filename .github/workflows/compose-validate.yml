@@ -59,7 +59,7 @@ jobs:
       COMPOSE_FILE: "infra/compose/docker-compose.yml"
       COMPOSE_ENV_FILE: ".env.example"
       OLLAMA_VOLUME: "smoke_ollama_data"
-      GENAI_OLLAMA_MODEL: "qwen2.5:3b"
+      OLLAMA_MODEL: "qwen2.5:3b"
     steps:
       - name: Checkout branch
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -74,7 +74,7 @@ jobs:
         uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
         with:
           path: /tmp/ollama-cache
-          key: ollama-models-${{ env.GENAI_OLLAMA_MODEL }}-v1
+          key: ollama-models-${{ env.OLLAMA_MODEL }}-v1
 
       - name: Seed Ollama volume from cache
         if: steps.ollama-cache.outputs.cache-hit == 'true'

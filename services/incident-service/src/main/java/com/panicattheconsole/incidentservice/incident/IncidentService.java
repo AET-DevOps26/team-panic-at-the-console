@@ -2,10 +2,12 @@ package com.panicattheconsole.incidentservice.incident;
 
 import java.time.Instant;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.UUID;
 
+import org.openapitools.model.RegenAccepted;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
@@ -64,6 +66,16 @@ public class IncidentService {
     public Incident getIncident(UUID incidentId) {
         return incidentRepository.findById(incidentId)
                 .orElseThrow(() -> new NoSuchElementException("Incident not found: " + incidentId));
+    }
+
+    /**
+     * Timeline entries for genai prompts and internal reads.
+     * event-service is not wired yet; synthesize from incident state and comments until then.
+     */
+    public List<org.openapitools.model.IncidentEvent> listIncidentEvents(UUID incidentId) {
+        Incident incident = getIncident(incidentId);
+        List<Comment> comments = commentRepository.findByIncident_IdOrderByCreatedAtAsc(incidentId);
+        return IncidentMapper.toApiEvents(incident, comments);
     }
 
 
@@ -172,7 +184,7 @@ public class IncidentService {
         Incident incident = getIncident(incidentId);
 
         Comment comment = new Comment(commentId, authorId, content);
-        incident.addComment(comment);
+        comment.setIncident(incident);
         Comment saved = commentRepository.save(comment);
 
         Map<String, Object> event = createBaseEvent(incidentId);
@@ -197,32 +209,31 @@ public class IncidentService {
     }
 
     /**
-     * Trigger on-demand regeneration of incident AI content.
-     * Publishes incident.regen.requested event.
-     * Validates that the incident exists.
+     * Trigger on-demand regeneration of one AI field.
+     * Publishes incident.regen.requested with a task the genai consumer understands.
      */
-    public void requestRegeneration(UUID incidentId) {
-        // Validate incident exists
+    public void requestRegeneration(UUID incidentId, RegenAccepted.TaskEnum task) {
         getIncident(incidentId);
-
-        publishAfterCommit("incident.regen.requested", createBaseEvent(incidentId));
-        log.info("Requested AI regeneration [id={}]", incidentId);
+        if (task == RegenAccepted.TaskEnum.POSTMORTEM) {
+            validatePostmortemAllowed(incidentId);
+        }
+        publishRegenRequested(incidentId, task);
+        log.info("Requested AI regeneration [id={}, task={}]", incidentId, task);
     }
 
     /**
-     * Trigger on-demand regeneration of a postmortem.
-     * Requires the incident to be resolved and publishes incident.regen.requested.
+     * Trigger on-demand regeneration of a postmortem (resolved incidents only).
      */
     public void requestPostmortemRegeneration(UUID incidentId) {
-        Incident incident = getIncident(incidentId);
-
-        if (incident.getStatus() != IncidentStatus.RESOLVED) {
-            throw new IllegalStateException(
-                    "Cannot regenerate postmortem for non-resolved incident: " + incidentId);
-        }
-
-        publishAfterCommit("incident.regen.requested", createBaseEvent(incidentId));
+        validatePostmortemAllowed(incidentId);
+        publishRegenRequested(incidentId, RegenAccepted.TaskEnum.POSTMORTEM);
         log.info("Requested AI regeneration for postmortem [id={}]", incidentId);
+    }
+
+    private void publishRegenRequested(UUID incidentId, RegenAccepted.TaskEnum task) {
+        Map<String, Object> event = createBaseEvent(incidentId);
+        event.put("task", task.getValue());
+        publishAfterCommit("incident.regen.requested", event);
     }
 
     /**
