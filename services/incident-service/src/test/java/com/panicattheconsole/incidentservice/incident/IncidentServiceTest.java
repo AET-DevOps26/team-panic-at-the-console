@@ -23,7 +23,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
-
 import org.openapitools.model.RegenAccepted;
 
 import com.panicattheconsole.incidentservice.nats.IncidentNatsEvent;
