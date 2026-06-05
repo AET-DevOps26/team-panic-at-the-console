@@ -9,9 +9,11 @@ global:
     - name: NATS_URL
       value: nats://nats:4222
 
-# Override postgresPassword in SOPS values for non-dev deploys.
+# Override these in SOPS values for non-dev deploys.
 secrets:
   postgresPassword: ""
+  # TUM Logos API key (lg-...). Empty => genai-service falls back to Ollama.
+  logosApiKey: ""
 
 nats:
   image: nats:2.10-alpine
@@ -151,10 +153,24 @@ services:
     image:
       repository: genai-service
     env:
+      # Cluster is on the TUM network, so Logos is reachable; Ollama stays as fallback.
+      - name: LLM_PROVIDER
+        value: logos
+      - name: LLM_FALLBACK_ENABLED
+        value: "true"
       - name: OLLAMA_URL
         value: http://ollama:11434
       - name: OLLAMA_MODEL
         value: *ollamaModel
+      - name: LOGOS_URL
+        value: https://logos.aet.cit.tum.de:8080
+      - name: LOGOS_MODEL
+        value: openai/gpt-oss-120b
+      - name: LOGOS_API_KEY
+        valueFrom:
+          secretKeyRef:
+            name: genai-credentials
+            key: logosApiKey
       - name: INCIDENT_SERVICE_URL
         value: http://incident-service:8081
 
