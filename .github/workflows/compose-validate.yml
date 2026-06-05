@@ -148,7 +148,7 @@ jobs:
           probe() {
             path="$1"; want="$2"
             for ((i = 0; i < 15; i++)); do
-              code=$(curl -fsS -o /dev/null -w '%{http_code}' -L "http://localhost:8080${path}" 2>/dev/null || true)
+              code=$(curl -sS -o /dev/null -w '%{http_code}' -L "http://localhost:8080${path}" 2>/dev/null || true)
               if [ "${code}" = "${want}" ]; then
                 echo "GET :8080${path} -> ${code}"
                 return 0
@@ -160,6 +160,9 @@ jobs:
           }
           probe /api/v1/health 200
           probe /swagger 200
+          # Asserts the / -> frontend route is wired. Frontend is still a
+          # placeholder, so edge returns 502; flip this to 200 once it serves.
+          probe / 502
 
       - name: Save Ollama model cache
         if: success() && steps.ollama-cache.outputs.cache-hit != 'true'
