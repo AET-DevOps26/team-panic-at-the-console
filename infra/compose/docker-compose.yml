@@ -1,3 +1,10 @@
+# Shared timing for Spring Boot liveness probes (wget in eclipse-temurin JRE image).
+x-healthcheck-spring: &healthcheck-spring
+  interval: 10s
+  timeout: 5s
+  retries: 5
+  start_period: 40s
+
 services:
   # ── Infrastructure ────────────────────────────────────────────────────────
 
@@ -64,7 +71,7 @@ services:
       - ./nginx.conf:/etc/nginx/nginx.conf:ro
     depends_on:
       gateway:
-        condition: service_started
+        condition: service_healthy
       swagger-ui:
         condition: service_started
     restart: unless-stopped
@@ -86,9 +93,12 @@ services:
     environment:
       GATEWAY_INCIDENT_SERVICE_URL: http://incident-service:8081
       NATS_URL: ${NATS_URL:-nats://nats:4222}
+    healthcheck:
+      <<: *healthcheck-spring
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://127.0.0.1:8080/api/v1/health || exit 1"]
     depends_on:
       incident-service:
-        condition: service_started
+        condition: service_healthy
     restart: unless-stopped
 
   incident-service:
@@ -103,6 +113,9 @@ services:
       NATS_URL: ${NATS_URL:-nats://nats:4222}
     ports:
       - "8081:8081"
+    healthcheck:
+      <<: *healthcheck-spring
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://127.0.0.1:8081/health || exit 1"]
     depends_on:
       postgres:
         condition: service_healthy
@@ -159,6 +172,9 @@ services:
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-devops}
     ports:
       - "8084:8084"
+    healthcheck:
+      <<: *healthcheck-spring
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://127.0.0.1:8084/health || exit 1"]
     depends_on:
       postgres:
         condition: service_healthy
@@ -204,8 +220,15 @@ services:
       dockerfile: ./genai-service/Dockerfile
     environment:
       NATS_URL: ${NATS_URL:-nats://nats:4222}
+      # Default to ollama locally: Logos is only reachable from the TUM network (eduVPN).
+      # Set LLM_PROVIDER=logos (on eduVPN) to use the chair-hosted model instead.
+      LLM_PROVIDER: ${LLM_PROVIDER:-ollama}
+      LLM_FALLBACK_ENABLED: ${LLM_FALLBACK_ENABLED:-false}
       OLLAMA_URL: ${OLLAMA_URL:-http://ollama:11434}
       OLLAMA_MODEL: ${OLLAMA_MODEL:-qwen2.5:3b}
+      LOGOS_URL: ${LOGOS_URL:-https://logos.aet.cit.tum.de:8080}
+      LOGOS_MODEL: ${LOGOS_MODEL:-openai/gpt-oss-120b}
+      LOGOS_API_KEY: ${LOGOS_API_KEY:-}
       INCIDENT_SERVICE_URL: http://incident-service:8081
     ports:
       - "8087:8087"
@@ -221,7 +244,7 @@ services:
       ollama:
         condition: service_healthy
       incident-service:
-        condition: service_started
+        condition: service_healthy
     restart: unless-stopped
 
   swagger-ui:

@@ -23,7 +23,7 @@ from client.models import (
     SummaryPatch,
 )
 from client.types import Response
-from genai_service.ollama_client import OllamaClient
+from genai_service.llm import LLMClient
 from genai_service.prompts import (
     PostmortemResponse,
     PromptBuilder,
@@ -54,11 +54,11 @@ class IncidentHandlers:
     def __init__(
         self,
         incident_api_client: Client,
-        ollama_client: OllamaClient,
+        llm_client: LLMClient,
         prompt_builder: PromptBuilder,
     ) -> None:
         self._client = incident_api_client
-        self._ollama = ollama_client
+        self._llm = llm_client
         self._prompts = prompt_builder
 
     async def on_incident_created(self, incident_id: str) -> None:
@@ -150,7 +150,7 @@ class IncidentHandlers:
         self, incident_id: str, incident: Incident, events: list[IncidentEvent]
     ) -> None:
         prompt = self._prompts.build(incident, events, PromptTask.SUMMARY)
-        result = await self._ollama.generate(
+        result = await self._llm.generate(
             prompt.user, system=prompt.system, response_model=SummaryResponse
         )
         response = await write_incident_summary.asyncio_detailed(
@@ -164,7 +164,7 @@ class IncidentHandlers:
         self, incident_id: str, incident: Incident, events: list[IncidentEvent]
     ) -> None:
         prompt = self._prompts.build(incident, events, PromptTask.SEVERITY_SUGGESTION)
-        result = await self._ollama.generate(
+        result = await self._llm.generate(
             prompt.user, system=prompt.system, response_model=SeverityResponse
         )
         response = await write_incident_severity_suggestion.asyncio_detailed(
@@ -178,7 +178,7 @@ class IncidentHandlers:
         self, incident_id: str, incident: Incident, events: list[IncidentEvent]
     ) -> None:
         prompt = self._prompts.build(incident, events, PromptTask.SOLUTION_SUGGESTIONS)
-        result = await self._ollama.generate(
+        result = await self._llm.generate(
             prompt.user, system=prompt.system, response_model=SolutionsResponse
         )
         response = await write_incident_solutions.asyncio_detailed(
@@ -195,7 +195,7 @@ class IncidentHandlers:
         events: list[IncidentEvent],
     ) -> None:
         prompt = self._prompts.build(incident, events, PromptTask.POSTMORTEM)
-        result = await self._ollama.generate(
+        result = await self._llm.generate(
             prompt.user, system=prompt.system, response_model=PostmortemResponse
         )
         response = await write_incident_postmortem.asyncio_detailed(

@@ -7,6 +7,8 @@ from fastapi import FastAPI
 from client import Client as IncidentApiClient
 from genai_service.config import settings
 from genai_service.handlers import IncidentHandlers
+from genai_service.llm import FallbackLLMClient, LLMClient
+from genai_service.logos_client import LogosClient
 from genai_service.nats_consumer import NatsConsumer
 from genai_service.ollama_client import OllamaClient
 from genai_service.prompts import PromptBuilder
@@ -27,6 +29,30 @@ structlog.configure(processors=_log_processors)
 logger = structlog.get_logger(__name__)
 
 
+def _build_llm_client(http: httpx.AsyncClient, ollama: OllamaClient) -> LLMClient:
+    """Select the primary provider and optionally wrap it with an Ollama fallback.
+
+    "ollama" stays the default so off-VPN local dev keeps working; the cluster sets
+    LLM_PROVIDER=logos. With LLM_FALLBACK_ENABLED, a failed/rate-limited Logos call
+    transparently retries against Ollama.
+    """
+    if settings.llm_provider == "ollama":
+        return ollama
+    if settings.llm_provider != "logos":
+        raise ValueError(f"unsupported LLM_PROVIDER: {settings.llm_provider!r}")
+
+    logos = LogosClient(
+        http,
+        settings.logos_url,
+        settings.logos_model,
+        api_key=settings.logos_api_key,
+        generate_timeout_seconds=settings.logos_generate_timeout_seconds,
+    )
+    if settings.llm_fallback_enabled:
+        return FallbackLLMClient(logos, ollama)
+    return logos
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     http = httpx.AsyncClient()
@@ -36,11 +62,12 @@ async def lifespan(app: FastAPI):
         settings.ollama_model,
         generate_timeout_seconds=settings.ollama_generate_timeout_seconds,
     )
+    llm_client = _build_llm_client(http, ollama)
     incident_api_client = IncidentApiClient(
         base_url=settings.incident_service_url,
         timeout=httpx.Timeout(settings.incident_service_timeout_seconds),
     )
-    handlers = IncidentHandlers(incident_api_client, ollama, PromptBuilder())
+    handlers = IncidentHandlers(incident_api_client, llm_client, PromptBuilder())
 
     consumer: NatsConsumer | None = None
     if settings.nats_enabled:
@@ -59,14 +86,17 @@ async def lifespan(app: FastAPI):
 
     app.state.http = http
     app.state.ollama_client = ollama
+    app.state.llm_client = llm_client
     app.state.incident_api_client = incident_api_client
     app.state.handlers = handlers
     app.state.nats_consumer = consumer
 
     logger.info(
         "genai_service_started",
+        llm_provider=settings.llm_provider,
+        llm_fallback_enabled=settings.llm_fallback_enabled,
+        model=llm_client.model,
         ollama_url=settings.ollama_url,
-        model=settings.ollama_model,
         nats_enabled=settings.nats_enabled,
         nats_url=settings.nats_url if settings.nats_enabled else None,
         incident_service_url=settings.incident_service_url,
