@@ -10,6 +10,7 @@ from genai_service.config import settings
 from genai_service.handlers import IncidentHandlers
 from genai_service.llm import FallbackLLMClient, LLMClient
 from genai_service.logos_client import LogosClient
+from genai_service.metrics import set_nats_consumer_connected
 from genai_service.nats_consumer import NatsConsumer
 from genai_service.ollama_client import OllamaClient
 from genai_service.prompts import PromptBuilder
@@ -83,7 +84,10 @@ async def lifespan(app: FastAPI):
         except Exception as exc:
             # Don't block /health on a broker outage; log degraded and continue.
             logger.error("nats_consumer_start_failed", error=str(exc))
+            set_nats_consumer_connected(False)
             consumer = None
+    else:
+        set_nats_consumer_connected(False)
 
     app.state.http = http
     app.state.ollama_client = ollama

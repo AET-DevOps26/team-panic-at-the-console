@@ -21,6 +21,7 @@ class OllamaClient:
         self._http = http
         self._base_url = base_url.rstrip("/")
         self.model = model
+        self.provider = "ollama"
         self._generate_timeout = generate_timeout_seconds
 
     async def reachable(self) -> bool:

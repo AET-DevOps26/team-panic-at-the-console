@@ -248,32 +248,35 @@ async def test_on_created_records_generation_metrics(ollama):
         SolutionsResponse(solutions=["restart"]),
     ]
 
+    provider = "unknown"
     before_summary = ai_generations_total.labels(
-        type="summary", outcome="success"
+        type="summary", provider=provider, outcome="success"
     )._value.get()
     before_severity = ai_generations_total.labels(
-        type="severity_suggestion", outcome="success"
+        type="severity_suggestion", provider=provider, outcome="success"
     )._value.get()
     before_solutions = ai_generations_total.labels(
-        type="solution_suggestions", outcome="success"
+        type="solution_suggestions", provider=provider, outcome="success"
     )._value.get()
 
     handlers = IncidentHandlers(c, ollama, PromptBuilder())
     await handlers.on_incident_created(str(INCIDENT_ID))
 
     assert (
-        ai_generations_total.labels(type="summary", outcome="success")._value.get()
+        ai_generations_total.labels(
+            type="summary", provider=provider, outcome="success"
+        )._value.get()
         == before_summary + 1
     )
     assert (
         ai_generations_total.labels(
-            type="severity_suggestion", outcome="success"
+            type="severity_suggestion", provider=provider, outcome="success"
         )._value.get()
         == before_severity + 1
     )
     assert (
         ai_generations_total.labels(
-            type="solution_suggestions", outcome="success"
+            type="solution_suggestions", provider=provider, outcome="success"
         )._value.get()
         == before_solutions + 1
     )
@@ -286,12 +289,16 @@ async def test_on_created_records_error_outcome_when_llm_fails(ollama):
     c = _client_with(incident=_incident_json(), events=_events_json())
     ollama.generate.side_effect = OllamaError("ollama down")
 
-    before = ai_generations_total.labels(type="summary", outcome="error")._value.get()
+    before = ai_generations_total.labels(
+        type="summary", provider="unknown", outcome="error"
+    )._value.get()
 
     handlers = IncidentHandlers(c, ollama, PromptBuilder())
     await handlers.on_incident_created(str(INCIDENT_ID))
 
     assert (
-        ai_generations_total.labels(type="summary", outcome="error")._value.get()
+        ai_generations_total.labels(
+            type="summary", provider="unknown", outcome="error"
+        )._value.get()
         == before + 1
     )

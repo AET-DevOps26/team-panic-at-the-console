@@ -3,6 +3,8 @@ from typing import Protocol, TypeVar, overload, runtime_checkable
 import structlog
 from pydantic import BaseModel
 
+from genai_service.metrics import llm_fallback_total
+
 T = TypeVar("T", bound=BaseModel)
 
 logger = structlog.get_logger(__name__)
@@ -62,6 +64,7 @@ class FallbackLLMClient:
         self._backup = backup
         # Expose the primary's model id for health/debug surfaces.
         self.model = primary.model
+        self.last_provider_used = "unknown"
 
     async def reachable(self) -> bool:
         return await self._primary.reachable() or await self._backup.reachable()
@@ -94,13 +97,17 @@ class FallbackLLMClient:
         response_model: type[T] | None = None,
         timeout: float | None = None,
     ) -> str | T:
+        primary_provider = provider_name(self._primary)
+        backup_provider = provider_name(self._backup)
         try:
-            return await self._primary.generate(
+            result = await self._primary.generate(
                 prompt,
                 system=system,
                 response_model=response_model,
                 timeout=timeout,
             )
+            self.last_provider_used = primary_provider
+            return result
         except Exception as exc:
             logger.warning(
                 "llm_primary_failed_falling_back",
@@ -108,9 +115,23 @@ class FallbackLLMClient:
                 primary_model=self._primary.model,
                 backup_model=self._backup.model,
             )
+            llm_fallback_total.labels(
+                from_provider=primary_provider, to_provider=backup_provider
+            ).inc()
+            self.last_provider_used = backup_provider
             return await self._backup.generate(
                 prompt,
                 system=system,
                 response_model=response_model,
                 timeout=timeout,
             )
+
+
+def provider_name(client: LLMClient) -> str:
+    """Return a stable provider label for Prometheus metrics."""
+    if isinstance(client, FallbackLLMClient):
+        return client.last_provider_used
+    explicit = getattr(client, "provider", None)
+    if isinstance(explicit, str):
+        return explicit
+    return "unknown"
