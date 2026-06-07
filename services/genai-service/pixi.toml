@@ -38,11 +38,15 @@ client = { path = "../generated/python-client", editable = true }
 pytest = "*"
 pytest-asyncio = "*"
 pytest-cov = "*"
+pytest-rerunfailures = "*"
 mypy = "*"
 
 [feature.test.tasks]
 test = "pytest -q"
 test-cov = "pytest --cov=genai_service --cov-report=term-missing"
+# Hits a real Ollama; set OLLAMA_INTEGRATION_URL (and optionally OLLAMA_INTEGRATION_MODEL).
+# Per-test retries (@pytest.mark.flaky) absorb the LLM-flakiness baseline.
+test-integration = "pytest -m integration -v"
 typecheck = "mypy src/genai_service"
 
 [feature.lint.dependencies]
@@ -55,6 +59,9 @@ lint-fix = "ruff check --fix src tests"
 
 [tasks]
 start = "uvicorn genai_service.main:app --host 0.0.0.0 --port 8087"
+# Manual smoke: PromptBuilder -> OllamaClient -> real Ollama, one run per PromptTask.
+# Honors OLLAMA_URL (default http://localhost:11434) and OLLAMA_MODEL (default qwen2.5:3b).
+demo = "python scripts/demo_generate.py"
 
 [feature.dev.tasks]
 start = "uvicorn genai_service.main:app --reload --host 0.0.0.0 --port 8087"
