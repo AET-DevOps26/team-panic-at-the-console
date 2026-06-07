@@ -55,7 +55,7 @@ class LogosClient:
             response = await self._http.get(
                 f"{self._base_url}/v1/models", headers=self._headers, timeout=2.0
             )
-            return response.status_code == 200
+            return response.status_code in (200, 429)
         except (httpx.HTTPError, OSError):
             return False
 

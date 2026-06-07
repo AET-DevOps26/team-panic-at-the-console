@@ -67,6 +67,8 @@ services:
     enabled: true
     inheritGlobalEnv: true
     port: 8080
+    probes: true
+    healthPath: /api/v1/health
     image:
       repository: gateway
     env:
@@ -79,6 +81,8 @@ services:
     enabled: true
     inheritGlobalEnv: true
     port: 8081
+    probes: true
+    healthPath: /health
     image:
       repository: incident-service
     env:
@@ -117,6 +121,8 @@ services:
   user-service:
     enabled: true
     port: 8084
+    probes: true
+    healthPath: /health
     image:
       repository: user-service
     env:
@@ -150,6 +156,10 @@ services:
     enabled: true
     inheritGlobalEnv: true
     port: 8087
+    probes: true
+    healthPath: /health
+    probeInitialDelaySeconds: 15
+    probeReadinessInitialDelaySeconds: 5
     image:
       repository: genai-service
     env:
