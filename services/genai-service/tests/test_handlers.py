@@ -236,3 +236,62 @@ async def test_on_created_continues_after_summary_patch_fails(ollama):
 
     assert ollama.generate.await_count == 3
     assert call == 2
+
+
+async def test_on_created_records_generation_metrics(ollama):
+    from genai_service.metrics import ai_generations_total
+
+    c = _client_with(incident=_incident_json(), events=_events_json())
+    ollama.generate.side_effect = [
+        SummaryResponse(summary="ok"),
+        SeverityResponse(severity=Severity.SEV2, reason="r"),
+        SolutionsResponse(solutions=["restart"]),
+    ]
+
+    before_summary = ai_generations_total.labels(
+        type="summary", outcome="success"
+    )._value.get()
+    before_severity = ai_generations_total.labels(
+        type="severity_suggestion", outcome="success"
+    )._value.get()
+    before_solutions = ai_generations_total.labels(
+        type="solution_suggestions", outcome="success"
+    )._value.get()
+
+    handlers = IncidentHandlers(c, ollama, PromptBuilder())
+    await handlers.on_incident_created(str(INCIDENT_ID))
+
+    assert (
+        ai_generations_total.labels(type="summary", outcome="success")._value.get()
+        == before_summary + 1
+    )
+    assert (
+        ai_generations_total.labels(
+            type="severity_suggestion", outcome="success"
+        )._value.get()
+        == before_severity + 1
+    )
+    assert (
+        ai_generations_total.labels(
+            type="solution_suggestions", outcome="success"
+        )._value.get()
+        == before_solutions + 1
+    )
+
+
+async def test_on_created_records_error_outcome_when_llm_fails(ollama):
+    from genai_service.metrics import ai_generations_total
+    from genai_service.ollama_client import OllamaError
+
+    c = _client_with(incident=_incident_json(), events=_events_json())
+    ollama.generate.side_effect = OllamaError("ollama down")
+
+    before = ai_generations_total.labels(type="summary", outcome="error")._value.get()
+
+    handlers = IncidentHandlers(c, ollama, PromptBuilder())
+    await handlers.on_incident_created(str(INCIDENT_ID))
+
+    assert (
+        ai_generations_total.labels(type="summary", outcome="error")._value.get()
+        == before + 1
+    )

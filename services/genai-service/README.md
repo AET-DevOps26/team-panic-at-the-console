@@ -3,6 +3,7 @@
 FastAPI scaffold:
 
 - **`GET /health`**: process is up; **no Ollama call** (use this for Docker / Kubernetes probes when Ollama is optional).
+- **`GET /metrics`**: Prometheus scrape endpoint (see [Metrics](#metrics)).
 - **`GET /api/v1/genai/ollama/health`**: checks a local [Ollama](https://ollama.com) instance (`OLLAMA_URL`, default `http://localhost:11434`); JSON **`status`: `"ok"`** when Ollama answers, **`"degraded"`** with **503** when it does not (for monitoring, not for liveness).
 - **`POST /api/v1/genai/_debug/generate`** _(opt-in)_: manual smoke test that calls Ollama with a free-form prompt. Mounted only when `DEBUG_ENDPOINTS=true`. Never enable in production — the service's real surface is NATS (see [ADR-0002](../../docs/adr/0002-genai-service-stateless.md)).
 
@@ -157,6 +158,17 @@ LOGOS_INTEGRATION_KEY="$(pixi run -e deploy sops --decrypt \
 The preflight proceeds on a `429` (endpoint up but rate-limited at 60 RPM); `generate()` absorbs 429s with backoff.
 
 Regular PR CI skips all integration tests — they're slow (~10–30 s per call) and smaller models occasionally produce JSON that fails strict validation. Each integration test carries `@pytest.mark.flaky(reruns=3)` (via `pytest-rerunfailures`) to absorb that baseline flakiness; unit `test` stays retry-free.
+
+## Metrics
+
+`GET /metrics` exposes Prometheus scrape data. HTTP histograms come from `prometheus-fastapi-instrumentator`; custom metrics are recorded by `IncidentHandlers` via `time_generation()` in `genai_service.metrics`:
+
+| Metric                  | Type      | Labels                                                                |
+| ----------------------- | --------- | --------------------------------------------------------------------- |
+| `ai_generation_seconds` | histogram | `type=summary\|severity_suggestion\|solution_suggestions\|postmortem` |
+| `ai_generations_total`  | counter   | `type`, `outcome=success\|error`                                      |
+
+Excluded from the OpenAPI surface.
 
 ## Logging
 

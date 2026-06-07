@@ -3,6 +3,7 @@ from contextlib import asynccontextmanager
 import httpx
 import structlog
 from fastapi import FastAPI
+from prometheus_fastapi_instrumentator import Instrumentator
 
 from client import Client as IncidentApiClient
 from genai_service.config import settings
@@ -113,6 +114,10 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="GenAI Service", version="0.1.0", lifespan=lifespan)
+
+Instrumentator(excluded_handlers=["/metrics"]).instrument(app).expose(
+    app, endpoint="/metrics", include_in_schema=False
+)
 
 
 @app.get("/health")

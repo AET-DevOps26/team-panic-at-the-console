@@ -24,6 +24,7 @@ from client.models import (
 )
 from client.types import Response
 from genai_service.llm import LLMClient
+from genai_service.metrics import time_generation
 from genai_service.prompts import (
     PostmortemResponse,
     PromptBuilder,
@@ -150,9 +151,10 @@ class IncidentHandlers:
         self, incident_id: str, incident: Incident, events: list[IncidentEvent]
     ) -> None:
         prompt = self._prompts.build(incident, events, PromptTask.SUMMARY)
-        result = await self._llm.generate(
-            prompt.user, system=prompt.system, response_model=SummaryResponse
-        )
+        with time_generation(PromptTask.SUMMARY.value):
+            result = await self._llm.generate(
+                prompt.user, system=prompt.system, response_model=SummaryResponse
+            )
         response = await write_incident_summary.asyncio_detailed(
             incident_id=_uuid(incident_id),
             client=self._client,
@@ -164,9 +166,10 @@ class IncidentHandlers:
         self, incident_id: str, incident: Incident, events: list[IncidentEvent]
     ) -> None:
         prompt = self._prompts.build(incident, events, PromptTask.SEVERITY_SUGGESTION)
-        result = await self._llm.generate(
-            prompt.user, system=prompt.system, response_model=SeverityResponse
-        )
+        with time_generation(PromptTask.SEVERITY_SUGGESTION.value):
+            result = await self._llm.generate(
+                prompt.user, system=prompt.system, response_model=SeverityResponse
+            )
         response = await write_incident_severity_suggestion.asyncio_detailed(
             incident_id=_uuid(incident_id),
             client=self._client,
@@ -178,9 +181,10 @@ class IncidentHandlers:
         self, incident_id: str, incident: Incident, events: list[IncidentEvent]
     ) -> None:
         prompt = self._prompts.build(incident, events, PromptTask.SOLUTION_SUGGESTIONS)
-        result = await self._llm.generate(
-            prompt.user, system=prompt.system, response_model=SolutionsResponse
-        )
+        with time_generation(PromptTask.SOLUTION_SUGGESTIONS.value):
+            result = await self._llm.generate(
+                prompt.user, system=prompt.system, response_model=SolutionsResponse
+            )
         response = await write_incident_solutions.asyncio_detailed(
             incident_id=_uuid(incident_id),
             client=self._client,
@@ -195,9 +199,10 @@ class IncidentHandlers:
         events: list[IncidentEvent],
     ) -> None:
         prompt = self._prompts.build(incident, events, PromptTask.POSTMORTEM)
-        result = await self._llm.generate(
-            prompt.user, system=prompt.system, response_model=PostmortemResponse
-        )
+        with time_generation(PromptTask.POSTMORTEM.value):
+            result = await self._llm.generate(
+                prompt.user, system=prompt.system, response_model=PostmortemResponse
+            )
         response = await write_incident_postmortem.asyncio_detailed(
             incident_id=_uuid(incident_id),
             client=self._client,
