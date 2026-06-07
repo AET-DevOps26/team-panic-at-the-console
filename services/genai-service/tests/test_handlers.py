@@ -236,3 +236,46 @@ async def test_on_created_continues_after_summary_patch_fails(ollama):
 
     assert ollama.generate.await_count == 3
     assert call == 2
+
+
+async def test_on_created_aborts_when_get_events_fails(ollama):
+    """If the event log fetch fails after the incident fetch succeeds, no generation runs."""
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        path = request.url.path
+        if request.method == "GET" and path.endswith(f"/incidents/{INCIDENT_ID}"):
+            return httpx.Response(200, json=_incident_json())
+        if request.method == "GET" and path.endswith("/events"):
+            return httpx.Response(500)
+        return httpx.Response(404)
+
+    c = Client(
+        base_url="http://incident-service",
+        httpx_args={"transport": httpx.MockTransport(handler)},
+    )
+    handlers = IncidentHandlers(c, ollama, PromptBuilder())
+
+    await handlers.on_incident_created(str(INCIDENT_ID))
+
+    ollama.generate.assert_not_awaited()
+
+
+async def test_on_created_continues_after_llm_fails_on_summary(ollama):
+    """A failed summary generation must not block later tasks in the handler loop."""
+    from genai_service.ollama_client import OllamaError
+
+    patches: list[dict] = []
+    c = _client_with(incident=_incident_json(), events=_events_json(), patches=patches)
+    ollama.generate.side_effect = [
+        OllamaError("ollama down"),
+        SeverityResponse(severity=Severity.SEV2, reason="r"),
+        SolutionsResponse(solutions=["a"]),
+    ]
+    handlers = IncidentHandlers(c, ollama, PromptBuilder())
+
+    await handlers.on_incident_created(str(INCIDENT_ID))
+
+    assert ollama.generate.await_count == 3
+    suffixes = {p["path"].rsplit("/", 2)[-2] for p in patches}
+    assert "summary" not in suffixes
+    assert suffixes == {"severity", "solutions"}
