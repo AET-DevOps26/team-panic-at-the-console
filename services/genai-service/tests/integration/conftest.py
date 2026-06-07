@@ -104,9 +104,7 @@ async def _logos_session() -> AsyncIterator[LogosClient]:
                 f"Logos rejected LOGOS_INTEGRATION_KEY (HTTP {resp.status_code})"
             )
         if resp.status_code not in (200, 429):
-            pytest.skip(
-                f"Logos preflight returned HTTP {resp.status_code}"
-            )
+            pytest.skip(f"Logos preflight returned HTTP {resp.status_code}")
         yield LogosClient(http, url, model, api_key=key)
 
 
