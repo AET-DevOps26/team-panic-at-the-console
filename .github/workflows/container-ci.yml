@@ -3,8 +3,6 @@ name: Container CI
 on:
   pull_request:
   merge_group:
-  release:
-    types: [published]
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -12,7 +10,6 @@ concurrency:
 
 permissions:
   contents: read
-  packages: write
 
 jobs:
   validate-container-layout:
@@ -47,8 +44,8 @@ jobs:
     uses: ./.github/workflows/_build-images.yml
     permissions:
       contents: read
-      packages: write
+      packages: read
     with:
-      push: ${{ github.event_name == 'release' }}
-      primary_tag: ${{ github.event.release.tag_name || 'dev' }}
-      sha_tag: ${{ github.event_name == 'release' && 'latest' || format('sha-{0}', github.sha) }}
+      push: false
+      primary_tag: dev
+      sha_tag: sha-${{ github.sha }}

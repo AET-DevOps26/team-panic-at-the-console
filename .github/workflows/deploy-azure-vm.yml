@@ -1,8 +1,24 @@
 name: Deploy to Azure VM
 
+# Called by release.yml after images are built (action=full, so Terraform applies
+# any infra changes and Ansible redeploys), or run manually via the Actions tab.
+# The tag and action always come from `inputs`, so there is no resolve step and no
+# GHCR polling: when invoked from a release the orchestrator's `needs: build`
+# already guarantees the images exist. A single `gate` job carries
+# `environment: production`, so the whole deploy needs one approval.
+
 on:
-  release:
-    types: [published]
+  workflow_call:
+    inputs:
+      tag:
+        description: "Docker image tag to deploy (e.g. latest, v1.2.3, sha-abc1234)"
+        type: string
+        required: true
+      action:
+        description: "deploy=Ansible only | provision=Terraform only | full=Terraform+Ansible | plan=dry-run"
+        type: string
+        default: deploy
+        required: false
   workflow_dispatch:
     inputs:
       action:
@@ -15,8 +31,9 @@ on:
           - plan
         default: deploy
         required: true
-      image_tag:
+      tag:
         description: "Docker image tag to deploy (e.g. latest, v1.2.3, sha-abc1234)"
+        type: string
         default: latest
         required: true
 
@@ -66,29 +83,11 @@ env:
   ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
 jobs:
-  # ── Resolve tag and action ───────────────────────────────────────────────────
-  resolve:
-    name: Resolve tag and action
-    runs-on: ubuntu-latest
-    outputs:
-      tag: ${{ steps.resolve.outputs.tag }}
-      action: ${{ steps.resolve.outputs.action }}
-    steps:
-      - name: Resolve
-        id: resolve
-        run: |
-          if [ "${{ github.event_name }}" = "release" ]; then
-            echo "tag=${{ github.event.release.tag_name }}" >> "$GITHUB_OUTPUT"
-            echo "action=full" >> "$GITHUB_OUTPUT"
-          else
-            echo "tag=${{ inputs.image_tag }}" >> "$GITHUB_OUTPUT"
-            echo "action=${{ inputs.action }}" >> "$GITHUB_OUTPUT"
-          fi
-
-  # ── Approval gate ───────────────────────────────────────────────────────────
+  # ── Approval gate ─────────────────────────────────────────────────────────────
+  # Single environment-protected job so the whole deploy needs exactly one approval,
+  # whether triggered by a release or run manually.
   gate:
     name: Await approval
-    needs: resolve
     runs-on: ubuntu-latest
     environment: production
     steps:
@@ -97,7 +96,7 @@ jobs:
   # ── Terraform ───────────────────────────────────────────────────────────────
   terraform:
     name: Terraform
-    needs: [resolve, gate]
+    needs: gate
     runs-on: ubuntu-latest
     outputs:
       vm_ip: ${{ steps.vm_ip.outputs.ip }}
@@ -119,20 +118,20 @@ jobs:
         working-directory: ${{ env.TF_DIR }}
 
       - name: Terraform Plan
-        if: needs.resolve.outputs.action == 'provision' || needs.resolve.outputs.action == 'full' || needs.resolve.outputs.action == 'plan'
+        if: inputs.action == 'provision' || inputs.action == 'full' || inputs.action == 'plan'
         run: terraform plan -out=tfplan
         working-directory: ${{ env.TF_DIR }}
         env:
           TF_VAR_ssh_public_key: ${{ secrets.VM_SSH_PUBLIC_KEY }}
 
       - name: Terraform Apply
-        if: needs.resolve.outputs.action == 'provision' || needs.resolve.outputs.action == 'full'
+        if: inputs.action == 'provision' || inputs.action == 'full'
         run: terraform apply -auto-approve tfplan
         working-directory: ${{ env.TF_DIR }}
 
       - name: Get VM public IP from state
         id: vm_ip
-        if: needs.resolve.outputs.action != 'plan'
+        if: inputs.action != 'plan'
         run: |
           ip=$(terraform output -raw vm_public_ip 2>/dev/null || true)
           if [ -z "${ip}" ]; then
@@ -145,8 +144,8 @@ jobs:
   # ── Ansible ─────────────────────────────────────────────────────────────────
   ansible:
     name: Ansible Deploy
-    needs: [resolve, gate, terraform]
-    if: needs.terraform.result == 'success' && (needs.resolve.outputs.action == 'deploy' || needs.resolve.outputs.action == 'full')
+    needs: [gate, terraform]
+    if: needs.terraform.result == 'success' && (inputs.action == 'deploy' || inputs.action == 'full')
     runs-on: ubuntu-latest
 
     steps:
@@ -226,21 +225,8 @@ jobs:
             yaml.dump(v, f)
           EOF
         env:
-          IMAGE_TAG: ${{ needs.resolve.outputs.tag }}
+          IMAGE_TAG: ${{ inputs.tag }}
           POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
-
-      - name: Wait for images to be available
-        if: github.event_name == 'release'
-        run: |
-          image="ghcr.io/aet-devops26/team-panic-at-the-console/gateway:${{ needs.resolve.outputs.tag }}"
-          for i in $(seq 1 20); do
-            if docker manifest inspect "${image}" > /dev/null 2>&1; then
-              echo "Images available after ${i} attempt(s)"; exit 0
-            fi
-            echo "  attempt ${i}/20, retrying in 30s..."
-            sleep 30
-          done
-          echo "::error::Images not available after 10 minutes"; exit 1
 
       - name: Run Ansible playbook
         run: |

@@ -78,18 +78,19 @@ pixi run pre-commit-install
 
 See [.github/workflows/](.github/workflows/).
 
-| Workflow | Trigger | Uses SOPS? |
-| -------- | ------- | ---------- |
-| `ci.yml` / `compose-validate.yml` | PR, merge queue | No (lint/compose only) |
-| `container-ci.yml` | PR, merge queue, GitHub Release | No (builds only; pushes on release) |
-| `deploy-k8s.yml` | GitHub Release, manual (`workflow_dispatch`) | Yes: deploy to Kubernetes |
-| `deploy-azure-vm.yml` | GitHub Release, manual (`workflow_dispatch`) | No (uses OIDC + Ansible) |
+| Workflow                          | Trigger                                               | Uses SOPS?                               |
+| --------------------------------- | ----------------------------------------------------- | ---------------------------------------- |
+| `ci.yml` / `compose-validate.yml` | PR, merge queue                                       | No (lint/compose only)                   |
+| `container-ci.yml`                | PR, merge queue                                       | No (builds only, no push)                |
+| `release.yml`                     | GitHub Release                                        | Orchestrates build + push + both deploys |
+| `deploy-k8s.yml`                  | Called by `release.yml`, manual (`workflow_dispatch`) | Yes: deploy to Kubernetes                |
+| `deploy-azure-vm.yml`             | Called by `release.yml`, manual (`workflow_dispatch`) | No (uses OIDC + Ansible)                 |
 
 **PR CI does not decrypt SOPS or deploy to the cluster** (no cluster credentials on PRs). Deploy workflows run only on the GitHub `production` environment with the secrets below.
 
 ### Release tags
 
-Publish a GitHub Release to trigger the full release pipeline: `container-ci.yml` builds and pushes all images to GHCR tagged with the release version and `latest`, then `deploy-k8s.yml` deploys to Kubernetes and `deploy-azure-vm.yml` deploys to the Azure VM.
+Publish a GitHub Release to trigger `release.yml`, the full release pipeline: it builds and pushes all images to GHCR (tagged with the release version and `latest`), then runs `deploy-k8s.yml` and `deploy-azure-vm.yml`. Both deploys use `needs: build`, so they start only once every image is pushed; a failed build aborts the deploys. The Azure VM deploy runs with `action: full` on release (Terraform applies any infra changes, then Ansible redeploys) behind a single `production` approval.
 
 ### Helm + SOPS
 
@@ -97,11 +98,11 @@ Production deploy secrets live in `infra/helm/secrets/values.prod.enc.yaml` (enc
 
 **Pixi tasks** (deploy environment; install with `pixi install`):
 
-| Task | Purpose |
-| ---- | ------- |
-| `pixi run -e deploy helm-deploy` | Decrypt SOPS values and install/upgrade the chart |
-| `pixi run -e deploy helm-uninstall` | Remove the Helm release |
-| `pixi run -e deploy k9s` | Open k9s (uses your active kubeconfig) |
+| Task                                | Purpose                                           |
+| ----------------------------------- | ------------------------------------------------- |
+| `pixi run -e deploy helm-deploy`    | Decrypt SOPS values and install/upgrade the chart |
+| `pixi run -e deploy helm-uninstall` | Remove the Helm release                           |
+| `pixi run -e deploy k9s`            | Open k9s (uses your active kubeconfig)            |
 
 **Flow (local or CI):**
 
@@ -111,12 +112,12 @@ Production deploy secrets live in `infra/helm/secrets/values.prod.enc.yaml` (enc
 
 **Key files:**
 
-| File | Purpose |
-| ---- | ------- |
-| `.sops.yaml` | Which AGE public keys may encrypt `infra/helm/secrets/*.enc.yaml` |
-| `infra/helm/secrets/values.prod.enc.yaml` | Encrypted prod overrides (commit this) |
-| `infra/helm/secrets/values.prod.dec.example.yaml` | Template for plaintext before first encrypt |
-| `infra/helm/devops-platform/files/init-dbs.sh` | Postgres DB init (compose + Helm) |
+| File                                              | Purpose                                                           |
+| ------------------------------------------------- | ----------------------------------------------------------------- |
+| `.sops.yaml`                                      | Which AGE public keys may encrypt `infra/helm/secrets/*.enc.yaml` |
+| `infra/helm/secrets/values.prod.enc.yaml`         | Encrypted prod overrides (commit this)                            |
+| `infra/helm/secrets/values.prod.dec.example.yaml` | Template for plaintext before first encrypt                       |
+| `infra/helm/devops-platform/files/init-dbs.sh`    | Postgres DB init (compose + Helm)                                 |
 
 Never commit `*.dec.yaml` or `~/.config/sops/age/keys.txt` (gitignored / local only).
 
@@ -124,11 +125,11 @@ Never commit `*.dec.yaml` or `~/.config/sops/age/keys.txt` (gitignored / local o
 
 Configure under **Settings → Environments → production**:
 
-| Name | Type | Used for |
-| ---- | ---- | -------- |
-| `KUBECONFIG_B64` | Secret | Cluster access (base64 kubeconfig) |
-| `SOPS_AGE_KEY` | Secret | Full AGE private key file (same as `keys.txt`) |
-| `DEPLOY_NAMESPACE` | Variable | e.g. `team-panic-at-the-console-devops26` |
+| Name               | Type     | Used for                                       |
+| ------------------ | -------- | ---------------------------------------------- |
+| `KUBECONFIG_B64`   | Secret   | Cluster access (base64 kubeconfig)             |
+| `SOPS_AGE_KEY`     | Secret   | Full AGE private key file (same as `keys.txt`) |
+| `DEPLOY_NAMESPACE` | Variable | e.g. `team-panic-at-the-console-devops26`      |
 
 `deploy-k8s.yml` runs `pixi run -e deploy helm-deploy` with these values.
 
