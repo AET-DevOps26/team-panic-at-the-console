@@ -237,18 +237,29 @@ Grafana talks to Prometheus at `http://prometheus:9090` inside Docker; use `loca
 
 Populate Grafana panels after boot: `pixi run compose-smoke-genai-metrics`.
 
-Use a kubeconfig/context that points at the stud cluster (`kubectl config current-context`).
-
-**Local Kubernetes (OrbStack):** Grafana ingress is disabled (no cert-manager). Port-forward, then open the **subpath** URL (Helm sets `serve_from_sub_path: true` for the stud cluster):
+**Local Kubernetes (OrbStack):** Grafana has no ingress locally. In one terminal, forward the port (must stay running):
 
 ```bash
-kubectl port-forward -n production svc/devops-platform-grafana 3030:80
-# → http://localhost:3030/grafana/   (not http://localhost:3030/ — that redirects to port 80)
+pixi run grafana-forward
 ```
+
+In another, deploy with `infra/helm/values.local-k8s.yaml` so Grafana serves at the port-forward root (not `/grafana`):
+
+```bash
+# append to your helm upgrade / helm-deploy -f infra/helm/values.local-k8s.yaml
+```
+
+Then open **http://localhost:3030/** (`admin` / password from monitoring secrets).
 
 Prometheus UI (optional): `kubectl port-forward -n production svc/devops-platform-kube-prome-prometheus 9090:9090`
 
 #### Debug the cluster
+
+```bash
+pixi run -e deploy k9s
+```
+
+Use a kubeconfig/context that points at the stud cluster (`kubectl config current-context`).
 
 ## Testing
 
