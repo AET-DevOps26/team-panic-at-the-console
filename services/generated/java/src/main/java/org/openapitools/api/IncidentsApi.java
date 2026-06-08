@@ -329,8 +329,8 @@ public interface IncidentsApi {
      * GET /incidents/{incidentId}/comments : List comments on an incident
      *
      * @param incidentId UUID of the target incident. (required)
-     * @param limit Maximum number of users to return (default 50, max 100). (optional, default to 50)
-     * @param offset Number of users to skip for pagination. (optional, default to 0)
+     * @param page  (optional, default to 0)
+     * @param size  (optional, default to 50)
      * @return List of comments (status code 200)
      *         or Not authenticated (status code 401)
      *         or No incident exists with the given ID (status code 404)
@@ -355,13 +355,13 @@ public interface IncidentsApi {
 
     default ResponseEntity<CommentListResponse> listComments(
         @Parameter(name = "incidentId", description = "UUID of the target incident.", required = true, in = ParameterIn.PATH) @PathVariable("incidentId") UUID incidentId,
-        @Min(1) @Max(100) @Parameter(name = "limit", description = "Maximum number of users to return (default 50, max 100).", in = ParameterIn.QUERY) @Valid @RequestParam(value = "limit", required = false, defaultValue = "50") Integer limit,
-        @Min(0) @Parameter(name = "offset", description = "Number of users to skip for pagination.", in = ParameterIn.QUERY) @Valid @RequestParam(value = "offset", required = false, defaultValue = "0") Integer offset
+        @Min(0) @Parameter(name = "page", description = "", in = ParameterIn.QUERY) @Valid @RequestParam(value = "page", required = false, defaultValue = "0") Integer page,
+        @Min(1) @Max(100) @Parameter(name = "size", description = "", in = ParameterIn.QUERY) @Valid @RequestParam(value = "size", required = false, defaultValue = "50") Integer size
     ) {
         getRequest().ifPresent(request -> {
             for (MediaType mediaType: MediaType.parseMediaTypes(request.getHeader("Accept"))) {
                 if (mediaType.isCompatibleWith(MediaType.valueOf("application/json"))) {
-                    String exampleString = "{ \"total\" : 3, \"offset\" : 0, \"limit\" : 50, \"items\" : [ { \"createdAt\" : \"2000-01-23T04:56:07.000+00:00\", \"id\" : \"046b6c7f-0b8a-43b9-b35d-6489e6daee91\", \"text\" : \"text\", \"incidentId\" : \"046b6c7f-0b8a-43b9-b35d-6489e6daee91\", \"authorId\" : \"046b6c7f-0b8a-43b9-b35d-6489e6daee91\" }, { \"createdAt\" : \"2000-01-23T04:56:07.000+00:00\", \"id\" : \"046b6c7f-0b8a-43b9-b35d-6489e6daee91\", \"text\" : \"text\", \"incidentId\" : \"046b6c7f-0b8a-43b9-b35d-6489e6daee91\", \"authorId\" : \"046b6c7f-0b8a-43b9-b35d-6489e6daee91\" } ] }";
+                    String exampleString = "{ \"total\" : 3, \"size\" : 50, \"page\" : 0, \"items\" : [ { \"createdAt\" : \"2000-01-23T04:56:07.000+00:00\", \"id\" : \"046b6c7f-0b8a-43b9-b35d-6489e6daee91\", \"text\" : \"text\", \"incidentId\" : \"046b6c7f-0b8a-43b9-b35d-6489e6daee91\", \"authorId\" : \"046b6c7f-0b8a-43b9-b35d-6489e6daee91\" }, { \"createdAt\" : \"2000-01-23T04:56:07.000+00:00\", \"id\" : \"046b6c7f-0b8a-43b9-b35d-6489e6daee91\", \"text\" : \"text\", \"incidentId\" : \"046b6c7f-0b8a-43b9-b35d-6489e6daee91\", \"authorId\" : \"046b6c7f-0b8a-43b9-b35d-6489e6daee91\" } ] }";
                     ApiUtil.setExampleResponse(request, "application/json", exampleString);
                     break;
                 }
@@ -418,8 +418,8 @@ public interface IncidentsApi {
      *
      * @param status Filter by incident status (optional)
      * @param severity Filter by incident severity (optional)
-     * @param limit Maximum number of users to return (default 50, max 100). (optional, default to 50)
-     * @param offset Number of users to skip for pagination. (optional, default to 0)
+     * @param page  (optional, default to 0)
+     * @param size  (optional, default to 50)
      * @return List of incidents (status code 200)
      *         or Not authenticated (status code 401)
      */
@@ -443,13 +443,13 @@ public interface IncidentsApi {
     default ResponseEntity<IncidentListResponse> listIncidents(
         @Parameter(name = "status", description = "Filter by incident status", in = ParameterIn.QUERY) @Valid @RequestParam(value = "status", required = false) @Nullable IncidentStatus status,
         @Parameter(name = "severity", description = "Filter by incident severity", in = ParameterIn.QUERY) @Valid @RequestParam(value = "severity", required = false) @Nullable Severity severity,
-        @Min(1) @Max(100) @Parameter(name = "limit", description = "Maximum number of users to return (default 50, max 100).", in = ParameterIn.QUERY) @Valid @RequestParam(value = "limit", required = false, defaultValue = "50") Integer limit,
-        @Min(0) @Parameter(name = "offset", description = "Number of users to skip for pagination.", in = ParameterIn.QUERY) @Valid @RequestParam(value = "offset", required = false, defaultValue = "0") Integer offset
+        @Min(0) @Parameter(name = "page", description = "", in = ParameterIn.QUERY) @Valid @RequestParam(value = "page", required = false, defaultValue = "0") Integer page,
+        @Min(1) @Max(100) @Parameter(name = "size", description = "", in = ParameterIn.QUERY) @Valid @RequestParam(value = "size", required = false, defaultValue = "50") Integer size
     ) {
         getRequest().ifPresent(request -> {
             for (MediaType mediaType: MediaType.parseMediaTypes(request.getHeader("Accept"))) {
                 if (mediaType.isCompatibleWith(MediaType.valueOf("application/json"))) {
-                    String exampleString = "{ \"total\" : 5, \"offset\" : 0, \"limit\" : 50, \"items\" : [ { \"severity\" : \"SEV1\", \"createdAt\" : \"2000-01-23T04:56:07.000+00:00\", \"resolvedAt\" : \"2000-01-23T04:56:07.000+00:00\", \"description\" : \"description\", \"id\" : \"046b6c7f-0b8a-43b9-b35d-6489e6daee91\", \"title\" : \"Checkout 5xx spike\", \"status\" : \"open\" }, { \"severity\" : \"SEV1\", \"createdAt\" : \"2000-01-23T04:56:07.000+00:00\", \"resolvedAt\" : \"2000-01-23T04:56:07.000+00:00\", \"description\" : \"description\", \"id\" : \"046b6c7f-0b8a-43b9-b35d-6489e6daee91\", \"title\" : \"Checkout 5xx spike\", \"status\" : \"open\" } ] }";
+                    String exampleString = "{ \"total\" : 5, \"size\" : 50, \"page\" : 0, \"items\" : [ { \"severity\" : \"SEV1\", \"createdAt\" : \"2000-01-23T04:56:07.000+00:00\", \"resolvedAt\" : \"2000-01-23T04:56:07.000+00:00\", \"description\" : \"description\", \"id\" : \"046b6c7f-0b8a-43b9-b35d-6489e6daee91\", \"title\" : \"Checkout 5xx spike\", \"status\" : \"open\" }, { \"severity\" : \"SEV1\", \"createdAt\" : \"2000-01-23T04:56:07.000+00:00\", \"resolvedAt\" : \"2000-01-23T04:56:07.000+00:00\", \"description\" : \"description\", \"id\" : \"046b6c7f-0b8a-43b9-b35d-6489e6daee91\", \"title\" : \"Checkout 5xx spike\", \"status\" : \"open\" } ] }";
                     ApiUtil.setExampleResponse(request, "application/json", exampleString);
                     break;
                 }
@@ -462,7 +462,7 @@ public interface IncidentsApi {
 
     /**
      * PATCH /incidents/{incidentId}/status : Transition incident status
-     * Allowed transitions: open → investigating, investigating → resolved, or open → resolved. Requires RESPONDER or COMMANDER role.
+     * Allowed transitions: open → investigating, investigating → resolved. Requires RESPONDER or COMMANDER role.
      *
      * @param incidentId UUID of the target incident. (required)
      * @param updateStatusRequest  (required)
@@ -475,7 +475,7 @@ public interface IncidentsApi {
     @Operation(
         operationId = "updateIncidentStatus",
         summary = "Transition incident status",
-        description = "Allowed transitions: open → investigating, investigating → resolved, or open → resolved. Requires RESPONDER or COMMANDER role. ",
+        description = "Allowed transitions: open → investigating, investigating → resolved. Requires RESPONDER or COMMANDER role. ",
         tags = { "incidents" },
         responses = {
             @ApiResponse(responseCode = "200", description = "Status updated", content = {

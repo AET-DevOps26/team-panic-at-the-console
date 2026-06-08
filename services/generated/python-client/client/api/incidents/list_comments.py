@@ -14,14 +14,14 @@ from ...types import UNSET, Response, Unset
 def _get_kwargs(
     incident_id: UUID,
     *,
-    limit: int | Unset = 50,
-    offset: int | Unset = 0,
+    page: int | Unset = 0,
+    size: int | Unset = 50,
 ) -> dict[str, Any]:
     params: dict[str, Any] = {}
 
-    params["limit"] = limit
+    params["page"] = page
 
-    params["offset"] = offset
+    params["size"] = size
 
     params = {k: v for k, v in params.items() if v is not UNSET and v is not None}
 
@@ -73,15 +73,15 @@ def sync_detailed(
     incident_id: UUID,
     *,
     client: AuthenticatedClient | Client,
-    limit: int | Unset = 50,
-    offset: int | Unset = 0,
+    page: int | Unset = 0,
+    size: int | Unset = 50,
 ) -> Response[Any | CommentListResponse]:
     """List comments on an incident
 
     Args:
         incident_id (UUID):  Example: 018e2c5f-1234-7abc-8def-000000000001.
-        limit (int | Unset):  Default: 50.
-        offset (int | Unset):  Default: 0.
+        page (int | Unset):  Default: 0.
+        size (int | Unset):  Default: 50.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -93,8 +93,8 @@ def sync_detailed(
 
     kwargs = _get_kwargs(
         incident_id=incident_id,
-        limit=limit,
-        offset=offset,
+        page=page,
+        size=size,
     )
 
     response = client.get_httpx_client().request(
@@ -108,15 +108,15 @@ def sync(
     incident_id: UUID,
     *,
     client: AuthenticatedClient | Client,
-    limit: int | Unset = 50,
-    offset: int | Unset = 0,
+    page: int | Unset = 0,
+    size: int | Unset = 50,
 ) -> Any | CommentListResponse | None:
     """List comments on an incident
 
     Args:
         incident_id (UUID):  Example: 018e2c5f-1234-7abc-8def-000000000001.
-        limit (int | Unset):  Default: 50.
-        offset (int | Unset):  Default: 0.
+        page (int | Unset):  Default: 0.
+        size (int | Unset):  Default: 50.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -129,8 +129,8 @@ def sync(
     return sync_detailed(
         incident_id=incident_id,
         client=client,
-        limit=limit,
-        offset=offset,
+        page=page,
+        size=size,
     ).parsed
 
 
@@ -138,15 +138,15 @@ async def asyncio_detailed(
     incident_id: UUID,
     *,
     client: AuthenticatedClient | Client,
-    limit: int | Unset = 50,
-    offset: int | Unset = 0,
+    page: int | Unset = 0,
+    size: int | Unset = 50,
 ) -> Response[Any | CommentListResponse]:
     """List comments on an incident
 
     Args:
         incident_id (UUID):  Example: 018e2c5f-1234-7abc-8def-000000000001.
-        limit (int | Unset):  Default: 50.
-        offset (int | Unset):  Default: 0.
+        page (int | Unset):  Default: 0.
+        size (int | Unset):  Default: 50.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -158,8 +158,8 @@ async def asyncio_detailed(
 
     kwargs = _get_kwargs(
         incident_id=incident_id,
-        limit=limit,
-        offset=offset,
+        page=page,
+        size=size,
     )
 
     response = await client.get_async_httpx_client().request(**kwargs)
@@ -171,15 +171,15 @@ async def asyncio(
     incident_id: UUID,
     *,
     client: AuthenticatedClient | Client,
-    limit: int | Unset = 50,
-    offset: int | Unset = 0,
+    page: int | Unset = 0,
+    size: int | Unset = 50,
 ) -> Any | CommentListResponse | None:
     """List comments on an incident
 
     Args:
         incident_id (UUID):  Example: 018e2c5f-1234-7abc-8def-000000000001.
-        limit (int | Unset):  Default: 50.
-        offset (int | Unset):  Default: 0.
+        page (int | Unset):  Default: 0.
+        size (int | Unset):  Default: 50.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -193,7 +193,7 @@ async def asyncio(
         await asyncio_detailed(
             incident_id=incident_id,
             client=client,
-            limit=limit,
-            offset=offset,
+            page=page,
+            size=size,
         )
     ).parsed

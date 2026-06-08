@@ -204,7 +204,11 @@ class IncidentServiceTest {
                 any(Pageable.class)))
                 .thenReturn(new PageImpl<>(List.of(incident)));
 
-        List<Incident> result = incidentService.listIncidents(IncidentStatus.OPEN, Severity.SEV2, 10, 0);
+        List<Incident> result = incidentService.listIncidents(
+                IncidentStatus.OPEN,
+                Severity.SEV2,
+                0,
+                10);
 
         assertThat(result).containsExactly(incident);
     }
@@ -234,10 +238,10 @@ class IncidentServiceTest {
         Comment comment = new Comment(UUID.randomUUID(), UUID.randomUUID(), "Note");
         comment.setIncident(incident);
         when(incidentRepository.findById(incidentId)).thenReturn(Optional.of(incident));
-        when(commentRepository.findByIncident_Id(eq(incidentId), any(Pageable.class)))
+        when(commentRepository.findByIncident_IdOrderByCreatedAtAsc(eq(incidentId), any(Pageable.class)))
                 .thenReturn(new PageImpl<>(List.of(comment)));
 
-        List<Comment> comments = incidentService.listComments(incidentId, 10, 0);
+        List<Comment> comments = incidentService.listComments(incidentId, 0, 10);
 
         assertThat(comments).containsExactly(comment);
     }

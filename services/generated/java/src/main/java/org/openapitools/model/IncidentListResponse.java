@@ -31,9 +31,9 @@ public class IncidentListResponse {
 
   private Integer total;
 
-  private Integer limit;
+  private Integer page;
 
-  private Integer offset;
+  private Integer size;
 
   public IncidentListResponse() {
     super();
@@ -42,11 +42,11 @@ public class IncidentListResponse {
   /**
    * Constructor with only required parameters
    */
-  public IncidentListResponse(List<@Valid Incident> items, Integer total, Integer limit, Integer offset) {
+  public IncidentListResponse(List<@Valid Incident> items, Integer total, Integer page, Integer size) {
     this.items = items;
     this.total = total;
-    this.limit = limit;
-    this.offset = offset;
+    this.page = page;
+    this.size = size;
   }
 
   public IncidentListResponse items(List<@Valid Incident> items) {
@@ -98,47 +98,47 @@ public class IncidentListResponse {
     this.total = total;
   }
 
-  public IncidentListResponse limit(Integer limit) {
-    this.limit = limit;
+  public IncidentListResponse page(Integer page) {
+    this.page = page;
     return this;
   }
 
   /**
-   * Get limit
-   * minimum: 1
-   * maximum: 100
-   * @return limit
-   */
-  @NotNull @Min(1) @Max(100)
-  @Schema(name = "limit", example = "50", requiredMode = Schema.RequiredMode.REQUIRED)
-  @JsonProperty("limit")
-  public Integer getLimit() {
-    return limit;
-  }
-
-  public void setLimit(Integer limit) {
-    this.limit = limit;
-  }
-
-  public IncidentListResponse offset(Integer offset) {
-    this.offset = offset;
-    return this;
-  }
-
-  /**
-   * Get offset
+   * Get page
    * minimum: 0
-   * @return offset
+   * @return page
    */
   @NotNull @Min(0)
-  @Schema(name = "offset", example = "0", requiredMode = Schema.RequiredMode.REQUIRED)
-  @JsonProperty("offset")
-  public Integer getOffset() {
-    return offset;
+  @Schema(name = "page", example = "0", requiredMode = Schema.RequiredMode.REQUIRED)
+  @JsonProperty("page")
+  public Integer getPage() {
+    return page;
   }
 
-  public void setOffset(Integer offset) {
-    this.offset = offset;
+  public void setPage(Integer page) {
+    this.page = page;
+  }
+
+  public IncidentListResponse size(Integer size) {
+    this.size = size;
+    return this;
+  }
+
+  /**
+   * Get size
+   * minimum: 1
+   * maximum: 100
+   * @return size
+   */
+  @NotNull @Min(1) @Max(100)
+  @Schema(name = "size", example = "50", requiredMode = Schema.RequiredMode.REQUIRED)
+  @JsonProperty("size")
+  public Integer getSize() {
+    return size;
+  }
+
+  public void setSize(Integer size) {
+    this.size = size;
   }
 
   @Override
@@ -152,13 +152,13 @@ public class IncidentListResponse {
     IncidentListResponse incidentListResponse = (IncidentListResponse) o;
     return Objects.equals(this.items, incidentListResponse.items) &&
         Objects.equals(this.total, incidentListResponse.total) &&
-        Objects.equals(this.limit, incidentListResponse.limit) &&
-        Objects.equals(this.offset, incidentListResponse.offset);
+        Objects.equals(this.page, incidentListResponse.page) &&
+        Objects.equals(this.size, incidentListResponse.size);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(items, total, limit, offset);
+    return Objects.hash(items, total, page, size);
   }
 
   @Override
@@ -167,8 +167,8 @@ public class IncidentListResponse {
     sb.append("class IncidentListResponse {\n");
     sb.append("    items: ").append(toIndentedString(items)).append("\n");
     sb.append("    total: ").append(toIndentedString(total)).append("\n");
-    sb.append("    limit: ").append(toIndentedString(limit)).append("\n");
-    sb.append("    offset: ").append(toIndentedString(offset)).append("\n");
+    sb.append("    page: ").append(toIndentedString(page)).append("\n");
+    sb.append("    size: ").append(toIndentedString(size)).append("\n");
     sb.append("}");
     return sb.toString();
   }

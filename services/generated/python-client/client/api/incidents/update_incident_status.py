@@ -85,7 +85,7 @@ def sync_detailed(
 ) -> Response[Any | ErrorResponse | Incident]:
     """Transition incident status
 
-     Allowed transitions: open → investigating, investigating → resolved, or open → resolved.
+     Allowed transitions: open → investigating, investigating → resolved.
     Requires RESPONDER or COMMANDER role.
 
     Args:
@@ -120,7 +120,7 @@ def sync(
 ) -> Any | ErrorResponse | Incident | None:
     """Transition incident status
 
-     Allowed transitions: open → investigating, investigating → resolved, or open → resolved.
+     Allowed transitions: open → investigating, investigating → resolved.
     Requires RESPONDER or COMMANDER role.
 
     Args:
@@ -150,7 +150,7 @@ async def asyncio_detailed(
 ) -> Response[Any | ErrorResponse | Incident]:
     """Transition incident status
 
-     Allowed transitions: open → investigating, investigating → resolved, or open → resolved.
+     Allowed transitions: open → investigating, investigating → resolved.
     Requires RESPONDER or COMMANDER role.
 
     Args:
@@ -183,7 +183,7 @@ async def asyncio(
 ) -> Any | ErrorResponse | Incident | None:
     """Transition incident status
 
-     Allowed transitions: open → investigating, investigating → resolved, or open → resolved.
+     Allowed transitions: open → investigating, investigating → resolved.
     Requires RESPONDER or COMMANDER role.
 
     Args:

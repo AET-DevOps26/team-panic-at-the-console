@@ -18,14 +18,14 @@ class IncidentListResponse:
     Attributes:
         items (list[Incident]):
         total (int):  Example: 5.
-        limit (int):  Example: 50.
-        offset (int):
+        page (int):
+        size (int):  Example: 50.
     """
 
     items: list[Incident]
     total: int
-    limit: int
-    offset: int
+    page: int
+    size: int
 
     def to_dict(self) -> dict[str, Any]:
         items = []
@@ -35,9 +35,9 @@ class IncidentListResponse:
 
         total = self.total
 
-        limit = self.limit
+        page = self.page
 
-        offset = self.offset
+        size = self.size
 
         field_dict: dict[str, Any] = {}
 
@@ -45,8 +45,8 @@ class IncidentListResponse:
             {
                 "items": items,
                 "total": total,
-                "limit": limit,
-                "offset": offset,
+                "page": page,
+                "size": size,
             }
         )
 
@@ -66,15 +66,15 @@ class IncidentListResponse:
 
         total = d.pop("total")
 
-        limit = d.pop("limit")
+        page = d.pop("page")
 
-        offset = d.pop("offset")
+        size = d.pop("size")
 
         incident_list_response = cls(
             items=items,
             total=total,
-            limit=limit,
-            offset=offset,
+            page=page,
+            size=size,
         )
 
         return incident_list_response

@@ -15,8 +15,8 @@ def _get_kwargs(
     *,
     status: IncidentStatus | Unset = UNSET,
     severity: Severity | Unset = UNSET,
-    limit: int | Unset = 50,
-    offset: int | Unset = 0,
+    page: int | Unset = 0,
+    size: int | Unset = 50,
 ) -> dict[str, Any]:
     params: dict[str, Any] = {}
 
@@ -32,9 +32,9 @@ def _get_kwargs(
 
     params["severity"] = json_severity
 
-    params["limit"] = limit
+    params["page"] = page
 
-    params["offset"] = offset
+    params["size"] = size
 
     params = {k: v for k, v in params.items() if v is not UNSET and v is not None}
 
@@ -81,16 +81,16 @@ def sync_detailed(
     client: AuthenticatedClient | Client,
     status: IncidentStatus | Unset = UNSET,
     severity: Severity | Unset = UNSET,
-    limit: int | Unset = 50,
-    offset: int | Unset = 0,
+    page: int | Unset = 0,
+    size: int | Unset = 50,
 ) -> Response[Any | IncidentListResponse]:
     """List incidents with optional filtering
 
     Args:
         status (IncidentStatus | Unset):
         severity (Severity | Unset): Incident severity. SEV1 is highest impact.
-        limit (int | Unset):  Default: 50.
-        offset (int | Unset):  Default: 0.
+        page (int | Unset):  Default: 0.
+        size (int | Unset):  Default: 50.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -103,8 +103,8 @@ def sync_detailed(
     kwargs = _get_kwargs(
         status=status,
         severity=severity,
-        limit=limit,
-        offset=offset,
+        page=page,
+        size=size,
     )
 
     response = client.get_httpx_client().request(
@@ -119,16 +119,16 @@ def sync(
     client: AuthenticatedClient | Client,
     status: IncidentStatus | Unset = UNSET,
     severity: Severity | Unset = UNSET,
-    limit: int | Unset = 50,
-    offset: int | Unset = 0,
+    page: int | Unset = 0,
+    size: int | Unset = 50,
 ) -> Any | IncidentListResponse | None:
     """List incidents with optional filtering
 
     Args:
         status (IncidentStatus | Unset):
         severity (Severity | Unset): Incident severity. SEV1 is highest impact.
-        limit (int | Unset):  Default: 50.
-        offset (int | Unset):  Default: 0.
+        page (int | Unset):  Default: 0.
+        size (int | Unset):  Default: 50.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -142,8 +142,8 @@ def sync(
         client=client,
         status=status,
         severity=severity,
-        limit=limit,
-        offset=offset,
+        page=page,
+        size=size,
     ).parsed
 
 
@@ -152,16 +152,16 @@ async def asyncio_detailed(
     client: AuthenticatedClient | Client,
     status: IncidentStatus | Unset = UNSET,
     severity: Severity | Unset = UNSET,
-    limit: int | Unset = 50,
-    offset: int | Unset = 0,
+    page: int | Unset = 0,
+    size: int | Unset = 50,
 ) -> Response[Any | IncidentListResponse]:
     """List incidents with optional filtering
 
     Args:
         status (IncidentStatus | Unset):
         severity (Severity | Unset): Incident severity. SEV1 is highest impact.
-        limit (int | Unset):  Default: 50.
-        offset (int | Unset):  Default: 0.
+        page (int | Unset):  Default: 0.
+        size (int | Unset):  Default: 50.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -174,8 +174,8 @@ async def asyncio_detailed(
     kwargs = _get_kwargs(
         status=status,
         severity=severity,
-        limit=limit,
-        offset=offset,
+        page=page,
+        size=size,
     )
 
     response = await client.get_async_httpx_client().request(**kwargs)
@@ -188,16 +188,16 @@ async def asyncio(
     client: AuthenticatedClient | Client,
     status: IncidentStatus | Unset = UNSET,
     severity: Severity | Unset = UNSET,
-    limit: int | Unset = 50,
-    offset: int | Unset = 0,
+    page: int | Unset = 0,
+    size: int | Unset = 50,
 ) -> Any | IncidentListResponse | None:
     """List incidents with optional filtering
 
     Args:
         status (IncidentStatus | Unset):
         severity (Severity | Unset): Incident severity. SEV1 is highest impact.
-        limit (int | Unset):  Default: 50.
-        offset (int | Unset):  Default: 0.
+        page (int | Unset):  Default: 0.
+        size (int | Unset):  Default: 50.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -212,7 +212,7 @@ async def asyncio(
             client=client,
             status=status,
             severity=severity,
-            limit=limit,
-            offset=offset,
+            page=page,
+            size=size,
         )
     ).parsed

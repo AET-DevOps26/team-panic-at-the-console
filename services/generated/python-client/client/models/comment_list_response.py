@@ -18,14 +18,14 @@ class CommentListResponse:
     Attributes:
         items (list[Comment]):
         total (int):  Example: 3.
-        limit (int):  Example: 50.
-        offset (int):
+        page (int):
+        size (int):  Example: 50.
     """
 
     items: list[Comment]
     total: int
-    limit: int
-    offset: int
+    page: int
+    size: int
 
     def to_dict(self) -> dict[str, Any]:
         items = []
@@ -35,9 +35,9 @@ class CommentListResponse:
 
         total = self.total
 
-        limit = self.limit
+        page = self.page
 
-        offset = self.offset
+        size = self.size
 
         field_dict: dict[str, Any] = {}
 
@@ -45,8 +45,8 @@ class CommentListResponse:
             {
                 "items": items,
                 "total": total,
-                "limit": limit,
-                "offset": offset,
+                "page": page,
+                "size": size,
             }
         )
 
@@ -66,15 +66,15 @@ class CommentListResponse:
 
         total = d.pop("total")
 
-        limit = d.pop("limit")
+        page = d.pop("page")
 
-        offset = d.pop("offset")
+        size = d.pop("size")
 
         comment_list_response = cls(
             items=items,
             total=total,
-            limit=limit,
-            offset=offset,
+            page=page,
+            size=size,
         )
 
         return comment_list_response

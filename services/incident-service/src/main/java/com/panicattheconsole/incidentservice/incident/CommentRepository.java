@@ -13,7 +13,7 @@ public interface CommentRepository extends JpaRepository<Comment, UUID> {
 
     List<Comment> findByIncident_IdOrderByCreatedAtAsc(UUID incidentId);
 
-    Page<Comment> findByIncident_Id(UUID incidentId, Pageable pageable);
+    Page<Comment> findByIncident_IdOrderByCreatedAtAsc(UUID incidentId, Pageable pageable);
 
     long countByIncident_Id(UUID incidentId);
 }
