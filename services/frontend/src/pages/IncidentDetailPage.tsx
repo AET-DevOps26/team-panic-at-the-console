@@ -202,7 +202,7 @@ export default function IncidentDetailPage() {
                         {comments.map((c: Comment) => (
                           <div key={c.id} className="space-y-1">
                             <p className="text-xs text-muted-foreground">{formatDateTime(c.createdAt)}</p>
-                            <p className="text-sm">{c.content}</p>
+                            <p className="text-sm">{c.text}</p>
                             <Separator />
                           </div>
                         ))}
@@ -223,7 +223,7 @@ export default function IncidentDetailPage() {
                       size="sm"
                       disabled={!commentText.trim() || addComment.isPending}
                       onClick={async () => {
-                        await addComment.mutateAsync({ content: commentText });
+                        await addComment.mutateAsync({ text: commentText });
                         setCommentText("");
                       }}
                     >

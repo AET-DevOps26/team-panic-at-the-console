@@ -23,7 +23,7 @@ function CreateIncidentDialog() {
 
   async function handleCreate() {
     try {
-      await createIncident.mutateAsync({ title, description: description || null, severity });
+      await createIncident.mutateAsync({ title, severity });
       setOpen(false);
       setTitle("");
       setDescription("");
