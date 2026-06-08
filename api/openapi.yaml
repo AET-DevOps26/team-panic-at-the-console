@@ -11,10 +11,10 @@ info:
 tags:
   - name: health
     description: Service health and readiness.
+  - name: incidents
+    description: Incident lifecycle management (incident-service).
   - name: genai
     description: AI-assisted incident analysis (on-demand regeneration triggers).
-  - name: incidents
-    description: Incident read APIs and internal write-back endpoints used by genai-service.
   - name: auth
     description: |
       Registration, login, and logout (user-service). On login, user-service sets an httpOnly `session`
@@ -58,205 +58,7 @@ paths:
         "400":
           description: Bad request
 
-  /incidents/{incidentId}/genai/summary:
-    post:
-      operationId: regenerateSummary
-      summary: Trigger summary regeneration for an incident
-      tags: [genai]
-      parameters:
-        - $ref: "#/components/parameters/IncidentIdParam"
-      responses:
-        "202":
-          $ref: "#/components/responses/RegenAccepted"
-        "404":
-          $ref: "#/components/responses/IncidentNotFound"
-
-  /incidents/{incidentId}/genai/severity:
-    post:
-      operationId: regenerateSeverity
-      summary: Trigger severity suggestion regeneration for an incident
-      tags: [genai]
-      parameters:
-        - $ref: "#/components/parameters/IncidentIdParam"
-      responses:
-        "202":
-          $ref: "#/components/responses/RegenAccepted"
-        "404":
-          $ref: "#/components/responses/IncidentNotFound"
-
-  /incidents/{incidentId}/genai/solutions:
-    post:
-      operationId: regenerateSolutions
-      summary: Trigger solution suggestions regeneration for an incident
-      tags: [genai]
-      parameters:
-        - $ref: "#/components/parameters/IncidentIdParam"
-      responses:
-        "202":
-          $ref: "#/components/responses/RegenAccepted"
-        "404":
-          $ref: "#/components/responses/IncidentNotFound"
-
-  /incidents/{incidentId}/genai/postmortem:
-    post:
-      operationId: regeneratePostmortem
-      summary: Trigger postmortem regeneration for a resolved incident
-      tags: [genai]
-      parameters:
-        - $ref: "#/components/parameters/IncidentIdParam"
-      responses:
-        "202":
-          $ref: "#/components/responses/RegenAccepted"
-        "404":
-          $ref: "#/components/responses/IncidentNotFound"
-        "409":
-          $ref: "#/components/responses/IncidentNotResolved"
-
-  /incidents/{incidentId}:
-    get:
-      operationId: getIncident
-      summary: Fetch a single incident
-      tags: [incidents]
-      parameters:
-        - $ref: "#/components/parameters/IncidentIdParam"
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Incident"
-        "404":
-          description: Incident not found
-
-  /incidents/{incidentId}/events:
-    get:
-      operationId: listIncidentEvents
-      summary: List Events from the Event Log for one incident, in chronological order
-      tags: [incidents]
-      parameters:
-        - $ref: "#/components/parameters/IncidentIdParam"
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/IncidentEvent"
-        "404":
-          description: Incident not found
-
-  /incidents/{incidentId}/genai/summary/result:
-    patch:
-      operationId: writeIncidentSummary
-      summary: (internal) Write AI-generated Summary back to incident-service
-      description: |
-        Called by genai-service after an Ollama generation completes.
-        Cluster-internal only; not exposed via the gateway.
-      tags: [incidents]
-      parameters:
-        - $ref: "#/components/parameters/IncidentIdParam"
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/SummaryPatch"
-      responses:
-        "204":
-          description: Saved
-        "404":
-          description: Incident not found
-
-  /incidents/{incidentId}/genai/severity/result:
-    patch:
-      operationId: writeIncidentSeveritySuggestion
-      summary: (internal) Write AI-suggested Severity back to incident-service
-      tags: [incidents]
-      parameters:
-        - $ref: "#/components/parameters/IncidentIdParam"
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/SeverityPatch"
-      responses:
-        "204":
-          description: Saved
-        "404":
-          description: Incident not found
-
-  /incidents/{incidentId}/genai/solutions/result:
-    patch:
-      operationId: writeIncidentSolutions
-      summary: (internal) Write AI-generated Solution Suggestions back to incident-service
-      tags: [incidents]
-      parameters:
-        - $ref: "#/components/parameters/IncidentIdParam"
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/SolutionsPatch"
-      responses:
-        "204":
-          description: Saved
-        "404":
-          description: Incident not found
-
-  /incidents/{incidentId}/genai/postmortem/result:
-    patch:
-      operationId: writeIncidentPostmortem
-      summary: (internal) Write AI-generated Postmortem back to incident-service
-      tags: [incidents]
-      parameters:
-        - $ref: "#/components/parameters/IncidentIdParam"
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/PostmortemPatch"
-      responses:
-        "204":
-          description: Saved
-        "404":
-          description: Incident not found
-        "409":
-          description: Incident not in resolved state
-
   /incidents:
-    post:
-      operationId: createIncident
-      summary: Create a new incident manually
-      tags: [incidents]
-      security: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/CreateIncidentRequest"
-      responses:
-        "201":
-          description: Incident created
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Incident"
-        "400":
-          description: Invalid request
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "401":
-          description: Not authenticated
-
     get:
       operationId: listIncidents
       summary: List incidents with optional filtering
@@ -286,6 +88,49 @@ paths:
                 $ref: "#/components/schemas/IncidentListResponse"
         "401":
           description: Not authenticated
+    post:
+      operationId: createIncident
+      summary: Create a new incident manually
+      tags: [incidents]
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateIncidentRequest"
+      responses:
+        "201":
+          description: Incident created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Incident"
+        "400":
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Not authenticated
+
+  /incidents/{incidentId}:
+    get:
+      operationId: getIncident
+      summary: Fetch a single incident
+      tags: [incidents]
+      parameters:
+        - $ref: "#/components/parameters/IncidentIdParam"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Incident"
+        "404":
+          description: Incident not found
 
   /incidents/{incidentId}/status:
     patch:
@@ -394,7 +239,46 @@ paths:
         "404":
           $ref: "#/components/responses/IncidentNotFound"
 
+  /incidents/{incidentId}/events:
+    get:
+      operationId: listIncidentEvents
+      summary: List Events from the Event Log for one incident, in chronological order
+      tags: [incidents]
+      parameters:
+        - $ref: "#/components/parameters/IncidentIdParam"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/IncidentEvent"
+        "404":
+          description: Incident not found
+
   /incidents/{incidentId}/comments:
+    get:
+      operationId: listComments
+      summary: List comments on an incident
+      tags: [incidents]
+      security: []
+      parameters:
+        - $ref: "#/components/parameters/IncidentIdParam"
+        - $ref: "#/components/parameters/PageParam"
+        - $ref: "#/components/parameters/SizeParam"
+      responses:
+        "200":
+          description: List of comments
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CommentListResponse"
+        "401":
+          description: Not authenticated
+        "404":
+          $ref: "#/components/responses/IncidentNotFound"
     post:
       operationId: addComment
       summary: Add a comment to an incident (immutable)
@@ -426,26 +310,140 @@ paths:
         "404":
           $ref: "#/components/responses/IncidentNotFound"
 
-    get:
-      operationId: listComments
-      summary: List comments on an incident
-      tags: [incidents]
-      security: []
+  /incidents/{incidentId}/genai/summary:
+    post:
+      operationId: regenerateSummary
+      summary: Trigger summary regeneration for an incident
+      tags: [genai]
       parameters:
         - $ref: "#/components/parameters/IncidentIdParam"
-        - $ref: "#/components/parameters/PageParam"
-        - $ref: "#/components/parameters/SizeParam"
       responses:
-        "200":
-          description: List of comments
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/CommentListResponse"
-        "401":
-          description: Not authenticated
+        "202":
+          $ref: "#/components/responses/RegenAccepted"
         "404":
           $ref: "#/components/responses/IncidentNotFound"
+
+  /incidents/{incidentId}/genai/severity:
+    post:
+      operationId: regenerateSeverity
+      summary: Trigger severity suggestion regeneration for an incident
+      tags: [genai]
+      parameters:
+        - $ref: "#/components/parameters/IncidentIdParam"
+      responses:
+        "202":
+          $ref: "#/components/responses/RegenAccepted"
+        "404":
+          $ref: "#/components/responses/IncidentNotFound"
+
+  /incidents/{incidentId}/genai/solutions:
+    post:
+      operationId: regenerateSolutions
+      summary: Trigger solution suggestions regeneration for an incident
+      tags: [genai]
+      parameters:
+        - $ref: "#/components/parameters/IncidentIdParam"
+      responses:
+        "202":
+          $ref: "#/components/responses/RegenAccepted"
+        "404":
+          $ref: "#/components/responses/IncidentNotFound"
+
+  /incidents/{incidentId}/genai/postmortem:
+    post:
+      operationId: regeneratePostmortem
+      summary: Trigger postmortem regeneration for a resolved incident
+      tags: [genai]
+      parameters:
+        - $ref: "#/components/parameters/IncidentIdParam"
+      responses:
+        "202":
+          $ref: "#/components/responses/RegenAccepted"
+        "404":
+          $ref: "#/components/responses/IncidentNotFound"
+        "409":
+          $ref: "#/components/responses/IncidentNotResolved"
+
+  /incidents/{incidentId}/genai/summary/result:
+    patch:
+      operationId: writeIncidentSummary
+      summary: (internal) Write AI-generated Summary back to incident-service
+      description: |
+        Called by genai-service after an Ollama generation completes.
+        Cluster-internal only; not exposed via the gateway.
+      tags: [incidents]
+      parameters:
+        - $ref: "#/components/parameters/IncidentIdParam"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SummaryPatch"
+      responses:
+        "204":
+          description: Saved
+        "404":
+          description: Incident not found
+
+  /incidents/{incidentId}/genai/severity/result:
+    patch:
+      operationId: writeIncidentSeveritySuggestion
+      summary: (internal) Write AI-suggested Severity back to incident-service
+      tags: [incidents]
+      parameters:
+        - $ref: "#/components/parameters/IncidentIdParam"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SeverityPatch"
+      responses:
+        "204":
+          description: Saved
+        "404":
+          description: Incident not found
+
+  /incidents/{incidentId}/genai/solutions/result:
+    patch:
+      operationId: writeIncidentSolutions
+      summary: (internal) Write AI-generated Solution Suggestions back to incident-service
+      tags: [incidents]
+      parameters:
+        - $ref: "#/components/parameters/IncidentIdParam"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SolutionsPatch"
+      responses:
+        "204":
+          description: Saved
+        "404":
+          description: Incident not found
+
+  /incidents/{incidentId}/genai/postmortem/result:
+    patch:
+      operationId: writeIncidentPostmortem
+      summary: (internal) Write AI-generated Postmortem back to incident-service
+      tags: [incidents]
+      parameters:
+        - $ref: "#/components/parameters/IncidentIdParam"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PostmortemPatch"
+      responses:
+        "204":
+          description: Saved
+        "404":
+          description: Incident not found
+        "409":
+          description: Incident not in resolved state
 
   /auth/register:
     post:
@@ -606,20 +604,20 @@ components:
         maximum: 100
         default: 50
 
-    PageParam:
-      name: page
-      in: query
-      required: false
-      schema:
-        type: integer
-        minimum: 0
-        default: 0
-
     UserListOffsetParam:
       name: offset
       in: query
       required: false
       description: Number of users to skip for pagination.
+      schema:
+        type: integer
+        minimum: 0
+        default: 0
+
+    PageParam:
+      name: page
+      in: query
+      required: false
       schema:
         type: integer
         minimum: 0
@@ -887,6 +885,132 @@ components:
             - Roll back payment-service to v2.3.9
             - Scale checkout-api replicas to 6
 
+    CreateIncidentRequest:
+      type: object
+      description: Request to create a new incident manually.
+      required: [title, severity]
+      additionalProperties: false
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 500
+          example: Database migration rollback needed
+        severity:
+          $ref: "#/components/schemas/Severity"
+
+    UpdateStatusRequest:
+      type: object
+      description: Request to update incident status.
+      required: [status]
+      additionalProperties: false
+      properties:
+        status:
+          $ref: "#/components/schemas/IncidentStatus"
+
+    EscalateSeverityRequest:
+      type: object
+      description: Request to escalate severity (only higher severities allowed).
+      required: [severity]
+      additionalProperties: false
+      properties:
+        severity:
+          $ref: "#/components/schemas/Severity"
+
+    AssignIncidentRequest:
+      type: object
+      description: Request to assign or unassign responders.
+      required: [userIds]
+      additionalProperties: false
+      properties:
+        userIds:
+          type: array
+          items:
+            type: string
+            format: uuid
+          description: UUIDs of users to assign. Send empty array to clear all assignments.
+          example: ["018e2c5f-1234-7abc-8def-0000000000aa"]
+
+    Comment:
+      type: object
+      description: An immutable comment on an incident, authored by a user.
+      required: [id, incidentId, authorId, text, createdAt]
+      additionalProperties: false
+      properties:
+        id:
+          type: string
+          format: uuid
+        incidentId:
+          type: string
+          format: uuid
+        authorId:
+          type: string
+          format: uuid
+          description: UUID of the user who wrote the comment
+        text:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+
+    CreateCommentRequest:
+      type: object
+      description: Request to add a comment to an incident.
+      required: [text]
+      additionalProperties: false
+      properties:
+        text:
+          type: string
+          minLength: 1
+          maxLength: 5000
+          example: "Rolled back deployment v2.4.1; monitoring error rate now."
+
+    CommentListResponse:
+      type: object
+      required: [items, total, page, size]
+      additionalProperties: false
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/Comment"
+        total:
+          type: integer
+          minimum: 0
+          example: 3
+        page:
+          type: integer
+          minimum: 0
+          example: 0
+        size:
+          type: integer
+          minimum: 1
+          maximum: 100
+          example: 50
+
+    IncidentListResponse:
+      type: object
+      required: [items, total, page, size]
+      additionalProperties: false
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/Incident"
+        total:
+          type: integer
+          minimum: 0
+          example: 5
+        page:
+          type: integer
+          minimum: 0
+          example: 0
+        size:
+          type: integer
+          minimum: 1
+          maximum: 100
+          example: 50
+
     PostmortemResponse:
       type: object
       description: >
@@ -971,129 +1095,3 @@ components:
           minItems: 1
           items:
             type: string
-
-    CreateIncidentRequest:
-      type: object
-      description: Request to create a new incident manually.
-      required: [title, severity]
-      additionalProperties: false
-      properties:
-        title:
-          type: string
-          minLength: 1
-          maxLength: 500
-          example: Database migration rollback needed
-        severity:
-          $ref: "#/components/schemas/Severity"
-
-    UpdateStatusRequest:
-      type: object
-      description: Request to update incident status.
-      required: [status]
-      additionalProperties: false
-      properties:
-        status:
-          $ref: "#/components/schemas/IncidentStatus"
-
-    EscalateSeverityRequest:
-      type: object
-      description: Request to escalate severity (only higher severities allowed).
-      required: [severity]
-      additionalProperties: false
-      properties:
-        severity:
-          $ref: "#/components/schemas/Severity"
-
-    AssignIncidentRequest:
-      type: object
-      description: Request to assign or unassign responders.
-      required: [userIds]
-      additionalProperties: false
-      properties:
-        userIds:
-          type: array
-          items:
-            type: string
-            format: uuid
-          description: UUIDs of users to assign. Send empty array to clear all assignments.
-          example: ["018e2c5f-1234-7abc-8def-0000000000aa"]
-
-    CreateCommentRequest:
-      type: object
-      description: Request to add a comment to an incident.
-      required: [text]
-      additionalProperties: false
-      properties:
-        text:
-          type: string
-          minLength: 1
-          maxLength: 5000
-          example: "Rolled back deployment v2.4.1; monitoring error rate now."
-
-    Comment:
-      type: object
-      description: An immutable comment on an incident, authored by a user.
-      required: [id, incidentId, authorId, text, createdAt]
-      additionalProperties: false
-      properties:
-        id:
-          type: string
-          format: uuid
-        incidentId:
-          type: string
-          format: uuid
-        authorId:
-          type: string
-          format: uuid
-          description: UUID of the user who wrote the comment
-        text:
-          type: string
-        createdAt:
-          type: string
-          format: date-time
-
-    CommentListResponse:
-      type: object
-      required: [items, total, page, size]
-      additionalProperties: false
-      properties:
-        items:
-          type: array
-          items:
-            $ref: "#/components/schemas/Comment"
-        total:
-          type: integer
-          minimum: 0
-          example: 3
-        page:
-          type: integer
-          minimum: 0
-          example: 0
-        size:
-          type: integer
-          minimum: 1
-          maximum: 100
-          example: 50
-
-    IncidentListResponse:
-      type: object
-      required: [items, total, page, size]
-      additionalProperties: false
-      properties:
-        items:
-          type: array
-          items:
-            $ref: "#/components/schemas/Incident"
-        total:
-          type: integer
-          minimum: 0
-          example: 5
-        page:
-          type: integer
-          minimum: 0
-          example: 0
-        size:
-          type: integer
-          minimum: 1
-          maximum: 100
-          example: 50

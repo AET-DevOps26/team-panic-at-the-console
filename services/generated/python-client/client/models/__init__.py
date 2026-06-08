@@ -6,6 +6,7 @@ from .comment_list_response import CommentListResponse
 from .create_comment_request import CreateCommentRequest
 from .create_incident_request import CreateIncidentRequest
 from .error_response import ErrorResponse
+from .escalate_severity_request import EscalateSeverityRequest
 from .health_check_response_200 import HealthCheckResponse200
 from .incident import Incident
 from .incident_event import IncidentEvent
@@ -36,6 +37,7 @@ __all__ = (
     "CreateCommentRequest",
     "CreateIncidentRequest",
     "ErrorResponse",
+    "EscalateSeverityRequest",
     "HealthCheckResponse200",
     "Incident",
     "IncidentEvent",

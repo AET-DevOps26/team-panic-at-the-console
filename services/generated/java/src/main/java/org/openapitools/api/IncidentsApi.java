@@ -53,7 +53,7 @@ import jakarta.annotation.Generated;
 
 @Generated(value = "org.openapitools.codegen.languages.SpringCodegen", comments = "Generator version: 7.14.0")
 @Validated
-@Tag(name = "incidents", description = "Incident read APIs and internal write-back endpoints used by genai-service.")
+@Tag(name = "incidents", description = "Incident lifecycle management (incident-service).")
 public interface IncidentsApi {
 
     default Optional<NativeWebRequest> getRequest() {

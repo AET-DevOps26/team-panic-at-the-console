@@ -2,6 +2,7 @@
 # See container-ci.yml matrix `include` entries and per-service Dockerfiles.
 *
 !gateway/
+!frontend/
 !incident-service/
 !genai-service/
 !user-service/

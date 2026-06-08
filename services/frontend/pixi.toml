@@ -1,0 +1,13 @@
+[workspace]
+name = "frontend"
+channels = ["conda-forge"]
+exclude-newer = "7d"
+platforms = ["osx-arm64", "osx-64", "linux-64", "linux-aarch64", "win-64"]
+
+[dependencies]
+nodejs = ">=22,<23"
+
+[tasks]
+install = "npm install"
+dev = "npm run dev"
+prod = "npm run build && npm run preview"
