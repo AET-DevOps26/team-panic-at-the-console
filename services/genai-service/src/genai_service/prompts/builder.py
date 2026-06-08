@@ -23,32 +23,45 @@ class Prompt:
     response_model: type[BaseModel]
 
 
-_SYSTEM_PROMPTS: dict[PromptTask, str] = {
-    PromptTask.SUMMARY: (
-        "You are an SRE assistant. Summarize the incident's current state in one or two sentences. "
-        "Be specific and factual. Use only the incident metadata and event log provided."
-    ),
-    PromptTask.SEVERITY_SUGGESTION: (
-        "You are an SRE assistant. Suggest a severity (SEV1=highest, SEV4=lowest) for this incident "
-        "based on impact and scope visible in the metadata and event log. Justify the choice in one sentence."
-    ),
-    PromptTask.SOLUTION_SUGGESTIONS: (
-        "You are an SRE assistant. Propose concrete next steps an on-call engineer can try to mitigate "
-        "or diagnose the incident. Order by likelihood of impact. Keep each step actionable."
-    ),
-    PromptTask.POSTMORTEM: (
-        "You are an SRE assistant. Produce a post-incident review from the metadata and event log: "
-        "the root cause, a chronological timeline of what happened, and follow-up action items "
-        "to prevent recurrence."
-    ),
-}
+@dataclass(frozen=True)
+class _TaskSpec:
+    """The two facts that define a PromptTask: its system prompt and the schema its
+    response must satisfy. One entry per task keeps both aligned at a single key."""
+
+    system: str
+    response_model: type[BaseModel]
 
 
-_RESPONSE_MODELS: dict[PromptTask, type[BaseModel]] = {
-    PromptTask.SUMMARY: SummaryResponse,
-    PromptTask.SEVERITY_SUGGESTION: SeverityResponse,
-    PromptTask.SOLUTION_SUGGESTIONS: SolutionsResponse,
-    PromptTask.POSTMORTEM: PostmortemResponse,
+_TASK_SPECS: dict[PromptTask, _TaskSpec] = {
+    PromptTask.SUMMARY: _TaskSpec(
+        system=(
+            "You are an SRE assistant. Summarize the incident's current state in one or two sentences. "
+            "Be specific and factual. Use only the incident metadata and event log provided."
+        ),
+        response_model=SummaryResponse,
+    ),
+    PromptTask.SEVERITY_SUGGESTION: _TaskSpec(
+        system=(
+            "You are an SRE assistant. Suggest a severity (SEV1=highest, SEV4=lowest) for this incident "
+            "based on impact and scope visible in the metadata and event log. Justify the choice in one sentence."
+        ),
+        response_model=SeverityResponse,
+    ),
+    PromptTask.SOLUTION_SUGGESTIONS: _TaskSpec(
+        system=(
+            "You are an SRE assistant. Propose concrete next steps an on-call engineer can try to mitigate "
+            "or diagnose the incident. Order by likelihood of impact. Keep each step actionable."
+        ),
+        response_model=SolutionsResponse,
+    ),
+    PromptTask.POSTMORTEM: _TaskSpec(
+        system=(
+            "You are an SRE assistant. Produce a post-incident review from the metadata and event log: "
+            "the root cause, a chronological timeline of what happened, and follow-up action items "
+            "to prevent recurrence."
+        ),
+        response_model=PostmortemResponse,
+    ),
 }
 
 
@@ -80,10 +93,11 @@ class PromptBuilder:
                 f"Postmortem requires a resolved incident; status is {incident.status.value!r}."
             )
 
+        spec = _TASK_SPECS[task]
         return Prompt(
-            system=_SYSTEM_PROMPTS[task],
+            system=spec.system,
             user=self._format_context(incident, events),
-            response_model=_RESPONSE_MODELS[task],
+            response_model=spec.response_model,
         )
 
     def _format_context(
