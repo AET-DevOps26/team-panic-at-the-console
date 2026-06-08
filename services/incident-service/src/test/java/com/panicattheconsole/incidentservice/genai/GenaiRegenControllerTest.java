@@ -54,28 +54,29 @@ class GenaiRegenControllerTest {
                 .andExpect(jsonPath("$.task").value("POSTMORTEM"));
     }
 
-        @Test
-        void summary_returns404_whenNotFound() throws Exception {
+    @Test
+    void summary_returns404_whenNotFound() throws Exception {
         org.mockito.Mockito.doThrow(new NoSuchElementException("incident missing"))
-            .when(incidentService)
-            .requestRegeneration(
+                .when(incidentService)
+                .requestRegeneration(
                     java.util.UUID.fromString(INCIDENT_ID),
                     org.openapitools.model.RegenAccepted.TaskEnum.SUMMARY);
 
         mvc.perform(post("/incidents/{id}/genai/summary", INCIDENT_ID))
-            .andExpect(status().isNotFound())
-            .andExpect(jsonPath("$.error").value("NOT_FOUND"))
-            .andExpect(jsonPath("$.message").value("incident missing"));
-        }
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.error").value("NOT_FOUND"))
+                .andExpect(jsonPath("$.message").value("incident missing"));
+    }
 
-        @Test
-        void postmortem_returns409_whenNotAllowed() throws Exception {
+    @Test
+    void postmortem_returns409_whenNotAllowed() throws Exception {
         org.mockito.Mockito.doThrow(new IllegalStateException("not allowed"))
-            .when(incidentService).requestPostmortemRegeneration(java.util.UUID.fromString(INCIDENT_ID));
+                .when(incidentService)
+                .requestPostmortemRegeneration(java.util.UUID.fromString(INCIDENT_ID));
 
         mvc.perform(post("/incidents/{id}/genai/postmortem", INCIDENT_ID))
-            .andExpect(status().isConflict())
-            .andExpect(jsonPath("$.error").value("CONFLICT"))
-            .andExpect(jsonPath("$.message").value("not allowed"));
-        }
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.error").value("CONFLICT"))
+                .andExpect(jsonPath("$.message").value("not allowed"));
+    }
 }

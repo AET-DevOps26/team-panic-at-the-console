@@ -12,22 +12,11 @@ public class GatewayProperties {
     @NotBlank
     private String incidentServiceUrl;
 
-    @NotBlank
-    private String genaiServiceUrl;
-
     public String getIncidentServiceUrl() {
         return incidentServiceUrl;
     }
 
     public void setIncidentServiceUrl(String incidentServiceUrl) {
         this.incidentServiceUrl = incidentServiceUrl;
-    }
-
-    public String getGenaiServiceUrl() {
-        return genaiServiceUrl;
-    }
-
-    public void setGenaiServiceUrl(String genaiServiceUrl) {
-        this.genaiServiceUrl = genaiServiceUrl;
     }
 }

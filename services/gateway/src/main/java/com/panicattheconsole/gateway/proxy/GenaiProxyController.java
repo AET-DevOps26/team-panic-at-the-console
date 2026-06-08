@@ -3,33 +3,19 @@ package com.panicattheconsole.gateway.proxy;
 import java.util.UUID;
 
 import org.openapitools.api.GenaiApi;
-import org.openapitools.model.GenaiHealthResponse;
 import org.openapitools.model.RegenAccepted;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.client.RestClient;
 
-/**
- * Proxies OpenAPI genai routes: regen triggers to incident-service, Ollama health to genai-service.
- */
 @RestController
 class GenaiProxyController implements GenaiApi {
 
     private final RestClient incidentServiceClient;
-    private final RestClient genaiServiceClient;
 
-    GenaiProxyController(
-            @Qualifier("incidentServiceClient") RestClient incidentServiceClient,
-            @Qualifier("genaiServiceClient") RestClient genaiServiceClient) {
+    GenaiProxyController(@Qualifier("incidentServiceClient") RestClient incidentServiceClient) {
         this.incidentServiceClient = incidentServiceClient;
-        this.genaiServiceClient = genaiServiceClient;
-    }
-
-    @Override
-    public ResponseEntity<GenaiHealthResponse> genaiHealth() {
-        return DownstreamProxy.get(
-                genaiServiceClient, "/api/v1/genai/ollama/health", GenaiHealthResponse.class);
     }
 
     @Override

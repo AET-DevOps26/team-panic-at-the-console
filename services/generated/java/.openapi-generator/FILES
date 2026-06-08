@@ -8,7 +8,6 @@ src/main/java/org/openapitools/model/Comment.java
 src/main/java/org/openapitools/model/CreateCommentRequest.java
 src/main/java/org/openapitools/model/CreateIncidentRequest.java
 src/main/java/org/openapitools/model/ErrorResponse.java
-src/main/java/org/openapitools/model/GenaiHealthResponse.java
 src/main/java/org/openapitools/model/HealthCheck200Response.java
 src/main/java/org/openapitools/model/Incident.java
 src/main/java/org/openapitools/model/IncidentEvent.java

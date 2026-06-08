@@ -12,7 +12,50 @@ TUM DevOps Project · Spring 2026 · Team Panic! At the Console
 
 This repository uses [pixi](https://pixi.sh) for tooling. Use `pixi run` for project tasks. If you change `pixi.toml`, run `pixi lock` afterwards.
 
+### Pixi Usage Rules
+
+**Always use Pixi to run builds, tests, and development commands.**
+
+Do not invoke language-specific tooling directly (e.g. `mvn`, `gradle`, `npm`, `pnpm`, `pytest`) if an equivalent Pixi task exists.
+
+Each service maintains its own Pixi environment. Before working on a service, change into the service directory and use the local Pixi tasks.
+
+Example:
+
+```bash
+cd services/incident-service
+pixi run
+```
+
+Available tasks:
+
+```text
+build
+start
+test
+```
+
+Standard service commands:
+
+```bash
+pixi run start   # Start the service locally
+pixi run build   # Build the service
+pixi run test    # Run the service test suite
+```
+
+When modifying a service:
+
+1. Use the service-local Pixi environment.
+2. Run `pixi run test` before considering the task complete.
+3. Run `pixi run build` when changes affect compilation, packaging, or dependencies.
+4. Report any failing tests or build errors.
+5. Prefer existing Pixi tasks over direct invocation of language-specific tooling.
+
+A change is not considered complete until the relevant Pixi test and build commands succeed.
+
 ## Development Commands
+
+### Repository-Level Tasks
 
 ```bash
 pixi install                   # Install tooling and set up the Pixi environment
@@ -96,3 +139,4 @@ When reviewing PRs, flag:
 - Do not rename CI jobs without updating branch ruleset required status checks in the same PR
 - Do not add root-level language/runtime toolchains until corresponding service manifests exist
 - Keep `README.md` and docs aligned with actual repository state: no aspirational documentation
+- Always use existing Pixi tasks for build, test, lint, and development workflows. Do not invoke language-specific tooling directly when a Pixi task is available.

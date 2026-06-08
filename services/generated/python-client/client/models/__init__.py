@@ -4,7 +4,6 @@ from .comment import Comment
 from .create_comment_request import CreateCommentRequest
 from .create_incident_request import CreateIncidentRequest
 from .error_response import ErrorResponse
-from .genai_health_response import GenaiHealthResponse
 from .health_check_response_200 import HealthCheckResponse200
 from .incident import Incident
 from .incident_event import IncidentEvent
@@ -32,7 +31,6 @@ __all__ = (
     "CreateCommentRequest",
     "CreateIncidentRequest",
     "ErrorResponse",
-    "GenaiHealthResponse",
     "HealthCheckResponse200",
     "Incident",
     "IncidentEvent",
