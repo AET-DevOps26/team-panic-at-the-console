@@ -62,14 +62,16 @@ services:
 
   # ── Application Services ──────────────────────────────────────────────────
 
-  # Routes :8080 like cluster ingress (/api, /swagger). See nginx.conf.
+  # Routes :8080 like cluster ingress (/ -> frontend, /api -> gateway, /swagger). See nginx.conf.
   edge:
     image: nginx:1.27-alpine
     ports:
       - "8080:8080"
     volumes:
-      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./infra/compose/nginx.conf:/etc/nginx/nginx.conf:ro
     depends_on:
+      frontend:
+        condition: service_started
       gateway:
         condition: service_healthy
       swagger-ui:
