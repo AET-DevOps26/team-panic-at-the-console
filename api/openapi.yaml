@@ -58,22 +58,6 @@ paths:
         "400":
           description: Bad request
 
-  /genai/health:
-    get:
-      operationId: genaiHealth
-      summary: GenAI service health check
-      tags: [genai]
-      security: []
-      responses:
-        "200":
-          description: GenAI service and Ollama reachability status
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/GenaiHealthResponse"
-        "503":
-          description: Ollama unreachable
-
   /incidents/{incidentId}/genai/summary:
     post:
       operationId: regenerateSummary
@@ -779,22 +763,6 @@ components:
         message:
           type: string
           example: Invalid email or password
-
-    GenaiHealthResponse:
-      type: object
-      description: GenAI service health status including Ollama reachability.
-      required: [status, ollamaReachable, model]
-      additionalProperties: false
-      properties:
-        status:
-          type: string
-          example: ok
-        ollamaReachable:
-          type: boolean
-          example: true
-        model:
-          type: string
-          example: qwen2.5:3b
 
     RegenAccepted:
       type: object

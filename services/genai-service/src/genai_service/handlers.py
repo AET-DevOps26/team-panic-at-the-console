@@ -1,5 +1,8 @@
 import asyncio
+from collections.abc import Awaitable, Callable
+from dataclasses import dataclass
 from http import HTTPStatus
+from typing import Any
 from uuid import UUID
 
 import structlog
@@ -23,21 +26,52 @@ from client.models import (
     SummaryPatch,
 )
 from client.types import Response
-from genai_service.ollama_client import OllamaClient
-from genai_service.prompts import (
-    PostmortemResponse,
-    PromptBuilder,
-    PromptTask,
-    SeverityResponse,
-    SolutionsResponse,
-    SummaryResponse,
-)
+from genai_service.llm import LLMClient
+from genai_service.prompts import PromptBuilder, PromptTask
 from genai_service.regen_task import RegenTask
 
 logger = structlog.get_logger(__name__)
 
 _POSTMORTEM_RESOLVE_RETRIES = 3
 _POSTMORTEM_RESOLVE_DELAY_SECONDS = 0.5
+
+
+@dataclass(frozen=True)
+class _PatchSpec:
+    """How to turn an Ollama response for one PromptTask into an incident-service PATCH.
+
+    `to_body` adapts the validated response model into the matching Patch body;
+    `write` is the generated client call that PATCHes it back. The response model
+    itself is not named here: it lives on the Prompt produced by PromptBuilder, so
+    there is a single source of truth for which schema each task uses.
+    """
+
+    to_body: Callable[[Any], Any]
+    write: Callable[..., Awaitable[Response[Any]]]
+
+
+_PATCH_SPECS: dict[PromptTask, _PatchSpec] = {
+    PromptTask.SUMMARY: _PatchSpec(
+        to_body=lambda r: SummaryPatch(summary=r.summary),
+        write=write_incident_summary.asyncio_detailed,
+    ),
+    PromptTask.SEVERITY_SUGGESTION: _PatchSpec(
+        to_body=lambda r: SeverityPatch(severity=r.severity, reason=r.reason),
+        write=write_incident_severity_suggestion.asyncio_detailed,
+    ),
+    PromptTask.SOLUTION_SUGGESTIONS: _PatchSpec(
+        to_body=lambda r: SolutionsPatch(solutions=list(r.solutions)),
+        write=write_incident_solutions.asyncio_detailed,
+    ),
+    PromptTask.POSTMORTEM: _PatchSpec(
+        to_body=lambda r: PostmortemPatch(
+            root_cause=r.root_cause,
+            timeline=r.timeline,
+            action_items=r.action_items,
+        ),
+        write=write_incident_postmortem.asyncio_detailed,
+    ),
+}
 
 
 class IncidentHandlers:
@@ -54,11 +88,11 @@ class IncidentHandlers:
     def __init__(
         self,
         incident_api_client: Client,
-        ollama_client: OllamaClient,
+        llm_client: LLMClient,
         prompt_builder: PromptBuilder,
     ) -> None:
         self._client = incident_api_client
-        self._ollama = ollama_client
+        self._llm = llm_client
         self._prompts = prompt_builder
 
     async def on_incident_created(self, incident_id: str) -> None:
@@ -86,7 +120,9 @@ class IncidentHandlers:
                         status=incident.status.value,
                     )
                     return
-                await self._generate_postmortem(incident_id, incident, events)
+                await self._generate_and_patch(
+                    incident_id, incident, events, PromptTask.POSTMORTEM
+                )
                 log.info("postmortem_generated")
                 return
             except Exception as exc:
@@ -134,80 +170,17 @@ class IncidentHandlers:
         events: list[IncidentEvent],
         task: PromptTask,
     ) -> None:
-        match task:
-            case PromptTask.POSTMORTEM:
-                await self._generate_postmortem(incident_id, incident, events)
-            case PromptTask.SUMMARY:
-                await self._patch_summary(incident_id, incident, events)
-            case PromptTask.SEVERITY_SUGGESTION:
-                await self._patch_severity_suggestion(incident_id, incident, events)
-            case PromptTask.SOLUTION_SUGGESTIONS:
-                await self._patch_solutions(incident_id, incident, events)
-            case _:
-                raise ValueError(f"unsupported prompt task: {task}")
-
-    async def _patch_summary(
-        self, incident_id: str, incident: Incident, events: list[IncidentEvent]
-    ) -> None:
-        prompt = self._prompts.build(incident, events, PromptTask.SUMMARY)
-        result = await self._ollama.generate(
-            prompt.user, system=prompt.system, response_model=SummaryResponse
+        spec = _PATCH_SPECS[task]
+        prompt = self._prompts.build(incident, events, task)
+        result = await self._llm.generate(
+            prompt.user, system=prompt.system, response_model=prompt.response_model
         )
-        response = await write_incident_summary.asyncio_detailed(
+        response = await spec.write(
             incident_id=_uuid(incident_id),
             client=self._client,
-            body=SummaryPatch(summary=result.summary),
+            body=spec.to_body(result),
         )
-        _expect_no_content(response, operation="write summary")
-
-    async def _patch_severity_suggestion(
-        self, incident_id: str, incident: Incident, events: list[IncidentEvent]
-    ) -> None:
-        prompt = self._prompts.build(incident, events, PromptTask.SEVERITY_SUGGESTION)
-        result = await self._ollama.generate(
-            prompt.user, system=prompt.system, response_model=SeverityResponse
-        )
-        response = await write_incident_severity_suggestion.asyncio_detailed(
-            incident_id=_uuid(incident_id),
-            client=self._client,
-            body=SeverityPatch(severity=result.severity, reason=result.reason),
-        )
-        _expect_no_content(response, operation="write severity suggestion")
-
-    async def _patch_solutions(
-        self, incident_id: str, incident: Incident, events: list[IncidentEvent]
-    ) -> None:
-        prompt = self._prompts.build(incident, events, PromptTask.SOLUTION_SUGGESTIONS)
-        result = await self._ollama.generate(
-            prompt.user, system=prompt.system, response_model=SolutionsResponse
-        )
-        response = await write_incident_solutions.asyncio_detailed(
-            incident_id=_uuid(incident_id),
-            client=self._client,
-            body=SolutionsPatch(solutions=list(result.solutions)),
-        )
-        _expect_no_content(response, operation="write solutions")
-
-    async def _generate_postmortem(
-        self,
-        incident_id: str,
-        incident: Incident,
-        events: list[IncidentEvent],
-    ) -> None:
-        prompt = self._prompts.build(incident, events, PromptTask.POSTMORTEM)
-        result = await self._ollama.generate(
-            prompt.user, system=prompt.system, response_model=PostmortemResponse
-        )
-        response = await write_incident_postmortem.asyncio_detailed(
-            incident_id=_uuid(incident_id),
-            client=self._client,
-            body=PostmortemPatch(
-                root_cause=result.root_cause,
-                timeline=result.timeline,
-                action_items=result.action_items,
-            ),
-        )
-        _expect_no_content(response, operation="write postmortem")
+        _expect_no_content(response, operation=f"write {task.value}")
 
     async def _fetch(self, incident_id: str) -> tuple[Incident, list[IncidentEvent]]:
         incident = await get_incident.asyncio(

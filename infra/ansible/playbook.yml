@@ -97,6 +97,12 @@
         dest: "{{ app_dir }}/infra/compose/docker-compose.yml"
         mode: "0644"
 
+    - name: Copy nginx.conf
+      ansible.builtin.copy:
+        src: "{{ local_repo_root }}/infra/compose/nginx.conf"
+        dest: "{{ app_dir }}/infra/compose/nginx.conf"
+        mode: "0644"
+
     - name: Copy init-dbs.sh
       ansible.builtin.copy:
         src: "{{ local_repo_root }}/infra/helm/devops-platform/files/init-dbs.sh"
