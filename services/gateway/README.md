@@ -6,10 +6,10 @@ OpenAPI exploration uses the standalone **swagger-ui** service (`api/openapi.yam
 
 ## Implemented routes
 
-| Route                                 | Action                                      |
-| ------------------------------------- | ------------------------------------------- |
-| `GET /api/v1/health`                  | Gateway liveness (local)                    |
-| `POST /api/v1/incidents/{id}/genai/*` | Proxy to `incident-service` regen endpoints |
+| Route                                 | Action                                        |
+| ------------------------------------- | --------------------------------------------- |
+| `GET /api/v1/health`                  | Gateway liveness (local)                      |
+| `POST /api/v1/incidents/{id}/genai/*` | Proxy to `incident-service` regen endpoints   |
 | `GET/POST/PATCH /api/v1/incidents*`   | Proxy to `incident-service` incident REST API |
 
 GenAI compute runs via NATS (`genai-service`); Ollama reachability is checked on that service (`/api/v1/genai/ollama/health`), not exposed on the gateway.
