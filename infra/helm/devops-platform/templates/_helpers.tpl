@@ -29,3 +29,30 @@ readinessProbe:
   timeoutSeconds: 3
   failureThreshold: 3
 {{- end -}}
+
+{{/*
+Ollama: readiness waits until the configured model is present (matches compose healthcheck).
+Liveness only checks that the server responds; model pull runs in an init container.
+*/}}
+{{- define "devops-platform.ollamaProbes" -}}
+{{- $model := .model | default "qwen2.5:3b" -}}
+{{- $port := required "port is required for ollama probes" .port -}}
+readinessProbe:
+  exec:
+    command:
+      - /bin/sh
+      - -c
+      - ollama list 2>/dev/null | grep -q '{{ $model }}'
+  initialDelaySeconds: 10
+  periodSeconds: 15
+  timeoutSeconds: 5
+  failureThreshold: 40
+livenessProbe:
+  httpGet:
+    path: /
+    port: {{ $port }}
+  initialDelaySeconds: 30
+  periodSeconds: 20
+  timeoutSeconds: 5
+  failureThreshold: 3
+{{- end -}}

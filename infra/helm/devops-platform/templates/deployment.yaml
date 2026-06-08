@@ -8,6 +8,17 @@ metadata:
     app.kubernetes.io/name: {{ $name }}
 spec:
   replicas: 1
+  {{- with $svc.progressDeadlineSeconds }}
+  progressDeadlineSeconds: {{ . }}
+  {{- end }}
+  {{- if $svc.strategy }}
+  strategy:
+    {{- toYaml $svc.strategy | nindent 4 }}
+  {{- else if $svc.persistence }}
+  # RWO volumes cannot mount on two pods during a rolling update.
+  strategy:
+    type: Recreate
+  {{- end }}
   selector:
     matchLabels:
       app.kubernetes.io/name: {{ $name }}
@@ -16,6 +27,31 @@ spec:
       labels:
         app.kubernetes.io/name: {{ $name }}
     spec:
+      {{- if and $svc.modelInit $svc.persistence }}
+      initContainers:
+        - name: pull-model
+          image: {{ required "image.override is required for modelInit" $svc.image.override | quote }}
+          imagePullPolicy: IfNotPresent
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              ollama serve &
+              pid=$!
+              until ollama list >/dev/null 2>&1; do sleep 2; done
+              ollama pull "${OLLAMA_MODEL:-{{ $.Values.global.ollamaModel | default "qwen2.5:3b" }}}"
+              kill "$pid" 2>/dev/null || true
+              wait "$pid" 2>/dev/null || true
+          env:
+            - name: OLLAMA_MODEL
+              value: {{ $.Values.global.ollamaModel | default "qwen2.5:3b" | quote }}
+          {{- with $svc.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          volumeMounts:
+            - name: data
+              mountPath: {{ required "persistence.mountPath is required" $svc.persistence.mountPath }}
+      {{- end }}
       containers:
         - name: {{ $name }}
           {{- if $svc.image.override }}
@@ -28,6 +64,12 @@ spec:
             - containerPort: {{ $svc.port }}
           {{- if $svc.probes }}
           {{- include "devops-platform.httpProbes" (dict "healthPath" $svc.healthPath "port" $svc.port "initialDelaySeconds" ($svc.probeInitialDelaySeconds | default 30) "readinessInitialDelaySeconds" ($svc.probeReadinessInitialDelaySeconds | default 10)) | nindent 10 }}
+          {{- else if $svc.ollamaProbes }}
+          {{- include "devops-platform.ollamaProbes" (dict "port" $svc.port "model" ($.Values.global.ollamaModel | default "qwen2.5:3b")) | nindent 10 }}
+          {{- end }}
+          {{- with $svc.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
           {{- end }}
           {{- $globalEnv := list }}
           {{- if $svc.inheritGlobalEnv }}
