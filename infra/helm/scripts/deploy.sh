@@ -70,6 +70,14 @@ cp -r "$CHART_DIR"/. "$CHART_STAGE/"
 cp "$REPO_ROOT/api/openapi.yaml" "$CHART_STAGE/files/openapi.yaml"
 
 echo ">> helm upgrade --install (namespace=$DEPLOY_NAMESPACE tag=$TAG)"
+HELM_VALUES=(--values "$DEC_VALUES")
+MONITORING_ENC="${MONITORING_VALUES_FILE:-$REPO_ROOT/infra/helm/secrets/values.monitoring.enc.yaml}"
+if [ -f "$MONITORING_ENC" ]; then
+  echo ">> merge monitoring values from $MONITORING_ENC"
+  sops --decrypt "$MONITORING_ENC" > "$WORK_DIR/values.monitoring.dec.yaml"
+  HELM_VALUES+=(--values "$WORK_DIR/values.monitoring.dec.yaml")
+fi
+
 helm upgrade --install devops-platform "$CHART_STAGE" \
   --namespace "$DEPLOY_NAMESPACE" \
   --create-namespace \
@@ -77,4 +85,4 @@ helm upgrade --install devops-platform "$CHART_STAGE" \
   --timeout 10m \
   --rollback-on-failure \
   --set global.image.tag="$TAG" \
-  --values "$DEC_VALUES"
+  "${HELM_VALUES[@]}"

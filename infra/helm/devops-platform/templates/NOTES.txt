@@ -17,6 +17,15 @@ API gateway:
 Swagger UI (OpenAPI):
   http(s)://<ingress-address>{{ .Values.ingress.paths.swagger }}
 {{ end }}
+{{ if .Values.monitoring.enabled }}
+
+Grafana (metrics + GenAI dashboard):
+  http(s)://<ingress-address>{{ .Values.ingress.paths.grafana }}
+  Default login: admin / (see values.monitoring or kube-prometheus-stack.grafana.adminPassword)
+
+Prometheus (cluster-internal):
+  http://{{ .Release.Name }}-kube-prometheus-stack-prometheus:9090
+{{ end }}
 
 NATS (cluster-internal):
   nats://nats:{{ .Values.nats.port }}
