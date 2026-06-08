@@ -1,7 +1,6 @@
 """Contains all the data models used in inputs/outputs"""
 
 from .error_response import ErrorResponse
-from .genai_health_response import GenaiHealthResponse
 from .health_check_response_200 import HealthCheckResponse200
 from .incident import Incident
 from .incident_event import IncidentEvent
@@ -25,7 +24,6 @@ from .user_role import UserRole
 
 __all__ = (
     "ErrorResponse",
-    "GenaiHealthResponse",
     "HealthCheckResponse200",
     "Incident",
     "IncidentEvent",

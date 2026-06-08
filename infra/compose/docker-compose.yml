@@ -62,14 +62,16 @@ services:
 
   # ── Application Services ──────────────────────────────────────────────────
 
-  # Routes :8080 like cluster ingress (/api, /swagger). See nginx.conf.
+  # Routes :8080 like cluster ingress (/ -> frontend, /api -> gateway, /swagger). See nginx.conf.
   edge:
     image: nginx:1.27-alpine
     ports:
       - "8080:8080"
     volumes:
-      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./infra/compose/nginx.conf:/etc/nginx/nginx.conf:ro
     depends_on:
+      frontend:
+        condition: service_started
       gateway:
         condition: service_healthy
       swagger-ui:
@@ -92,15 +94,12 @@ services:
       dockerfile: gateway/Dockerfile
     environment:
       GATEWAY_INCIDENT_SERVICE_URL: http://incident-service:8081
-      GATEWAY_GENAI_SERVICE_URL: http://genai-service:8087
       NATS_URL: ${NATS_URL:-nats://nats:4222}
     healthcheck:
       <<: *healthcheck-spring
       test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://127.0.0.1:8080/api/v1/health || exit 1"]
     depends_on:
       incident-service:
-        condition: service_healthy
-      genai-service:
         condition: service_healthy
     restart: unless-stopped
 

@@ -46,18 +46,23 @@ jobs:
       - name: Validate compose files via Pixi task
         run: pixi run compose-validate
 
+      - name: Verify the canonical command resolves (root discovery, no flags)
+        # What a user actually types: `docker compose` from root, no flags.
+        run: docker compose config -q
+
   compose-smoke:
     name: Smoke-boot full stack
     runs-on: ubuntu-latest
     # Gate the expensive boot/build on config validation passing first.
     needs: compose-config
-    # Frontend and swagger-ui are excluded - static assets, no runtime wiring to test.
+    # Boot via the canonical flag-free `docker compose`, so CI runs what users run.
     # Ollama pulls a multi-GB model on first boot; we cache the volume across runs.
     env:
-      SMOKE_SERVICES: "postgres nats ollama ollama-init gateway incident-service event-service rule-engine user-service notification-service webhook-service genai-service"
+      SMOKE_SERVICES: "postgres nats ollama ollama-init gateway incident-service event-service rule-engine user-service notification-service webhook-service genai-service edge swagger-ui"
+      # frontend is WIP (served on :3000, not via edge). The coverage guard below
+      # fails if any service is in neither list, so none can escape unnoticed.
+      EXCLUDED_SERVICES: "frontend"
       COMPOSE_PROJECT: "smoke"
-      COMPOSE_FILE: "infra/compose/docker-compose.yml"
-      COMPOSE_ENV_FILE: ".env.example"
       OLLAMA_VOLUME: "smoke_ollama_data"
       OLLAMA_MODEL: "qwen2.5:3b"
     steps:
@@ -65,6 +70,21 @@ jobs:
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           persist-credentials: false
+
+      - name: Ensure every compose service is smoke-tested or explicitly excluded
+        run: |
+          set -euo pipefail
+          read -ra smoke <<< "${SMOKE_SERVICES}"
+          read -ra excluded <<< "${EXCLUDED_SERVICES}"
+          all=$(docker compose config --services | sort -u)
+          covered=$(printf '%s\n' "${smoke[@]}" "${excluded[@]}" | sort -u)
+          missing=$(comm -23 <(printf '%s\n' "${all}") <(printf '%s\n' "${covered}") || true)
+          if [ -n "${missing}" ]; then
+            echo "::error::Compose services neither smoke-tested nor excluded:"
+            echo "${missing}"
+            echo "Add each to SMOKE_SERVICES or EXCLUDED_SERVICES in compose-validate.yml."
+            exit 1
+          fi
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@d7f5e7f509e45cec5c76c4d5afdd7de93d0b3df5 # v4.1.0
@@ -91,28 +111,14 @@ jobs:
         run: |
           set -euo pipefail
           read -ra services <<< "${SMOKE_SERVICES}"
-          docker compose \
-            -p "${COMPOSE_PROJECT}" \
-            --project-directory . \
-            --env-file "${COMPOSE_ENV_FILE}" \
-            -f "${COMPOSE_FILE}" \
-            up -d --build "${services[@]}"
+          docker compose -p "${COMPOSE_PROJECT}" up -d --build "${services[@]}"
 
       - name: Wait for ollama-init to complete model pull
         id: ollama-init
         run: |
           set -euo pipefail
-          # ollama-init exits 0 once the model is pulled; --wait can't represent
-          # that, so we use docker wait directly. Resolve the container id via
-          # compose so we don't depend on the `<project>-<service>-1` name.
-          # -a is required because ollama-init may have already exited by now
-          # (the model pulls fast from Ollama's Azure-adjacent CDN).
-          cid=$(docker compose \
-            -p "${COMPOSE_PROJECT}" \
-            --project-directory . \
-            --env-file "${COMPOSE_ENV_FILE}" \
-            -f "${COMPOSE_FILE}" \
-            ps -aq ollama-init)
+          # ollama-init is one-shot; docker wait its exit code (-a: may already be gone).
+          cid=$(docker compose -p "${COMPOSE_PROJECT}" ps -aq ollama-init)
           if [ -z "${cid}" ]; then
             echo "::error::ollama-init container not found"
             exit 1
@@ -125,18 +131,38 @@ jobs:
         id: wait
         run: |
           set -euo pipefail
-          # ollama-init is excluded - it's a one-shot container that exited 0
-          # in the previous step, and --wait would treat that as a failure.
-          # --no-recreate keeps the existing containers in place.
+          # ollama-init excluded (already exited 0; --wait would call that a failure).
           docker compose \
             -p "${COMPOSE_PROJECT}" \
-            --project-directory . \
-            --env-file "${COMPOSE_ENV_FILE}" \
-            -f "${COMPOSE_FILE}" \
             up -d --no-recreate --wait --wait-timeout 600 \
             postgres nats ollama gateway incident-service event-service \
             rule-engine user-service notification-service webhook-service \
-            genai-service
+            genai-service edge swagger-ui
+
+      - name: Probe edge proxy over HTTP
+        id: probe
+        # "up" != "serving": would have caught the edge mounting an empty
+        # nginx.conf/ dir over its config (ran fine, routed nothing).
+        run: |
+          set -euo pipefail
+          probe() {
+            path="$1"; want="$2"
+            for ((i = 0; i < 15; i++)); do
+              code=$(curl -sS -o /dev/null -w '%{http_code}' -L "http://localhost:8080${path}" 2>/dev/null || true)
+              if [ "${code}" = "${want}" ]; then
+                echo "GET :8080${path} -> ${code}"
+                return 0
+              fi
+              sleep 2
+            done
+            echo "::error::GET :8080${path} -> ${code:-no response} (expected ${want})"
+            return 1
+          }
+          probe /api/v1/health 200
+          probe /swagger 200
+          # Asserts the / -> frontend route is wired. Frontend is still a
+          # placeholder, so edge returns 502; flip this to 200 once it serves.
+          probe / 502
 
       - name: Save Ollama model cache
         if: success() && steps.ollama-cache.outputs.cache-hit != 'true'
@@ -152,24 +178,20 @@ jobs:
             alpine sh -c "cp -a /src/. /dest/ && chmod -R a+rX /dest/"
 
       - name: Dump container status and logs on failure
-        if: failure() && (steps.boot.outcome == 'failure' || steps.ollama-init.outcome == 'failure' || steps.wait.outcome == 'failure')
+        if: failure() && (steps.boot.outcome == 'failure' || steps.ollama-init.outcome == 'failure' || steps.wait.outcome == 'failure' || steps.probe.outcome == 'failure')
         run: |
           set -euo pipefail
           read -ra services <<< "${SMOKE_SERVICES}"
           echo "::group::docker compose ps"
-          docker compose -p "${COMPOSE_PROJECT}" --project-directory . -f "${COMPOSE_FILE}" ps
+          docker compose -p "${COMPOSE_PROJECT}" ps
           echo "::endgroup::"
           for svc in "${services[@]}"; do
             echo "::group::logs - ${svc}"
-            docker compose -p "${COMPOSE_PROJECT}" --project-directory . -f "${COMPOSE_FILE}" logs --tail=200 "${svc}" || true
+            docker compose -p "${COMPOSE_PROJECT}" logs --tail=200 "${svc}" || true
             echo "::endgroup::"
           done
 
       - name: Tear down stack
         if: always()
         run: |
-          docker compose \
-            -p "${COMPOSE_PROJECT}" \
-            --project-directory . \
-            -f "${COMPOSE_FILE}" \
-            down --remove-orphans --volumes
+          docker compose -p "${COMPOSE_PROJECT}" down --remove-orphans --volumes
