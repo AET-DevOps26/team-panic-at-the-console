@@ -8,19 +8,29 @@ import httpx
 from ... import errors
 from ...client import AuthenticatedClient, Client
 from ...models.incident import Incident
+from ...models.update_incident_request import UpdateIncidentRequest
 from ...types import Response
 
 
 def _get_kwargs(
     incident_id: UUID,
+    *,
+    body: UpdateIncidentRequest,
 ) -> dict[str, Any]:
+    headers: dict[str, Any] = {}
+
     _kwargs: dict[str, Any] = {
-        "method": "get",
+        "method": "patch",
         "url": "/incidents/{incident_id}".format(
             incident_id=quote(str(incident_id), safe=""),
         ),
     }
 
+    _kwargs["json"] = body.to_dict()
+
+    headers["Content-Type"] = "application/json"
+
+    _kwargs["headers"] = headers
     return _kwargs
 
 
@@ -53,11 +63,13 @@ def sync_detailed(
     incident_id: UUID,
     *,
     client: AuthenticatedClient | Client,
+    body: UpdateIncidentRequest,
 ) -> Response[Any | Incident]:
-    """Get a single incident by ID
+    """Update incident status or severity
 
     Args:
         incident_id (UUID):  Example: 018e2c5f-1234-7abc-8def-000000000001.
+        body (UpdateIncidentRequest): Partial update for an incident's mutable fields.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -69,6 +81,7 @@ def sync_detailed(
 
     kwargs = _get_kwargs(
         incident_id=incident_id,
+        body=body,
     )
 
     response = client.get_httpx_client().request(
@@ -82,11 +95,13 @@ def sync(
     incident_id: UUID,
     *,
     client: AuthenticatedClient | Client,
+    body: UpdateIncidentRequest,
 ) -> Any | Incident | None:
-    """Get a single incident by ID
+    """Update incident status or severity
 
     Args:
         incident_id (UUID):  Example: 018e2c5f-1234-7abc-8def-000000000001.
+        body (UpdateIncidentRequest): Partial update for an incident's mutable fields.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -99,6 +114,7 @@ def sync(
     return sync_detailed(
         incident_id=incident_id,
         client=client,
+        body=body,
     ).parsed
 
 
@@ -106,11 +122,13 @@ async def asyncio_detailed(
     incident_id: UUID,
     *,
     client: AuthenticatedClient | Client,
+    body: UpdateIncidentRequest,
 ) -> Response[Any | Incident]:
-    """Get a single incident by ID
+    """Update incident status or severity
 
     Args:
         incident_id (UUID):  Example: 018e2c5f-1234-7abc-8def-000000000001.
+        body (UpdateIncidentRequest): Partial update for an incident's mutable fields.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -122,6 +140,7 @@ async def asyncio_detailed(
 
     kwargs = _get_kwargs(
         incident_id=incident_id,
+        body=body,
     )
 
     response = await client.get_async_httpx_client().request(**kwargs)
@@ -133,11 +152,13 @@ async def asyncio(
     incident_id: UUID,
     *,
     client: AuthenticatedClient | Client,
+    body: UpdateIncidentRequest,
 ) -> Any | Incident | None:
-    """Get a single incident by ID
+    """Update incident status or severity
 
     Args:
         incident_id (UUID):  Example: 018e2c5f-1234-7abc-8def-000000000001.
+        body (UpdateIncidentRequest): Partial update for an incident's mutable fields.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -151,5 +172,6 @@ async def asyncio(
         await asyncio_detailed(
             incident_id=incident_id,
             client=client,
+            body=body,
         )
     ).parsed

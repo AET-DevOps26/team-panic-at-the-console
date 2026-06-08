@@ -1,5 +1,8 @@
 """Contains all the data models used in inputs/outputs"""
 
+from .comment import Comment
+from .create_comment_request import CreateCommentRequest
+from .create_incident_request import CreateIncidentRequest
 from .error_response import ErrorResponse
 from .health_check_response_200 import HealthCheckResponse200
 from .incident import Incident
@@ -18,11 +21,15 @@ from .solutions_patch import SolutionsPatch
 from .solutions_response import SolutionsResponse
 from .summary_patch import SummaryPatch
 from .summary_response import SummaryResponse
+from .update_incident_request import UpdateIncidentRequest
 from .user import User
 from .user_list_response import UserListResponse
 from .user_role import UserRole
 
 __all__ = (
+    "Comment",
+    "CreateCommentRequest",
+    "CreateIncidentRequest",
     "ErrorResponse",
     "HealthCheckResponse200",
     "Incident",
@@ -41,6 +48,7 @@ __all__ = (
     "SolutionsResponse",
     "SummaryPatch",
     "SummaryResponse",
+    "UpdateIncidentRequest",
     "User",
     "UserListResponse",
     "UserRole",

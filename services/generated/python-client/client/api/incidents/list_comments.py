@@ -7,7 +7,7 @@ import httpx
 
 from ... import errors
 from ...client import AuthenticatedClient, Client
-from ...models.incident import Incident
+from ...models.comment import Comment
 from ...types import Response
 
 
@@ -16,7 +16,7 @@ def _get_kwargs(
 ) -> dict[str, Any]:
     _kwargs: dict[str, Any] = {
         "method": "get",
-        "url": "/incidents/{incident_id}".format(
+        "url": "/incidents/{incident_id}/comments".format(
             incident_id=quote(str(incident_id), safe=""),
         ),
     }
@@ -24,9 +24,14 @@ def _get_kwargs(
     return _kwargs
 
 
-def _parse_response(*, client: AuthenticatedClient | Client, response: httpx.Response) -> Any | Incident | None:
+def _parse_response(*, client: AuthenticatedClient | Client, response: httpx.Response) -> Any | list[Comment] | None:
     if response.status_code == 200:
-        response_200 = Incident.from_dict(response.json())
+        response_200 = []
+        _response_200 = response.json()
+        for response_200_item_data in _response_200:
+            response_200_item = Comment.from_dict(response_200_item_data)
+
+            response_200.append(response_200_item)
 
         return response_200
 
@@ -40,7 +45,7 @@ def _parse_response(*, client: AuthenticatedClient | Client, response: httpx.Res
         return None
 
 
-def _build_response(*, client: AuthenticatedClient | Client, response: httpx.Response) -> Response[Any | Incident]:
+def _build_response(*, client: AuthenticatedClient | Client, response: httpx.Response) -> Response[Any | list[Comment]]:
     return Response(
         status_code=HTTPStatus(response.status_code),
         content=response.content,
@@ -53,8 +58,8 @@ def sync_detailed(
     incident_id: UUID,
     *,
     client: AuthenticatedClient | Client,
-) -> Response[Any | Incident]:
-    """Get a single incident by ID
+) -> Response[Any | list[Comment]]:
+    """List comments on an incident
 
     Args:
         incident_id (UUID):  Example: 018e2c5f-1234-7abc-8def-000000000001.
@@ -64,7 +69,7 @@ def sync_detailed(
         httpx.TimeoutException: If the request takes longer than Client.timeout.
 
     Returns:
-        Response[Any | Incident]
+        Response[Any | list[Comment]]
     """
 
     kwargs = _get_kwargs(
@@ -82,8 +87,8 @@ def sync(
     incident_id: UUID,
     *,
     client: AuthenticatedClient | Client,
-) -> Any | Incident | None:
-    """Get a single incident by ID
+) -> Any | list[Comment] | None:
+    """List comments on an incident
 
     Args:
         incident_id (UUID):  Example: 018e2c5f-1234-7abc-8def-000000000001.
@@ -93,7 +98,7 @@ def sync(
         httpx.TimeoutException: If the request takes longer than Client.timeout.
 
     Returns:
-        Any | Incident
+        Any | list[Comment]
     """
 
     return sync_detailed(
@@ -106,8 +111,8 @@ async def asyncio_detailed(
     incident_id: UUID,
     *,
     client: AuthenticatedClient | Client,
-) -> Response[Any | Incident]:
-    """Get a single incident by ID
+) -> Response[Any | list[Comment]]:
+    """List comments on an incident
 
     Args:
         incident_id (UUID):  Example: 018e2c5f-1234-7abc-8def-000000000001.
@@ -117,7 +122,7 @@ async def asyncio_detailed(
         httpx.TimeoutException: If the request takes longer than Client.timeout.
 
     Returns:
-        Response[Any | Incident]
+        Response[Any | list[Comment]]
     """
 
     kwargs = _get_kwargs(
@@ -133,8 +138,8 @@ async def asyncio(
     incident_id: UUID,
     *,
     client: AuthenticatedClient | Client,
-) -> Any | Incident | None:
-    """Get a single incident by ID
+) -> Any | list[Comment] | None:
+    """List comments on an incident
 
     Args:
         incident_id (UUID):  Example: 018e2c5f-1234-7abc-8def-000000000001.
@@ -144,7 +149,7 @@ async def asyncio(
         httpx.TimeoutException: If the request takes longer than Client.timeout.
 
     Returns:
-        Any | Incident
+        Any | list[Comment]
     """
 
     return (

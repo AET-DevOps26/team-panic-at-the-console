@@ -5,13 +5,19 @@
  */
 package org.openapitools.api;
 
+import org.openapitools.model.Comment;
+import org.openapitools.model.CreateCommentRequest;
+import org.openapitools.model.CreateIncidentRequest;
 import org.openapitools.model.Incident;
 import org.openapitools.model.IncidentEvent;
+import org.openapitools.model.IncidentStatus;
 import org.openapitools.model.PostmortemPatch;
+import org.openapitools.model.Severity;
 import org.openapitools.model.SeverityPatch;
 import org.openapitools.model.SolutionsPatch;
 import org.openapitools.model.SummaryPatch;
 import java.util.UUID;
+import org.openapitools.model.UpdateIncidentRequest;
 import io.swagger.v3.oas.annotations.ExternalDocumentation;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -42,7 +48,7 @@ import jakarta.annotation.Generated;
 
 @Generated(value = "org.openapitools.codegen.languages.SpringCodegen", comments = "Generator version: 7.14.0")
 @Validated
-@Tag(name = "incidents", description = "Incident read APIs and internal write-back endpoints used by genai-service.")
+@Tag(name = "incidents", description = "Incident lifecycle management (incident-service).")
 public interface IncidentsApi {
 
     default Optional<NativeWebRequest> getRequest() {
@@ -50,21 +56,107 @@ public interface IncidentsApi {
     }
 
     /**
-     * GET /incidents/{incidentId} : Fetch a single incident
+     * POST /incidents/{incidentId}/comments : Add a comment to an incident
      *
      * @param incidentId UUID of the target incident. (required)
-     * @return OK (status code 200)
-     *         or Incident not found (status code 404)
+     * @param createCommentRequest  (required)
+     * @return Comment created (status code 201)
+     *         or No incident exists with the given ID (status code 404)
+     */
+    @Operation(
+        operationId = "addComment",
+        summary = "Add a comment to an incident",
+        tags = { "incidents" },
+        responses = {
+            @ApiResponse(responseCode = "201", description = "Comment created", content = {
+                @Content(mediaType = "application/json", schema = @Schema(implementation = Comment.class))
+            }),
+            @ApiResponse(responseCode = "404", description = "No incident exists with the given ID")
+        }
+    )
+    @RequestMapping(
+        method = RequestMethod.POST,
+        value = "/incidents/{incidentId}/comments",
+        produces = { "application/json" },
+        consumes = { "application/json" }
+    )
+
+    default ResponseEntity<Comment> addComment(
+        @Parameter(name = "incidentId", description = "UUID of the target incident.", required = true, in = ParameterIn.PATH) @PathVariable("incidentId") UUID incidentId,
+        @Parameter(name = "CreateCommentRequest", description = "", required = true) @Valid @RequestBody CreateCommentRequest createCommentRequest
+    ) {
+        getRequest().ifPresent(request -> {
+            for (MediaType mediaType: MediaType.parseMediaTypes(request.getHeader("Accept"))) {
+                if (mediaType.isCompatibleWith(MediaType.valueOf("application/json"))) {
+                    String exampleString = "{ \"createdAt\" : \"2000-01-23T04:56:07.000+00:00\", \"id\" : \"046b6c7f-0b8a-43b9-b35d-6489e6daee91\", \"incidentId\" : \"046b6c7f-0b8a-43b9-b35d-6489e6daee91\", \"authorId\" : \"046b6c7f-0b8a-43b9-b35d-6489e6daee91\", \"content\" : \"Possible root cause is the connection pool configuration in v2.4.1\" }";
+                    ApiUtil.setExampleResponse(request, "application/json", exampleString);
+                    break;
+                }
+            }
+        });
+        return new ResponseEntity<>(HttpStatus.NOT_IMPLEMENTED);
+
+    }
+
+
+    /**
+     * POST /incidents : Manually create a new incident
+     *
+     * @param createIncidentRequest  (required)
+     * @return Incident created; starts in open state (status code 201)
+     *         or Validation failed (status code 400)
+     */
+    @Operation(
+        operationId = "createIncident",
+        summary = "Manually create a new incident",
+        tags = { "incidents" },
+        responses = {
+            @ApiResponse(responseCode = "201", description = "Incident created; starts in open state", content = {
+                @Content(mediaType = "application/json", schema = @Schema(implementation = Incident.class))
+            }),
+            @ApiResponse(responseCode = "400", description = "Validation failed")
+        }
+    )
+    @RequestMapping(
+        method = RequestMethod.POST,
+        value = "/incidents",
+        produces = { "application/json" },
+        consumes = { "application/json" }
+    )
+
+    default ResponseEntity<Incident> createIncident(
+        @Parameter(name = "CreateIncidentRequest", description = "", required = true) @Valid @RequestBody CreateIncidentRequest createIncidentRequest
+    ) {
+        getRequest().ifPresent(request -> {
+            for (MediaType mediaType: MediaType.parseMediaTypes(request.getHeader("Accept"))) {
+                if (mediaType.isCompatibleWith(MediaType.valueOf("application/json"))) {
+                    String exampleString = "{ \"severity\" : \"SEV1\", \"createdAt\" : \"2000-01-23T04:56:07.000+00:00\", \"resolvedAt\" : \"2000-01-23T04:56:07.000+00:00\", \"description\" : \"description\", \"id\" : \"046b6c7f-0b8a-43b9-b35d-6489e6daee91\", \"title\" : \"Checkout 5xx spike\", \"status\" : \"open\" }";
+                    ApiUtil.setExampleResponse(request, "application/json", exampleString);
+                    break;
+                }
+            }
+        });
+        return new ResponseEntity<>(HttpStatus.NOT_IMPLEMENTED);
+
+    }
+
+
+    /**
+     * GET /incidents/{incidentId} : Get a single incident by ID
+     *
+     * @param incidentId UUID of the target incident. (required)
+     * @return Incident found (status code 200)
+     *         or No incident exists with the given ID (status code 404)
      */
     @Operation(
         operationId = "getIncident",
-        summary = "Fetch a single incident",
+        summary = "Get a single incident by ID",
         tags = { "incidents" },
         responses = {
-            @ApiResponse(responseCode = "200", description = "OK", content = {
+            @ApiResponse(responseCode = "200", description = "Incident found", content = {
                 @Content(mediaType = "application/json", schema = @Schema(implementation = Incident.class))
             }),
-            @ApiResponse(responseCode = "404", description = "Incident not found")
+            @ApiResponse(responseCode = "404", description = "No incident exists with the given ID")
         }
     )
     @RequestMapping(
@@ -91,21 +183,62 @@ public interface IncidentsApi {
 
 
     /**
-     * GET /incidents/{incidentId}/events : List Events from the Event Log for one incident, in chronological order
+     * GET /incidents/{incidentId}/comments : List comments on an incident
      *
      * @param incidentId UUID of the target incident. (required)
-     * @return OK (status code 200)
-     *         or Incident not found (status code 404)
+     * @return Comments in chronological order (status code 200)
+     *         or No incident exists with the given ID (status code 404)
+     */
+    @Operation(
+        operationId = "listComments",
+        summary = "List comments on an incident",
+        tags = { "incidents" },
+        responses = {
+            @ApiResponse(responseCode = "200", description = "Comments in chronological order", content = {
+                @Content(mediaType = "application/json", array = @ArraySchema(schema = @Schema(implementation = Comment.class)))
+            }),
+            @ApiResponse(responseCode = "404", description = "No incident exists with the given ID")
+        }
+    )
+    @RequestMapping(
+        method = RequestMethod.GET,
+        value = "/incidents/{incidentId}/comments",
+        produces = { "application/json" }
+    )
+
+    default ResponseEntity<List<Comment>> listComments(
+        @Parameter(name = "incidentId", description = "UUID of the target incident.", required = true, in = ParameterIn.PATH) @PathVariable("incidentId") UUID incidentId
+    ) {
+        getRequest().ifPresent(request -> {
+            for (MediaType mediaType: MediaType.parseMediaTypes(request.getHeader("Accept"))) {
+                if (mediaType.isCompatibleWith(MediaType.valueOf("application/json"))) {
+                    String exampleString = "[ { \"createdAt\" : \"2000-01-23T04:56:07.000+00:00\", \"id\" : \"046b6c7f-0b8a-43b9-b35d-6489e6daee91\", \"incidentId\" : \"046b6c7f-0b8a-43b9-b35d-6489e6daee91\", \"authorId\" : \"046b6c7f-0b8a-43b9-b35d-6489e6daee91\", \"content\" : \"Possible root cause is the connection pool configuration in v2.4.1\" }, { \"createdAt\" : \"2000-01-23T04:56:07.000+00:00\", \"id\" : \"046b6c7f-0b8a-43b9-b35d-6489e6daee91\", \"incidentId\" : \"046b6c7f-0b8a-43b9-b35d-6489e6daee91\", \"authorId\" : \"046b6c7f-0b8a-43b9-b35d-6489e6daee91\", \"content\" : \"Possible root cause is the connection pool configuration in v2.4.1\" } ]";
+                    ApiUtil.setExampleResponse(request, "application/json", exampleString);
+                    break;
+                }
+            }
+        });
+        return new ResponseEntity<>(HttpStatus.NOT_IMPLEMENTED);
+
+    }
+
+
+    /**
+     * GET /incidents/{incidentId}/events : Get the event log for an incident
+     *
+     * @param incidentId UUID of the target incident. (required)
+     * @return Event log entries in chronological order (status code 200)
+     *         or No incident exists with the given ID (status code 404)
      */
     @Operation(
         operationId = "listIncidentEvents",
-        summary = "List Events from the Event Log for one incident, in chronological order",
+        summary = "Get the event log for an incident",
         tags = { "incidents" },
         responses = {
-            @ApiResponse(responseCode = "200", description = "OK", content = {
+            @ApiResponse(responseCode = "200", description = "Event log entries in chronological order", content = {
                 @Content(mediaType = "application/json", array = @ArraySchema(schema = @Schema(implementation = IncidentEvent.class)))
             }),
-            @ApiResponse(responseCode = "404", description = "Incident not found")
+            @ApiResponse(responseCode = "404", description = "No incident exists with the given ID")
         }
     )
     @RequestMapping(
@@ -121,6 +254,91 @@ public interface IncidentsApi {
             for (MediaType mediaType: MediaType.parseMediaTypes(request.getHeader("Accept"))) {
                 if (mediaType.isCompatibleWith(MediaType.valueOf("application/json"))) {
                     String exampleString = "[ { \"description\" : \"status: open -> investigating\", \"type\" : \"status_changed\", \"timestamp\" : \"2000-01-23T04:56:07.000+00:00\" }, { \"description\" : \"status: open -> investigating\", \"type\" : \"status_changed\", \"timestamp\" : \"2000-01-23T04:56:07.000+00:00\" } ]";
+                    ApiUtil.setExampleResponse(request, "application/json", exampleString);
+                    break;
+                }
+            }
+        });
+        return new ResponseEntity<>(HttpStatus.NOT_IMPLEMENTED);
+
+    }
+
+
+    /**
+     * GET /incidents : List all incidents
+     *
+     * @param status  (optional)
+     * @param severity  (optional)
+     * @return Incidents in reverse-chronological order (status code 200)
+     */
+    @Operation(
+        operationId = "listIncidents",
+        summary = "List all incidents",
+        tags = { "incidents" },
+        responses = {
+            @ApiResponse(responseCode = "200", description = "Incidents in reverse-chronological order", content = {
+                @Content(mediaType = "application/json", array = @ArraySchema(schema = @Schema(implementation = Incident.class)))
+            })
+        }
+    )
+    @RequestMapping(
+        method = RequestMethod.GET,
+        value = "/incidents",
+        produces = { "application/json" }
+    )
+
+    default ResponseEntity<List<Incident>> listIncidents(
+        @Parameter(name = "status", description = "", in = ParameterIn.QUERY) @Valid @RequestParam(value = "status", required = false) @Nullable IncidentStatus status,
+        @Parameter(name = "severity", description = "", in = ParameterIn.QUERY) @Valid @RequestParam(value = "severity", required = false) @Nullable Severity severity
+    ) {
+        getRequest().ifPresent(request -> {
+            for (MediaType mediaType: MediaType.parseMediaTypes(request.getHeader("Accept"))) {
+                if (mediaType.isCompatibleWith(MediaType.valueOf("application/json"))) {
+                    String exampleString = "[ { \"severity\" : \"SEV1\", \"createdAt\" : \"2000-01-23T04:56:07.000+00:00\", \"resolvedAt\" : \"2000-01-23T04:56:07.000+00:00\", \"description\" : \"description\", \"id\" : \"046b6c7f-0b8a-43b9-b35d-6489e6daee91\", \"title\" : \"Checkout 5xx spike\", \"status\" : \"open\" }, { \"severity\" : \"SEV1\", \"createdAt\" : \"2000-01-23T04:56:07.000+00:00\", \"resolvedAt\" : \"2000-01-23T04:56:07.000+00:00\", \"description\" : \"description\", \"id\" : \"046b6c7f-0b8a-43b9-b35d-6489e6daee91\", \"title\" : \"Checkout 5xx spike\", \"status\" : \"open\" } ]";
+                    ApiUtil.setExampleResponse(request, "application/json", exampleString);
+                    break;
+                }
+            }
+        });
+        return new ResponseEntity<>(HttpStatus.NOT_IMPLEMENTED);
+
+    }
+
+
+    /**
+     * PATCH /incidents/{incidentId} : Update incident status or severity
+     *
+     * @param incidentId UUID of the target incident. (required)
+     * @param updateIncidentRequest  (required)
+     * @return Updated incident (status code 200)
+     *         or No incident exists with the given ID (status code 404)
+     */
+    @Operation(
+        operationId = "updateIncident",
+        summary = "Update incident status or severity",
+        tags = { "incidents" },
+        responses = {
+            @ApiResponse(responseCode = "200", description = "Updated incident", content = {
+                @Content(mediaType = "application/json", schema = @Schema(implementation = Incident.class))
+            }),
+            @ApiResponse(responseCode = "404", description = "No incident exists with the given ID")
+        }
+    )
+    @RequestMapping(
+        method = RequestMethod.PATCH,
+        value = "/incidents/{incidentId}",
+        produces = { "application/json" },
+        consumes = { "application/json" }
+    )
+
+    default ResponseEntity<Incident> updateIncident(
+        @Parameter(name = "incidentId", description = "UUID of the target incident.", required = true, in = ParameterIn.PATH) @PathVariable("incidentId") UUID incidentId,
+        @Parameter(name = "UpdateIncidentRequest", description = "", required = true) @Valid @RequestBody UpdateIncidentRequest updateIncidentRequest
+    ) {
+        getRequest().ifPresent(request -> {
+            for (MediaType mediaType: MediaType.parseMediaTypes(request.getHeader("Accept"))) {
+                if (mediaType.isCompatibleWith(MediaType.valueOf("application/json"))) {
+                    String exampleString = "{ \"severity\" : \"SEV1\", \"createdAt\" : \"2000-01-23T04:56:07.000+00:00\", \"resolvedAt\" : \"2000-01-23T04:56:07.000+00:00\", \"description\" : \"description\", \"id\" : \"046b6c7f-0b8a-43b9-b35d-6489e6daee91\", \"title\" : \"Checkout 5xx spike\", \"status\" : \"open\" }";
                     ApiUtil.setExampleResponse(request, "application/json", exampleString);
                     break;
                 }
