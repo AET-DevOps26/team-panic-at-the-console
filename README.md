@@ -86,7 +86,7 @@ See [.github/workflows/](.github/workflows/).
 | `deploy-k8s.yml`                  | Called by `release.yml`, manual (`workflow_dispatch`) | Yes: deploy to Kubernetes                |
 | `deploy-azure-vm.yml`             | Called by `release.yml`, manual (`workflow_dispatch`) | No (uses OIDC + Ansible)                 |
 
-**PR CI does not decrypt SOPS or deploy to the cluster** (no cluster credentials on PRs). Deploy workflows gate on separate GitHub Environments (`kubernetes`, `azure`) for deployment history and optional protection rules. CI credentials live in **repository** Actions secrets and variables (see below).
+**PR CI does not decrypt SOPS or deploy to the cluster** (no cluster credentials on PRs). Deploy workflows gate on the `kubernetes` and `azure` GitHub Environments; credentials live in repository Actions secrets (below).
 
 ### Release tags
 
@@ -121,44 +121,17 @@ Production deploy secrets live in `infra/helm/secrets/values.prod.enc.yaml` (enc
 
 Never commit `*.dec.yaml` or `~/.config/sops/age/keys.txt` (gitignored / local only).
 
-#### GitHub deploy environments
+#### GitHub Actions secrets (Kubernetes deploy)
 
-Deploy workflows use two GitHub Environments so Kubernetes and Azure have independent deployment history and protection rules. Creating environments requires repo admin rights; collaborators can still manage deploy credentials via repository Actions secrets (see next section).
+Configure under **Settings → Secrets and variables → Actions** (repository scope):
 
-| Environment   | Workflow            | Purpose                                      |
-| ------------- | ------------------- | -------------------------------------------- |
-| `kubernetes`  | `deploy-k8s.yml`    | Helm deploy gate                             |
-| `azure`       | `deploy-azure-vm.yml` | Terraform + Ansible gate (one approval job) |
+| Name               | Type     | Used for                                       |
+| ------------------ | -------- | ---------------------------------------------- |
+| `KUBECONFIG_B64`   | Secret   | Cluster access (base64 kubeconfig)             |
+| `SOPS_AGE_KEY`     | Secret   | Full AGE private key file (same as `keys.txt`) |
+| `DEPLOY_NAMESPACE` | Variable | e.g. `team-panic-at-the-console-devops26`      |
 
-If `production` had deploy protection rules (e.g. required reviewers), copy them to both new environments when an admin creates them, then remove the legacy `production` environment.
-
-`deploy-azure-vm.yml` expects an Azure OIDC federated credential scoped to **Environment: azure** (see comments in the workflow file).
-
-#### Repository Actions secrets and variables
-
-Configure under **Settings → Secrets and variables → Actions** (repository scope, not per-environment). Any collaborator with access to this repo can use them in workflows; they are not passed to workflows triggered by pull requests from forks.
-
-**Secrets** (encrypted):
-
-| Name                  | Used by              | Purpose                                  |
-| --------------------- | -------------------- | ---------------------------------------- |
-| `KUBECONFIG_B64`      | `deploy-k8s.yml`     | Cluster access (base64 kubeconfig)       |
-| `SOPS_AGE_KEY`        | `deploy-k8s.yml`     | Full AGE private key (same as `keys.txt`) |
-| `AZURE_CLIENT_ID`     | `deploy-azure-vm.yml` | App Registration client ID (OIDC)       |
-| `AZURE_TENANT_ID`     | `deploy-azure-vm.yml` | Azure AD tenant ID                       |
-| `AZURE_SUBSCRIPTION_ID` | `deploy-azure-vm.yml` | Azure subscription ID                  |
-| `VM_SSH_PUBLIC_KEY`   | `deploy-azure-vm.yml` | Public key placed on the VM by Terraform |
-| `VM_SSH_PRIVATE_KEY`  | `deploy-azure-vm.yml` | Private key used by Ansible to connect   |
-| `POSTGRES_PASSWORD`   | `deploy-azure-vm.yml` | Shared Postgres password for the VM stack |
-
-**Variables** (plain text):
-
-| Name                         | Used by              | Purpose                                   |
-| ---------------------------- | -------------------- | ----------------------------------------- |
-| `DEPLOY_NAMESPACE`           | `deploy-k8s.yml`     | e.g. `team-panic-at-the-console-devops26` |
-| `TF_BACKEND_STORAGE_ACCOUNT` | `deploy-azure-vm.yml` | Terraform remote state storage account  |
-
-`deploy-k8s.yml` runs `pixi run -e deploy helm-deploy` with `KUBECONFIG_B64`, `SOPS_AGE_KEY`, and `DEPLOY_NAMESPACE`.
+`deploy-k8s.yml` runs `pixi run -e deploy helm-deploy` with these values. Azure deploy secrets are documented in `deploy-azure-vm.yml`.
 
 #### New team member access
 
