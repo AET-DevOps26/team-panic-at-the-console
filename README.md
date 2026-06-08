@@ -218,7 +218,7 @@ Optional: `VALUES_FILE=path/to/other.enc.yaml` when running `helm-deploy`.
 | `/` | Frontend |
 | `/api` | Gateway (`/api/v1/...`) |
 | `/swagger` | Swagger UI (OpenAPI) |
-| `/grafana` | Grafana (genai dashboard; requires monitoring Helm values) |
+| `/grafana` | Grafana (`admin` / `admin`; genai dashboard; requires monitoring Helm values) |
 
 Ingress uses cert-manager (`letsencrypt-prod`) and TLS secret `devops-platform-tls`. Prometheus is cluster-internal only (no public route).
 
@@ -229,7 +229,7 @@ Ingress uses cert-manager (`letsencrypt-prod`) and TLS secret `devops-platform-t
 | `http://localhost:8080/api/v1/` | Gateway (via `edge`) |
 | `http://localhost:8080/swagger` | Swagger UI (via `edge`) |
 | `http://localhost:3000/` | Frontend (direct) |
-| `http://localhost:3030/` | Grafana (`admin` / `admin`; compose only) |
+| `http://localhost:3030/` | Grafana (`admin` / `admin`) |
 | `http://localhost:9090/` | Prometheus UI |
 | `http://localhost:8087/metrics` | genai-service Prometheus scrape |
 
@@ -249,7 +249,7 @@ In another, deploy with `infra/helm/values.local-k8s.yaml` so Grafana serves at 
 # append to your helm upgrade / helm-deploy -f infra/helm/values.local-k8s.yaml
 ```
 
-Then open **http://localhost:3030/** (`admin` / password from monitoring secrets).
+Then open **http://localhost:3030/** (`admin` / `admin`).
 
 Prometheus UI (optional): `kubectl port-forward -n production svc/devops-platform-kube-prome-prometheus 9090:9090`
 
@@ -300,7 +300,7 @@ pixi run compose-up
 | `http://localhost:8080/api/v1/` | Gateway (via `edge`; e.g. `/health`) |
 | `http://localhost:8080/swagger` | Swagger UI |
 | `http://localhost:3000/` | Frontend (direct) |
-| `http://localhost:3030/` | Grafana (compose; use `/grafana/` if port-forwarding from k8s) |
+| `http://localhost:3030/` | Grafana (`admin` / `admin`) |
 | `http://localhost:9090/` | Prometheus |
 | `http://localhost:8087/metrics` | genai-service metrics |
 
