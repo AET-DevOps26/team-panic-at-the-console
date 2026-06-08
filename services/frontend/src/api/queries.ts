@@ -112,6 +112,7 @@ export function useCreateIncident() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (body: CreateIncidentRequest) => {
+      if (MOCK) return {} as Incident;
       const { data, error } = await apiClient.POST("/incidents", { body });
       if (error) throw new Error("Failed to create incident");
       return data;
@@ -126,6 +127,7 @@ export function useUpdateIncident(id: string) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (body: UpdateIncidentRequest) => {
+      if (MOCK) return {} as Incident;
       const { data, error } = await apiClient.PATCH("/incidents/{incidentId}", {
         params: { path: { incidentId: id } },
         body,
@@ -178,6 +180,7 @@ export function useAddComment(incidentId: string) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (body: CreateCommentRequest) => {
+      if (MOCK) return {} as Comment;
       const { data, error } = await apiClient.POST("/incidents/{incidentId}/comments", {
         params: { path: { incidentId } },
         body,

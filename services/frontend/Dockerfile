@@ -8,8 +8,7 @@ COPY frontend/package*.json ./
 RUN npm ci
 
 COPY frontend/ .
-# ARG/ENV default can be flipped to false once a real backend is wired up
-ARG VITE_MOCK=true
+ARG VITE_MOCK=false
 ENV VITE_MOCK=$VITE_MOCK
 RUN npm run build
 

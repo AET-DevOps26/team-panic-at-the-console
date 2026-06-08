@@ -22,10 +22,14 @@ function CreateIncidentDialog() {
   const createIncident = useCreateIncident();
 
   async function handleCreate() {
-    await createIncident.mutateAsync({ title, description: description || null, severity });
-    setOpen(false);
-    setTitle("");
-    setDescription("");
+    try {
+      await createIncident.mutateAsync({ title, description: description || null, severity });
+      setOpen(false);
+      setTitle("");
+      setDescription("");
+    } catch {
+      // error exposed via createIncident.isError / createIncident.error
+    }
   }
 
   return (
