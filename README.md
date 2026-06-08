@@ -229,7 +229,7 @@ Ingress uses cert-manager (`letsencrypt-prod`) and TLS secret `devops-platform-t
 | `http://localhost:8080/api/v1/` | Gateway (via `edge`) |
 | `http://localhost:8080/swagger` | Swagger UI (via `edge`) |
 | `http://localhost:3000/` | Frontend (direct) |
-| `http://localhost:3030/` | Grafana (`admin` / `admin` by default) |
+| `http://localhost:3030/` | Grafana (`admin` / `admin`; compose only) |
 | `http://localhost:9090/` | Prometheus UI |
 | `http://localhost:8087/metrics` | genai-service Prometheus scrape |
 
@@ -237,13 +237,18 @@ Grafana talks to Prometheus at `http://prometheus:9090` inside Docker; use `loca
 
 Populate Grafana panels after boot: `pixi run compose-smoke-genai-metrics`.
 
-#### Debug the cluster
+Use a kubeconfig/context that points at the stud cluster (`kubectl config current-context`).
+
+**Local Kubernetes (OrbStack):** Grafana ingress is disabled (no cert-manager). Port-forward, then open the **subpath** URL (Helm sets `serve_from_sub_path: true` for the stud cluster):
 
 ```bash
-pixi run -e deploy k9s
+kubectl port-forward -n production svc/devops-platform-grafana 3030:80
+# → http://localhost:3030/grafana/   (not http://localhost:3030/ — that redirects to port 80)
 ```
 
-Use a kubeconfig/context that points at the stud cluster (`kubectl config current-context`).
+Prometheus UI (optional): `kubectl port-forward -n production svc/devops-platform-kube-prome-prometheus 9090:9090`
+
+#### Debug the cluster
 
 ## Testing
 
@@ -284,7 +289,7 @@ pixi run compose-up
 | `http://localhost:8080/api/v1/` | Gateway (via `edge`; e.g. `/health`) |
 | `http://localhost:8080/swagger` | Swagger UI |
 | `http://localhost:3000/` | Frontend (direct) |
-| `http://localhost:3030/` | Grafana |
+| `http://localhost:3030/` | Grafana (compose; use `/grafana/` if port-forwarding from k8s) |
 | `http://localhost:9090/` | Prometheus |
 | `http://localhost:8087/metrics` | genai-service metrics |
 
