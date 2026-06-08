@@ -1,10 +1,24 @@
 name: Deploy to Azure VM
 
+# Called by release.yml after images are built (action=full, so Terraform applies
+# any infra changes and Ansible redeploys), or run manually via the Actions tab.
+# The tag and action always come from `inputs`, so there is no resolve step and no
+# GHCR polling: when invoked from a release the orchestrator's `needs: build`
+# already guarantees the images exist. A single `gate` job carries
+# `environment: production`, so the whole deploy needs one approval.
+
 on:
-  push:
-    tags: ["v*"]
-  release:
-    types: [published]
+  workflow_call:
+    inputs:
+      tag:
+        description: "Docker image tag to deploy (e.g. latest, v1.2.3, sha-abc1234)"
+        type: string
+        required: true
+      action:
+        description: "deploy=Ansible only | provision=Terraform only | full=Terraform+Ansible | plan=dry-run"
+        type: string
+        default: deploy
+        required: false
   workflow_dispatch:
     inputs:
       action:
@@ -17,10 +31,11 @@ on:
           - plan
         default: deploy
         required: true
-      image_tag:
-        description: "Docker image tag to deploy (e.g. main, v1.2.3, sha-abc1234)"
-        default: main
-        required: false
+      tag:
+        description: "Docker image tag to deploy (e.g. latest, v1.2.3, sha-abc1234)"
+        type: string
+        default: latest
+        required: true
 
 concurrency:
   group: azure-vm-deployment
@@ -68,43 +83,30 @@ env:
   ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
 jobs:
-  # ── Resolve tag and action ───────────────────────────────────────────────────
-  resolve:
-    name: Resolve tag and action
+  # ── Approval gate ─────────────────────────────────────────────────────────────
+  # Single environment-protected job so the whole deploy needs exactly one approval,
+  # whether triggered by a release or run manually.
+  gate:
+    name: Await approval
     runs-on: ubuntu-latest
-    outputs:
-      tag: ${{ steps.resolve.outputs.tag }}
-      action: ${{ steps.resolve.outputs.action }}
+    environment: production
     steps:
-      - name: Resolve
-        id: resolve
-        run: |
-          if [ "${{ github.event_name }}" = "release" ]; then
-            echo "tag=${{ github.event.release.tag_name }}" >> "$GITHUB_OUTPUT"
-            echo "action=full" >> "$GITHUB_OUTPUT"
-          elif [ "${{ github.event_name }}" = "push" ]; then
-            echo "tag=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
-            echo "action=full" >> "$GITHUB_OUTPUT"
-          else
-            echo "tag=${{ inputs.image_tag || 'main' }}" >> "$GITHUB_OUTPUT"
-            echo "action=${{ inputs.action }}" >> "$GITHUB_OUTPUT"
-          fi
+      - run: echo "Approved"
 
   # ── Terraform ───────────────────────────────────────────────────────────────
   terraform:
     name: Terraform
-    needs: resolve
+    needs: gate
     runs-on: ubuntu-latest
-    environment: production
     outputs:
       vm_ip: ${{ steps.vm_ip.outputs.ip }}
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
       - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v4
+        uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
         with:
           terraform_version: "~1.9"
           terraform_wrapper: false
@@ -116,20 +118,20 @@ jobs:
         working-directory: ${{ env.TF_DIR }}
 
       - name: Terraform Plan
-        if: needs.resolve.outputs.action == 'provision' || needs.resolve.outputs.action == 'full' || needs.resolve.outputs.action == 'plan'
+        if: inputs.action == 'provision' || inputs.action == 'full' || inputs.action == 'plan'
         run: terraform plan -out=tfplan
         working-directory: ${{ env.TF_DIR }}
         env:
           TF_VAR_ssh_public_key: ${{ secrets.VM_SSH_PUBLIC_KEY }}
 
       - name: Terraform Apply
-        if: needs.resolve.outputs.action == 'provision' || needs.resolve.outputs.action == 'full'
+        if: inputs.action == 'provision' || inputs.action == 'full'
         run: terraform apply -auto-approve tfplan
         working-directory: ${{ env.TF_DIR }}
 
       - name: Get VM public IP from state
         id: vm_ip
-        if: needs.resolve.outputs.action != 'plan'
+        if: inputs.action != 'plan'
         run: |
           ip=$(terraform output -raw vm_public_ip 2>/dev/null || true)
           if [ -z "${ip}" ]; then
@@ -142,23 +144,28 @@ jobs:
   # ── Ansible ─────────────────────────────────────────────────────────────────
   ansible:
     name: Ansible Deploy
-    needs: [resolve, terraform]
-    if: needs.terraform.result == 'success' && needs.resolve.outputs.action != 'plan'
+    needs: [gate, terraform]
+    if: needs.terraform.result == 'success' && (inputs.action == 'deploy' || inputs.action == 'full')
     runs-on: ubuntu-latest
-    environment: production
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
       - name: Install Ansible
         run: pip install --quiet ansible
 
       - name: Configure SSH key
+        env:
+          VM_SSH_PRIVATE_KEY: ${{ secrets.VM_SSH_PRIVATE_KEY }}
         run: |
           install -m 0700 -d "${HOME}/.ssh"
-          install -m 0600 /dev/null "${HOME}/.ssh/vm_key"
-          printf '%s\n' "${{ secrets.VM_SSH_PRIVATE_KEY }}" > "${HOME}/.ssh/vm_key"
+          printf '%s\n' "${VM_SSH_PRIVATE_KEY}" > "${HOME}/.ssh/vm_key"
+          chmod 600 "${HOME}/.ssh/vm_key"
+          ssh-keygen -lf "${HOME}/.ssh/vm_key" >/dev/null || {
+            echo "::error::VM_SSH_PRIVATE_KEY secret is not a valid private key"
+            exit 1
+          }
 
       - name: Write inventory
         run: |
@@ -169,20 +176,42 @@ jobs:
 
       - name: Wait for SSH to become available
         run: |
-          echo "Waiting for SSH on ${{ needs.terraform.outputs.vm_ip }}..."
-          for i in $(seq 1 30); do
-            if ssh \
-              -o StrictHostKeyChecking=no \
-              -o ConnectTimeout=5 \
-              -i "${HOME}/.ssh/vm_key" \
-              "azureuser@${{ needs.terraform.outputs.vm_ip }}" \
-              true 2>/dev/null; then
+          vm_ip="${{ needs.terraform.outputs.vm_ip }}"
+          ssh_key="${HOME}/.ssh/vm_key"
+          max_attempts=60
+          ssh_opts=(
+            -o StrictHostKeyChecking=no
+            -o ConnectTimeout=10
+            -i "${ssh_key}"
+          )
+
+          echo "Waiting for SSH on ${vm_ip}..."
+          ready=false
+          for i in $(seq 1 "${max_attempts}"); do
+            if ssh "${ssh_opts[@]}" "azureuser@${vm_ip}" true 2>/dev/null; then
               echo "SSH ready after ${i} attempt(s)"
+              ready=true
               break
             fi
-            echo "  attempt ${i}/30, retrying in 10s..."
+
+            if [ $((i % 10)) -eq 0 ] || [ "${i}" -eq "${max_attempts}" ]; then
+              echo "  attempt ${i}/${max_attempts} — diagnostics:"
+              if nc -z -w 5 "${vm_ip}" 22 2>/dev/null; then
+                echo "    port 22 is open"
+              else
+                echo "    port 22 is closed or filtered"
+              fi
+              ssh "${ssh_opts[@]}" "azureuser@${vm_ip}" true 2>&1 | tail -5 || true
+            else
+              echo "  attempt ${i}/${max_attempts}, retrying in 10s..."
+            fi
             sleep 10
           done
+
+          if [ "${ready}" != true ]; then
+            echo "::error::SSH not available on ${vm_ip} after ${max_attempts} attempts (~10 min)"
+            exit 1
+          fi
 
       - name: Write Ansible variables
         run: |
@@ -196,7 +225,7 @@ jobs:
             yaml.dump(v, f)
           EOF
         env:
-          IMAGE_TAG: ${{ needs.resolve.outputs.tag }}
+          IMAGE_TAG: ${{ inputs.tag }}
           POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
 
       - name: Run Ansible playbook

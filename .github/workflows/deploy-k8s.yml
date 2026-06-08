@@ -1,23 +1,35 @@
-name: Deploy Helm (SOPS)
+name: Deploy to Kubernetes Cluster
+
+# Called by release.yml after images are built, or run manually via the Actions
+# tab to (re)deploy an arbitrary tag. The image tag always comes from `inputs.tag`,
+# so there is no resolve step and no GHCR polling: when invoked from a release the
+# orchestrator's `needs: build` already guarantees the images exist.
 
 on:
+  workflow_call:
+    inputs:
+      tag:
+        description: "Image tag to deploy (e.g. latest, v1.2.3, sha-abc1234)"
+        type: string
+        required: true
   workflow_dispatch:
     inputs:
       tag:
-        description: "Image tag to deploy (e.g. v0.1.0)"
-        required: true
+        description: "Image tag to deploy (e.g. latest, v1.2.3, sha-abc1234)"
         type: string
+        default: latest
+        required: true
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  group: k8s-deployment
+  cancel-in-progress: false
 
 permissions:
   contents: read
-  packages: read
 
 jobs:
   deploy:
+    name: Deploy to Kubernetes
     runs-on: ubuntu-latest
     environment: production
     steps:
@@ -36,5 +48,5 @@ jobs:
           KUBECONFIG_B64: ${{ secrets.KUBECONFIG_B64 }}
           SOPS_AGE_KEY: ${{ secrets.SOPS_AGE_KEY }}
           DEPLOY_NAMESPACE: ${{ vars.DEPLOY_NAMESPACE }}
-          TAG: ${{ github.event.inputs.tag }}
+          TAG: ${{ inputs.tag }}
         run: pixi run -e deploy helm-deploy
