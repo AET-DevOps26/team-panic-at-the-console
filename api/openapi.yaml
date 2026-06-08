@@ -58,22 +58,6 @@ paths:
         "400":
           description: Bad request
 
-  /genai/health:
-    get:
-      operationId: genaiHealth
-      summary: GenAI service health check
-      tags: [genai]
-      security: []
-      responses:
-        "200":
-          description: GenAI service and Ollama reachability status
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/GenaiHealthResponse"
-        "503":
-          description: Ollama unreachable
-
   /incidents:
     get:
       operationId: listIncidents
