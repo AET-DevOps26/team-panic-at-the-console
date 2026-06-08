@@ -10,9 +10,7 @@ import org.springframework.web.client.RestClient;
 class ServiceClientsConfig {
 
     @Bean
-    RestClient incidentServiceClient(GatewayProperties properties) {
-        return RestClient.builder()
-                .baseUrl(properties.getIncidentServiceUrl())
-                .build();
+    RestClient incidentServiceClient(GatewayProperties properties, RestClient.Builder builder) {
+        return builder.baseUrl(properties.getIncidentServiceUrl()).build();
     }
 }
