@@ -21,23 +21,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/genai/health": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** GenAI service health check */
-        get: operations["genaiHealth"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/incidents": {
         parameters: {
             query?: never;
@@ -438,15 +421,6 @@ export interface components {
             /** @example Invalid email or password */
             message: string;
         };
-        /** @description GenAI service health status including Ollama reachability. */
-        GenaiHealthResponse: {
-            /** @example ok */
-            status: string;
-            /** @example true */
-            ollamaReachable: boolean;
-            /** @example qwen2.5:3b */
-            model: string;
-        };
         /** @description Confirmation that an AI generation task was accepted for async processing. */
         RegenAccepted: {
             /** @example true */
@@ -672,33 +646,6 @@ export interface operations {
                 content?: never;
             };
             /** @description Service unavailable */
-            503: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    genaiHealth: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description GenAI service and Ollama reachability status */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["GenaiHealthResponse"];
-                };
-            };
-            /** @description Ollama unreachable */
             503: {
                 headers: {
                     [name: string]: unknown;
