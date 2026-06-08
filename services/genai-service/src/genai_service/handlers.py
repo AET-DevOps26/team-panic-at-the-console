@@ -26,7 +26,7 @@ from client.models import (
     SummaryPatch,
 )
 from client.types import Response
-from genai_service.ollama_client import OllamaClient
+from genai_service.llm import LLMClient
 from genai_service.prompts import PromptBuilder, PromptTask
 from genai_service.regen_task import RegenTask
 
@@ -88,11 +88,11 @@ class IncidentHandlers:
     def __init__(
         self,
         incident_api_client: Client,
-        ollama_client: OllamaClient,
+        llm_client: LLMClient,
         prompt_builder: PromptBuilder,
     ) -> None:
         self._client = incident_api_client
-        self._ollama = ollama_client
+        self._llm = llm_client
         self._prompts = prompt_builder
 
     async def on_incident_created(self, incident_id: str) -> None:
@@ -172,7 +172,7 @@ class IncidentHandlers:
     ) -> None:
         spec = _PATCH_SPECS[task]
         prompt = self._prompts.build(incident, events, task)
-        result = await self._ollama.generate(
+        result = await self._llm.generate(
             prompt.user, system=prompt.system, response_model=prompt.response_model
         )
         response = await spec.write(

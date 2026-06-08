@@ -237,14 +237,21 @@ pixi run test-genai
 
 ## Local Runtime
 
+A single command from the repository root, no extra tooling required:
+
 ```bash
-cp .env.example .env
-pixi run compose-up
+docker compose up
 ```
 
-Starts all services plus shared infrastructure (Postgres, NATS). Service env vars (`DATABASE_URL`, `NATS_URL`) are pre-wired.
+Starts all services plus shared infrastructure (Postgres, NATS). Service env vars (`DATABASE_URL`, `NATS_URL`) are pre-wired, and every variable has a baked-in default, so no `.env` is required for a default boot.
 
-The compose file lives at `infra/compose/docker-compose.yml`. `pixi run compose-up` passes the correct `--project-directory`, `--env-file`, and `-f` flags automatically.
+The root `compose.yaml` is the entry point Docker discovers automatically (it points at `infra/compose/docker-compose.yml`, where the stack is defined).
+
+For local development, the Pixi wrapper builds from source and loads `.env.example`:
+
+```bash
+pixi run compose-up
+```
 
 Local URLs (same path layout as the Helm ingress):
 

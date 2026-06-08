@@ -6,11 +6,12 @@ OpenAPI exploration uses the standalone **swagger-ui** service (`api/openapi.yam
 
 ## Implemented routes
 
-| Route                                 | Action                                                 |
-| ------------------------------------- | ------------------------------------------------------ |
-| `GET /api/v1/health`                  | Gateway liveness (local)                               |
-| `GET /api/v1/genai/health`            | Proxy to `genai-service` `/api/v1/genai/ollama/health` |
-| `POST /api/v1/incidents/{id}/genai/*` | Proxy to `incident-service` regen endpoints            |
+| Route                                 | Action                                      |
+| ------------------------------------- | ------------------------------------------- |
+| `GET /api/v1/health`                  | Gateway liveness (local)                    |
+| `POST /api/v1/incidents/{id}/genai/*` | Proxy to `incident-service` regen endpoints |
+
+GenAI compute runs via NATS (`genai-service`); Ollama reachability is checked on that service (`/api/v1/genai/ollama/health`), not exposed on the gateway.
 
 Ingress (and local compose `edge` on port 8080) sends traffic with prefix `/api`; clients should use `/api/v1/...`. Swagger UI is at `/swagger/` on the same host.
 
@@ -21,7 +22,6 @@ Downstream base URLs are required (`@NotBlank` on `GatewayProperties`). Local de
 | Property / env                                                  | Local default (`application.properties`) |
 | --------------------------------------------------------------- | ---------------------------------------- |
 | `gateway.incident-service-url` / `GATEWAY_INCIDENT_SERVICE_URL` | `http://localhost:8081`                  |
-| `gateway.genai-service-url` / `GATEWAY_GENAI_SERVICE_URL`       | `http://localhost:8087`                  |
 
 ## Local development
 

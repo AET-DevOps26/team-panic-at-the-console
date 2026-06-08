@@ -1,0 +1,67 @@
+# Hits a real Ollama. Manual + nightly only (not gating PRs).
+name: ollama-integration
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 0 * * 1" # every Monday at midnight
+
+env:
+  OLLAMA_INTEGRATION_MODEL: qwen2.5:0.5b
+
+jobs:
+  integration:
+    name: genai-service end-to-end against real Ollama
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+
+      - name: Set up pixi
+        uses: prefix-dev/setup-pixi@1b2de7f3351f171c8b4dfeb558c639cb58ed4ec0 # v0.9.5
+        with:
+          manifest-path: services/genai-service/pixi.toml
+          frozen: true
+          cache: true
+
+      - name: Cache Ollama model
+        uses: actions/cache@v4
+        with:
+          path: ~/.ollama/models
+          key: ollama-models-${{ env.OLLAMA_INTEGRATION_MODEL }}
+
+      - name: Install Ollama
+        run: curl -fsSL https://ollama.com/install.sh | sh
+
+      - name: Start Ollama
+        run: |
+          nohup ollama serve > /tmp/ollama.log 2>&1 &
+          for _ in $(seq 1 30); do
+            if curl -sf http://localhost:11434/api/tags > /dev/null; then
+              echo "Ollama is up"
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "Ollama failed to start within 30s"
+          cat /tmp/ollama.log
+          exit 1
+
+      - name: Pull model
+        run: ollama pull "$OLLAMA_INTEGRATION_MODEL"
+
+      - name: Run integration tests
+        env:
+          OLLAMA_INTEGRATION_URL: http://localhost:11434
+        run: pixi run --manifest-path services/genai-service/pixi.toml test-integration
