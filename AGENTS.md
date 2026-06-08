@@ -120,8 +120,8 @@ infra/helm/devops-platform/files/  # Postgres DB init script (compose + Helm)
 - PRs and merge queue: lint, lockfile check, container build validation, semantic PR title check (images built but not pushed)
 - Publishing a GitHub Release runs `release.yml`, the single release orchestrator: it builds and pushes all images to GHCR (tagged with the release version and `latest`), then deploys to Kubernetes and the Azure VM. The deploy jobs use `needs: build`, so they start only after every image is pushed and a failed build aborts both deploys (no GHCR polling).
 - `deploy-k8s.yml` and `deploy-azure-vm.yml` are reusable (`workflow_call`) workflows that `release.yml` calls, and they also expose `workflow_dispatch` for ad-hoc deploys. The image tag and (for Azure) the action come from workflow inputs.
-- Manual Kubernetes deploy: `deploy-k8s.yml` (workflow_dispatch with `tag` input, requires `KUBECONFIG_B64` and `SOPS_AGE_KEY` secrets)
-- Manual Azure VM deploy: `deploy-azure-vm.yml` (workflow_dispatch with `action` and `tag` inputs); a single `gate` job means one `production` approval covers Terraform and Ansible
+- Manual Kubernetes deploy: `deploy-k8s.yml` (workflow_dispatch with `tag` input; gates on `production-kubernetes`)
+- Manual Azure VM deploy: `deploy-azure-vm.yml` (workflow_dispatch with `action` and `tag` inputs; gates on `production-azure`; one approval covers Terraform and Ansible)
 
 ## Code Review
 
