@@ -5,7 +5,7 @@ name: Deploy to Azure VM
 # The tag and action always come from `inputs`, so there is no resolve step and no
 # GHCR polling: when invoked from a release the orchestrator's `needs: build`
 # already guarantees the images exist. A single `gate` job carries
-# `environment: production-azure`, so the whole deploy needs one approval.
+# `environment: azure`, so the whole deploy needs one approval.
 
 on:
   workflow_call:
@@ -64,7 +64,7 @@ permissions:
 #      az ad sp create --id <appId>
 # 3. Add Federated Credential on the App Registration (in Azure Portal or CLI):
 #      Entity type: GitHub Actions
-#      Organisation: aet-devops26 | Repository: team-panic-at-the-console | Environment: production-azure
+#      Organisation: aet-devops26 | Repository: team-panic-at-the-console | Environment: azure
 # 4. Assign the Contributor role (subscription or resource group scope):
 #      az role assignment create \
 #        --assignee <appId> \
@@ -89,7 +89,7 @@ jobs:
   gate:
     name: Await approval
     runs-on: ubuntu-latest
-    environment: production-azure
+    environment: azure
     steps:
       - run: echo "Approved"
 

@@ -86,11 +86,11 @@ See [.github/workflows/](.github/workflows/).
 | `deploy-k8s.yml`                  | Called by `release.yml`, manual (`workflow_dispatch`) | Yes: deploy to Kubernetes                |
 | `deploy-azure-vm.yml`             | Called by `release.yml`, manual (`workflow_dispatch`) | No (uses OIDC + Ansible)                 |
 
-**PR CI does not decrypt SOPS or deploy to the cluster** (no cluster credentials on PRs). Deploy workflows run on separate GitHub Environments (`production-kubernetes`, `production-azure`) with the secrets below.
+**PR CI does not decrypt SOPS or deploy to the cluster** (no cluster credentials on PRs). Deploy workflows run on separate GitHub Environments (`kubernetes`, `azure`) with the secrets below.
 
 ### Release tags
 
-Publish a GitHub Release to trigger `release.yml`, the full release pipeline: it builds and pushes all images to GHCR (tagged with the release version and `latest`), then runs `deploy-k8s.yml` and `deploy-azure-vm.yml`. Both deploys use `needs: build`, so they start only once every image is pushed; a failed build aborts the deploys. Each deploy workflow gates on its own environment (`production-kubernetes` for Helm, `production-azure` for Terraform + Ansible).
+Publish a GitHub Release to trigger `release.yml`, the full release pipeline: it builds and pushes all images to GHCR (tagged with the release version and `latest`), then runs `deploy-k8s.yml` and `deploy-azure-vm.yml`. Both deploys use `needs: build`, so they start only once every image is pushed; a failed build aborts the deploys. Each deploy workflow gates on its own environment (`kubernetes` for Helm, `azure` for Terraform + Ansible).
 
 ### Helm + SOPS
 
@@ -125,9 +125,9 @@ Never commit `*.dec.yaml` or `~/.config/sops/age/keys.txt` (gitignored / local o
 
 Deploy workflows use two GitHub Environments so Kubernetes and Azure have independent deployment history and protection rules.
 
-##### `production-kubernetes`
+##### `kubernetes`
 
-Configure under **Settings → Environments → production-kubernetes**:
+Configure under **Settings → Environments → kubernetes**:
 
 | Name               | Type     | Used for                                       |
 | ------------------ | -------- | ---------------------------------------------- |
@@ -137,9 +137,9 @@ Configure under **Settings → Environments → production-kubernetes**:
 
 `deploy-k8s.yml` runs `pixi run -e deploy helm-deploy` with these values.
 
-##### `production-azure`
+##### `azure`
 
-Configure under **Settings → Environments → production-azure**:
+Configure under **Settings → Environments → azure**:
 
 | Name                         | Type     | Used for                                    |
 | ---------------------------- | -------- | ------------------------------------------- |
@@ -151,7 +151,7 @@ Configure under **Settings → Environments → production-azure**:
 | `POSTGRES_PASSWORD`          | Secret   | Shared Postgres password for the VM stack   |
 | `TF_BACKEND_STORAGE_ACCOUNT` | Variable | Terraform remote state storage account name |
 
-`deploy-azure-vm.yml` uses a single `gate` job on this environment, so one approval covers Terraform and Ansible. Add an Azure OIDC federated credential scoped to **Environment: production-azure** (see comments in the workflow file).
+`deploy-azure-vm.yml` uses a single `gate` job on this environment, so one approval covers Terraform and Ansible. Add an Azure OIDC federated credential scoped to **Environment: azure** (see comments in the workflow file).
 
 After migrating secrets and variables, remove the legacy `production` environment.
 
