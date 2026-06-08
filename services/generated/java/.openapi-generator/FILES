@@ -5,7 +5,6 @@ src/main/java/org/openapitools/api/HealthApi.java
 src/main/java/org/openapitools/api/IncidentsApi.java
 src/main/java/org/openapitools/api/UsersApi.java
 src/main/java/org/openapitools/model/ErrorResponse.java
-src/main/java/org/openapitools/model/GenaiHealthResponse.java
 src/main/java/org/openapitools/model/HealthCheck200Response.java
 src/main/java/org/openapitools/model/Incident.java
 src/main/java/org/openapitools/model/IncidentEvent.java

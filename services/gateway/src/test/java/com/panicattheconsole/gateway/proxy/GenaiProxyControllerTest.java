@@ -19,7 +19,6 @@ import com.panicattheconsole.gateway.GatewayApplication;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.method;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withStatus;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -38,55 +37,9 @@ class GenaiProxyControllerTest {
     @Autowired
     MockRestServiceServer incidentServer;
 
-    @Autowired
-    MockRestServiceServer genaiServer;
-
     @BeforeEach
     void resetServers() {
         incidentServer.reset();
-        genaiServer.reset();
-    }
-
-    @Test
-    void genaiHealth_proxiesGenaiService() throws Exception {
-        genaiServer
-                .expect(requestTo("http://localhost:8087/api/v1/genai/ollama/health"))
-                .andExpect(method(HttpMethod.GET))
-                .andRespond(
-                        withStatus(HttpStatus.OK)
-                                .contentType(MediaType.APPLICATION_JSON)
-                                .body(
-                                        """
-                                        {"status":"ok","ollamaReachable":true,"model":"qwen2.5:3b"}
-                                        """));
-
-        mvc.perform(get("/genai/health"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.status").value("ok"))
-                .andExpect(jsonPath("$.ollamaReachable").value(true));
-
-        genaiServer.verify();
-    }
-
-    @Test
-    void genaiHealth_forwards503WhenOllamaUnreachable() throws Exception {
-        genaiServer
-                .expect(requestTo("http://localhost:8087/api/v1/genai/ollama/health"))
-                .andExpect(method(HttpMethod.GET))
-                .andRespond(
-                        withStatus(HttpStatus.SERVICE_UNAVAILABLE)
-                                .contentType(MediaType.APPLICATION_JSON)
-                                .body(
-                                        """
-                                        {"status":"degraded","ollamaReachable":false,"model":"qwen2.5:3b"}
-                                        """));
-
-        mvc.perform(get("/genai/health"))
-                .andExpect(status().isServiceUnavailable())
-                .andExpect(jsonPath("$.status").value("degraded"))
-                .andExpect(jsonPath("$.ollamaReachable").value(false));
-
-        genaiServer.verify();
     }
 
     @Test
