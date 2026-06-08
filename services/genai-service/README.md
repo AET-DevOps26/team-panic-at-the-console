@@ -161,12 +161,12 @@ Regular PR CI skips all integration tests — they're slow (~10–30 s per call)
 
 ## Metrics
 
-`GET /metrics` exposes Prometheus scrape data. HTTP histograms come from `prometheus-fastapi-instrumentator`; custom metrics are recorded by `IncidentHandlers` via `time_generation()` in `genai_service.metrics`:
+`GET /metrics` exposes Prometheus scrape data. HTTP histograms come from `prometheus-fastapi-instrumentator`; custom metrics are recorded by `IncidentHandlers` via `time_generation()` in `genai_service.metrics` (covers LLM call and incident-service PATCH):
 
 | Metric                    | Type      | Labels                                                       |
 | ------------------------- | --------- | ------------------------------------------------------------ |
 | `ai_generation_seconds`   | histogram | `type`, `provider=ollama\|logos`                             |
-| `ai_generations_total`    | counter   | `type`, `provider`, `outcome=success\|error`                 |
+| `ai_generations_total`    | counter   | `type`, `provider`, `outcome=success\|error` (LLM + PATCH)   |
 | `llm_fallback_total`      | counter   | `from_provider`, `to_provider`                               |
 | `nats_messages_total`     | counter   | `subject`, `outcome=handled\|invalid_payload\|handler_error` |
 | `nats_consumer_connected` | gauge     | `1` when subscribed, `0` otherwise                           |

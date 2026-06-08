@@ -173,18 +173,18 @@ class IncidentHandlers:
     ) -> None:
         spec = _PATCH_SPECS[task]
         prompt = self._prompts.build(incident, events, task)
-        with time_generation(task.value, provider_name(self._llm)):
+        with time_generation(task.value, provider=lambda: provider_name(self._llm)):
             result = await self._llm.generate(
                 prompt.user,
                 system=prompt.system,
                 response_model=prompt.response_model,
             )
-        response = await spec.write(
-            incident_id=_uuid(incident_id),
-            client=self._client,
-            body=spec.to_body(result),
-        )
-        _expect_no_content(response, operation=f"write {task.value}")
+            response = await spec.write(
+                incident_id=_uuid(incident_id),
+                client=self._client,
+                body=spec.to_body(result),
+            )
+            _expect_no_content(response, operation=f"write {task.value}")
 
     async def _fetch(self, incident_id: str) -> tuple[Incident, list[IncidentEvent]]:
         incident = await get_incident.asyncio(

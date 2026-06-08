@@ -38,6 +38,7 @@ def test_metrics_endpoint_returns_prometheus_format(client):
     assert "ai_generation_seconds" in body
     assert "ai_generations_total" in body
     assert "llm_fallback_total" in body
+    assert 'llm_fallback_total{from_provider="logos",to_provider="ollama"}' in body
     assert "nats_messages_total" in body
     assert "nats_consumer_connected" in body
 
@@ -81,6 +82,16 @@ def test_time_generation_records_error_outcome_and_reraises():
             raise RuntimeError("boom")
 
     assert _counter_value("postmortem", "logos", "error") == pytest.approx(before + 1)
+
+
+def test_time_generation_resolves_callable_provider():
+    state = {"provider": "logos"}
+    before = _counter_value("summary", "ollama", "success")
+
+    with time_generation("summary", provider=lambda: state["provider"]):
+        state["provider"] = "ollama"
+
+    assert _counter_value("summary", "ollama", "success") == pytest.approx(before + 1)
 
 
 def test_metrics_excluded_from_openapi(client):
