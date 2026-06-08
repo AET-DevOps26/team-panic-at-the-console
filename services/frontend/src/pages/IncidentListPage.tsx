@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Plus, Search, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -80,6 +80,7 @@ function CreateIncidentDialog() {
 
 export default function IncidentListPage() {
   const { data: incidents, isLoading, refetch } = useIncidents();
+  const navigate = useNavigate();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<IncidentStatus | "all">("all");
   const [severityFilter, setSeverityFilter] = useState<Severity | "all">("all");
@@ -165,9 +166,9 @@ export default function IncidentListPage() {
                 </TableRow>
               ) : (
                 rows.map((incident) => (
-                  <TableRow key={incident.id} className="cursor-pointer">
+                  <TableRow key={incident.id} className="cursor-pointer" onClick={() => navigate(`/incidents/${incident.id}`)}>
                     <TableCell>
-                      <Link to={`/incidents/${incident.id}`} className="font-medium hover:underline">
+                      <Link to={`/incidents/${incident.id}`} className="font-medium" onClick={(e) => e.stopPropagation()}>
                         {incident.title}
                       </Link>
                       {incident.description && <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{incident.description}</p>}
