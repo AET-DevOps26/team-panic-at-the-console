@@ -8,8 +8,11 @@
 #   DEPLOY_NAMESPACE  target namespace
 #   TAG               image tag to deploy (e.g. main, v0.1.0, sha-<sha>)
 # Optional env:
-#   VALUES_FILE       path to SOPS-encrypted values file
-#                     (default: infra/helm/secrets/values.prod.enc.yaml)
+#   VALUES_FILE            path to SOPS-encrypted values file
+#                          (default: infra/helm/secrets/values.prod.enc.yaml)
+#   MONITORING_VALUES_FILE path to SOPS-encrypted monitoring values file
+#                          (default: infra/helm/secrets/values.monitoring.enc.yaml)
+#                          Required: overrides adminPassword=admin from values.yaml
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
@@ -69,14 +72,24 @@ mkdir -p "$CHART_STAGE/files"
 cp -r "$CHART_DIR"/. "$CHART_STAGE/"
 cp "$REPO_ROOT/api/openapi.yaml" "$CHART_STAGE/files/openapi.yaml"
 
+echo ">> copy Grafana dashboards from observability source of truth"
+mkdir -p "$CHART_STAGE/files/grafana"
+cp "$REPO_ROOT/infra/observability/grafana/dashboards/"*.json "$CHART_STAGE/files/grafana/"
+
+echo ">> helm dependency build"
+helm dependency build "$CHART_STAGE"
+
 echo ">> helm upgrade --install (namespace=$DEPLOY_NAMESPACE tag=$TAG)"
 HELM_VALUES=(--values "$DEC_VALUES")
 MONITORING_ENC="${MONITORING_VALUES_FILE:-$REPO_ROOT/infra/helm/secrets/values.monitoring.enc.yaml}"
-if [ -f "$MONITORING_ENC" ]; then
-  echo ">> merge monitoring values from $MONITORING_ENC"
-  sops --decrypt "$MONITORING_ENC" > "$WORK_DIR/values.monitoring.dec.yaml"
-  HELM_VALUES+=(--values "$WORK_DIR/values.monitoring.dec.yaml")
+if [ ! -f "$MONITORING_ENC" ]; then
+  echo "::error:: monitoring values file not found: $MONITORING_ENC" >&2
+  echo "::error:: set MONITORING_VALUES_FILE or create infra/helm/secrets/values.monitoring.enc.yaml to avoid shipping adminPassword=admin" >&2
+  exit 1
 fi
+echo ">> merge monitoring values from $MONITORING_ENC"
+sops --decrypt "$MONITORING_ENC" > "$WORK_DIR/values.monitoring.dec.yaml"
+HELM_VALUES+=(--values "$WORK_DIR/values.monitoring.dec.yaml")
 
 helm upgrade --install devops-platform "$CHART_STAGE" \
   --namespace "$DEPLOY_NAMESPACE" \
