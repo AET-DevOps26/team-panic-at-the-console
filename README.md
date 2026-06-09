@@ -86,11 +86,11 @@ See [.github/workflows/](.github/workflows/).
 | `deploy-k8s.yml`                  | Called by `release.yml`, manual (`workflow_dispatch`) | Yes: deploy to Kubernetes                |
 | `deploy-azure-vm.yml`             | Called by `release.yml`, manual (`workflow_dispatch`) | No (uses OIDC + Ansible)                 |
 
-**PR CI does not decrypt SOPS or deploy to the cluster** (no cluster credentials on PRs). Deploy workflows run only on the GitHub `production` environment with the secrets below.
+**PR CI does not decrypt SOPS or deploy to the cluster** (no cluster credentials on PRs). Deploy workflows gate on the `kubernetes` and `azure` GitHub Environments; credentials live in repository Actions secrets (below).
 
 ### Release tags
 
-Publish a GitHub Release to trigger `release.yml`, the full release pipeline: it builds and pushes all images to GHCR (tagged with the release version and `latest`), then runs `deploy-k8s.yml` and `deploy-azure-vm.yml`. Both deploys use `needs: build`, so they start only once every image is pushed; a failed build aborts the deploys. The Azure VM deploy runs with `action: full` on release (Terraform applies any infra changes, then Ansible redeploys) behind a single `production` approval.
+Publish a GitHub Release to trigger `release.yml`, the full release pipeline: it builds and pushes all images to GHCR (tagged with the release version and `latest`), then runs `deploy-k8s.yml` and `deploy-azure-vm.yml`. Both deploys use `needs: build`, so they start only once every image is pushed; a failed build aborts the deploys. Each deploy workflow gates on its own environment (`kubernetes` for Helm, `azure` for Terraform + Ansible).
 
 ### Helm + SOPS
 
@@ -121,9 +121,9 @@ Production deploy secrets live in `infra/helm/secrets/values.prod.enc.yaml` (enc
 
 Never commit `*.dec.yaml` or `~/.config/sops/age/keys.txt` (gitignored / local only).
 
-#### GitHub `production` environment
+#### GitHub Actions secrets (Kubernetes deploy)
 
-Configure under **Settings → Environments → production**:
+Configure under **Settings → Secrets and variables → Actions** (repository scope):
 
 | Name               | Type     | Used for                                       |
 | ------------------ | -------- | ---------------------------------------------- |
@@ -131,7 +131,7 @@ Configure under **Settings → Environments → production**:
 | `SOPS_AGE_KEY`     | Secret   | Full AGE private key file (same as `keys.txt`) |
 | `DEPLOY_NAMESPACE` | Variable | e.g. `team-panic-at-the-console-devops26`      |
 
-`deploy-k8s.yml` runs `pixi run -e deploy helm-deploy` with these values.
+`deploy-k8s.yml` runs `pixi run -e deploy helm-deploy` with these values. Azure deploy secrets are documented in `deploy-azure-vm.yml`.
 
 #### New team member access
 

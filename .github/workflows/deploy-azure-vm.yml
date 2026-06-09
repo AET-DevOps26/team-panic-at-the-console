@@ -5,7 +5,7 @@ name: Deploy to Azure VM
 # The tag and action always come from `inputs`, so there is no resolve step and no
 # GHCR polling: when invoked from a release the orchestrator's `needs: build`
 # already guarantees the images exist. A single `gate` job carries
-# `environment: production`, so the whole deploy needs one approval.
+# `environment: azure`, so the whole deploy needs one approval.
 
 on:
   workflow_call:
@@ -62,9 +62,16 @@ permissions:
 #      az ad app create --display-name "github-actions-team-panic"
 # 2. Create a Service Principal:
 #      az ad sp create --id <appId>
-# 3. Add Federated Credential on the App Registration (in Azure Portal or CLI):
-#      Entity type: GitHub Actions
-#      Organisation: aet-devops26 | Repository: team-panic-at-the-console | Environment: production
+# 3. Add a Federated Credential on the App Registration.
+#      Only the `gate` job sets `environment: azure`; Terraform and Ansible run
+#      with no environment, and GitHub scopes the OIDC subject per job. Their
+#      tokens therefore carry a ref-based subject (e.g.
+#      `repo:AET-DevOps26/team-panic-at-the-console:ref:refs/tags/v1.2.3`), not
+#      `environment:azure`, so an environment-scoped credential would not match.
+#      Use a wildcard subject identifier so every ref (and environment) is accepted:
+#        claims['sub'] matches 'repo:AET-DevOps26/team-panic-at-the-console:*'
+#      Wildcard subjects are not available for the "GitHub Actions" entity type in
+#      the Azure Portal; create the credential via the Azure CLI (preview feature).
 # 4. Assign the Contributor role (subscription or resource group scope):
 #      az role assignment create \
 #        --assignee <appId> \
@@ -89,7 +96,7 @@ jobs:
   gate:
     name: Await approval
     runs-on: ubuntu-latest
-    environment: production
+    environment: azure
     steps:
       - run: echo "Approved"
 
