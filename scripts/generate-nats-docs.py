@@ -3,6 +3,12 @@
 import json
 from pathlib import Path
 
+########################
+# This script basically just generates markdown documentation/overview for NATS event contracts.
+# It reads all JSON files in the `api/specs/nats` directory, extracts relevant information,
+# and produces a structured markdown file with details about each event contract.
+########################
+
 
 ROOT = Path(__file__).resolve().parent.parent
 SPEC_DIR = ROOT / "api" / "specs" / "nats"
@@ -32,9 +38,7 @@ def render_properties(properties, required):
         if "enum" in prop:
             typ += f" (enum: {', '.join(map(str, prop['enum']))})"
 
-        lines.append(
-            f"| `{name}` | {typ} | {req} | {desc} |"
-        )
+        lines.append(f"| `{name}` | {typ} | {req} | {desc} |")
 
     return "\n".join(lines)
 
