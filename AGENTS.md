@@ -86,17 +86,17 @@ See `CONTEXT.md` for full architectural decisions and `docs/adr/` for key trade-
 
 ### Services
 
-| Service                | Port | Description                             |
-| ---------------------- | ---- | --------------------------------------- |
-| `frontend`             | 3000 | Web dashboard                           |
-| `gateway`              | 8080 | Single API entry point                  |
-| `incident-service`     | 8081 | Core incident CRUD + lifecycle          |
-| `event-service`        | 8082 | Append-only event log                   |
-| `rule-engine`          | 8083 | Evaluates signals → incident decisions  |
-| `user-service`         | 8084 | Auth + role management                  |
-| `notification-service` | 8085 | Notifies users on incident events       |
-| `webhook-service`      | 8086 | Receives CI/CD webhook events           |
-| `genai-service`        | 8087 | AI summaries, triage, postmortem drafts |
+| Service                | Port                  | Description                                               |
+| ---------------------- | --------------------- | --------------------------------------------------------- |
+| `frontend`             | 3000                  | Web dashboard                                             |
+| `gateway`              | 8080                  | Single API entry point                                    |
+| `incident-service`     | 8081                  | Core incident CRUD + lifecycle                            |
+| `event-service`        | 8082                  | Append-only event log                                     |
+| `rule-engine`          | 8083                  | Evaluates signals → incident decisions                    |
+| `user-service`         | 8084                  | Auth + role management                                    |
+| `notification-service` | 8085                  | Notifies users on incident events                         |
+| `webhook-service`      | 8086                  | Receives CI/CD webhook events                             |
+| `genai-service`        | 8087                  | AI summaries, triage, postmortem drafts                   |
 | `swagger-ui`           | (via `:8080/swagger`) | OpenAPI explorer; routed by compose `edge` / Helm ingress |
 
 ### Infrastructure
@@ -117,10 +117,11 @@ infra/helm/devops-platform/files/  # Postgres DB init script (compose + Helm)
 
 ## CI/CD
 
-- PRs run: lint, lockfile check, container build validation, semantic PR title check
-- Merges to `main` build and push all images to GHCR tagged `:main` and `:<full-commit-sha>`
-- Semantic tags (`v*`) trigger `release-deploy.yml`: builds versioned images + deploys via Helm to the `production` environment
-- Manual deploys: `deploy-helm-sops.yml` (workflow_dispatch, requires `KUBECONFIG_B64` and `SOPS_AGE_KEY` secrets)
+- PRs and merge queue: lint, lockfile check, container build validation, semantic PR title check (images built but not pushed)
+- Publishing a GitHub Release runs `release.yml`, the single release orchestrator: it builds and pushes all images to GHCR (tagged with the release version and `latest`), then deploys to Kubernetes and the Azure VM. The deploy jobs use `needs: build`, so they start only after every image is pushed and a failed build aborts both deploys (no GHCR polling).
+- `deploy-k8s.yml` and `deploy-azure-vm.yml` are reusable (`workflow_call`) workflows that `release.yml` calls, and they also expose `workflow_dispatch` for ad-hoc deploys. The image tag and (for Azure) the action come from workflow inputs.
+- Manual Kubernetes deploy: `deploy-k8s.yml` (workflow_dispatch with `tag` input, requires `KUBECONFIG_B64` and `SOPS_AGE_KEY` secrets)
+- Manual Azure VM deploy: `deploy-azure-vm.yml` (workflow_dispatch with `action` and `tag` inputs); a single `gate` job means one `production` approval covers Terraform and Ansible
 
 ## Code Review
 

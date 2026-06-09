@@ -3,9 +3,6 @@ name: Container CI
 on:
   pull_request:
   merge_group:
-  push:
-    branches:
-      - main
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -13,7 +10,6 @@ concurrency:
 
 permissions:
   contents: read
-  packages: write
 
 jobs:
   validate-container-layout:
@@ -48,8 +44,8 @@ jobs:
     uses: ./.github/workflows/_build-images.yml
     permissions:
       contents: read
-      packages: write
+      packages: read
     with:
-      push: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
-      primary_tag: main
-      sha_tag: ${{ github.sha }}
+      push: false
+      primary_tag: dev
+      sha_tag: sha-${{ github.sha }}
