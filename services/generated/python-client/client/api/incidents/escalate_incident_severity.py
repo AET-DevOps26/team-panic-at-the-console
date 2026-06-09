@@ -7,22 +7,22 @@ import httpx
 
 from ... import errors
 from ...client import AuthenticatedClient, Client
-from ...models.comment import Comment
-from ...models.create_comment_request import CreateCommentRequest
 from ...models.error_response import ErrorResponse
+from ...models.escalate_severity_request import EscalateSeverityRequest
+from ...models.incident import Incident
 from ...types import Response
 
 
 def _get_kwargs(
     incident_id: UUID,
     *,
-    body: CreateCommentRequest,
+    body: EscalateSeverityRequest,
 ) -> dict[str, Any]:
     headers: dict[str, Any] = {}
 
     _kwargs: dict[str, Any] = {
-        "method": "post",
-        "url": "/incidents/{incident_id}/comments".format(
+        "method": "patch",
+        "url": "/incidents/{incident_id}/severity".format(
             incident_id=quote(str(incident_id), safe=""),
         ),
     }
@@ -37,11 +37,11 @@ def _get_kwargs(
 
 def _parse_response(
     *, client: AuthenticatedClient | Client, response: httpx.Response
-) -> Any | Comment | ErrorResponse | None:
-    if response.status_code == 201:
-        response_201 = Comment.from_dict(response.json())
+) -> Any | ErrorResponse | Incident | None:
+    if response.status_code == 200:
+        response_200 = Incident.from_dict(response.json())
 
-        return response_201
+        return response_200
 
     if response.status_code == 400:
         response_400 = ErrorResponse.from_dict(response.json())
@@ -51,6 +51,10 @@ def _parse_response(
     if response.status_code == 401:
         response_401 = cast(Any, None)
         return response_401
+
+    if response.status_code == 403:
+        response_403 = cast(Any, None)
+        return response_403
 
     if response.status_code == 404:
         response_404 = cast(Any, None)
@@ -64,7 +68,7 @@ def _parse_response(
 
 def _build_response(
     *, client: AuthenticatedClient | Client, response: httpx.Response
-) -> Response[Any | Comment | ErrorResponse]:
+) -> Response[Any | ErrorResponse | Incident]:
     return Response(
         status_code=HTTPStatus(response.status_code),
         content=response.content,
@@ -77,20 +81,23 @@ def sync_detailed(
     incident_id: UUID,
     *,
     client: AuthenticatedClient | Client,
-    body: CreateCommentRequest,
-) -> Response[Any | Comment | ErrorResponse]:
-    """Add a comment to an incident (immutable)
+    body: EscalateSeverityRequest,
+) -> Response[Any | ErrorResponse | Incident]:
+    """Manually escalate incident severity
+
+     Requires COMMANDER role.
 
     Args:
         incident_id (UUID):  Example: 018e2c5f-1234-7abc-8def-000000000001.
-        body (CreateCommentRequest): Request to add a comment to an incident.
+        body (EscalateSeverityRequest): Request to escalate severity (only higher severities
+            allowed).
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
         httpx.TimeoutException: If the request takes longer than Client.timeout.
 
     Returns:
-        Response[Any | Comment | ErrorResponse]
+        Response[Any | ErrorResponse | Incident]
     """
 
     kwargs = _get_kwargs(
@@ -109,20 +116,23 @@ def sync(
     incident_id: UUID,
     *,
     client: AuthenticatedClient | Client,
-    body: CreateCommentRequest,
-) -> Any | Comment | ErrorResponse | None:
-    """Add a comment to an incident (immutable)
+    body: EscalateSeverityRequest,
+) -> Any | ErrorResponse | Incident | None:
+    """Manually escalate incident severity
+
+     Requires COMMANDER role.
 
     Args:
         incident_id (UUID):  Example: 018e2c5f-1234-7abc-8def-000000000001.
-        body (CreateCommentRequest): Request to add a comment to an incident.
+        body (EscalateSeverityRequest): Request to escalate severity (only higher severities
+            allowed).
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
         httpx.TimeoutException: If the request takes longer than Client.timeout.
 
     Returns:
-        Any | Comment | ErrorResponse
+        Any | ErrorResponse | Incident
     """
 
     return sync_detailed(
@@ -136,20 +146,23 @@ async def asyncio_detailed(
     incident_id: UUID,
     *,
     client: AuthenticatedClient | Client,
-    body: CreateCommentRequest,
-) -> Response[Any | Comment | ErrorResponse]:
-    """Add a comment to an incident (immutable)
+    body: EscalateSeverityRequest,
+) -> Response[Any | ErrorResponse | Incident]:
+    """Manually escalate incident severity
+
+     Requires COMMANDER role.
 
     Args:
         incident_id (UUID):  Example: 018e2c5f-1234-7abc-8def-000000000001.
-        body (CreateCommentRequest): Request to add a comment to an incident.
+        body (EscalateSeverityRequest): Request to escalate severity (only higher severities
+            allowed).
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
         httpx.TimeoutException: If the request takes longer than Client.timeout.
 
     Returns:
-        Response[Any | Comment | ErrorResponse]
+        Response[Any | ErrorResponse | Incident]
     """
 
     kwargs = _get_kwargs(
@@ -166,20 +179,23 @@ async def asyncio(
     incident_id: UUID,
     *,
     client: AuthenticatedClient | Client,
-    body: CreateCommentRequest,
-) -> Any | Comment | ErrorResponse | None:
-    """Add a comment to an incident (immutable)
+    body: EscalateSeverityRequest,
+) -> Any | ErrorResponse | Incident | None:
+    """Manually escalate incident severity
+
+     Requires COMMANDER role.
 
     Args:
         incident_id (UUID):  Example: 018e2c5f-1234-7abc-8def-000000000001.
-        body (CreateCommentRequest): Request to add a comment to an incident.
+        body (EscalateSeverityRequest): Request to escalate severity (only higher severities
+            allowed).
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
         httpx.TimeoutException: If the request takes longer than Client.timeout.
 
     Returns:
-        Any | Comment | ErrorResponse
+        Any | ErrorResponse | Incident
     """
 
     return (

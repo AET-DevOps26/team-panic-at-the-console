@@ -21,77 +21,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/incidents": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** List all incidents */
-        get: operations["listIncidents"];
-        put?: never;
-        /** Manually create a new incident */
-        post: operations["createIncident"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/incidents/{incidentId}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Get a single incident by ID */
-        get: operations["getIncident"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        /** Update incident status or severity */
-        patch: operations["updateIncident"];
-        trace?: never;
-    };
-    "/incidents/{incidentId}/events": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Get the event log for an incident */
-        get: operations["listIncidentEvents"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/incidents/{incidentId}/comments": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** List comments on an incident */
-        get: operations["listComments"];
-        put?: never;
-        /** Add a comment to an incident */
-        post: operations["addComment"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/incidents/{incidentId}/genai/summary": {
         parameters: {
             query?: never;
@@ -154,6 +83,40 @@ export interface paths {
         put?: never;
         /** Trigger postmortem regeneration for a resolved incident */
         post: operations["regeneratePostmortem"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/incidents/{incidentId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Fetch a single incident */
+        get: operations["getIncident"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/incidents/{incidentId}/events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Events from the Event Log for one incident, in chronological order */
+        get: operations["listIncidentEvents"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -231,6 +194,104 @@ export interface paths {
         head?: never;
         /** (internal) Write AI-generated Postmortem back to incident-service */
         patch: operations["writeIncidentPostmortem"];
+        trace?: never;
+    };
+    "/incidents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List incidents with optional filtering */
+        get: operations["listIncidents"];
+        put?: never;
+        /** Create a new incident manually */
+        post: operations["createIncident"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/incidents/{incidentId}/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Transition incident status
+         * @description Allowed transitions: open → investigating, investigating → resolved.
+         *     Requires RESPONDER or COMMANDER role.
+         *
+         */
+        patch: operations["updateIncidentStatus"];
+        trace?: never;
+    };
+    "/incidents/{incidentId}/severity": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Manually escalate incident severity
+         * @description Requires COMMANDER role.
+         */
+        patch: operations["escalateIncidentSeverity"];
+        trace?: never;
+    };
+    "/incidents/{incidentId}/assign": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Assign or unassign responders to an incident
+         * @description Requires COMMANDER or RESPONDER role (can assign themselves).
+         */
+        patch: operations["assignIncident"];
+        trace?: never;
+    };
+    "/incidents/{incidentId}/comments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List comments on an incident */
+        get: operations["listComments"];
+        put?: never;
+        /** Add a comment to an incident (immutable) */
+        post: operations["addComment"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/auth/register": {
@@ -502,37 +563,6 @@ export interface components {
              *     ] */
             solutions: string[];
         };
-        /** @description Payload for manually creating a new incident. */
-        CreateIncidentRequest: {
-            /** @example Checkout 5xx spike */
-            title: string;
-            /** @example High error rate on checkout API after deploy v2.4.1 */
-            description?: string | null;
-            severity: components["schemas"]["Severity"];
-        };
-        /** @description Partial update for an incident's mutable fields. */
-        UpdateIncidentRequest: {
-            status?: components["schemas"]["IncidentStatus"];
-            severity?: components["schemas"]["Severity"];
-        };
-        /** @description An immutable comment left on an incident. */
-        Comment: {
-            /** Format: uuid */
-            id: string;
-            /** Format: uuid */
-            incidentId: string;
-            /** Format: uuid */
-            authorId: string;
-            /** @example Possible root cause is the connection pool configuration in v2.4.1 */
-            content: string;
-            /** Format: date-time */
-            createdAt: string;
-        };
-        /** @description Payload for adding a comment to an incident. */
-        CreateCommentRequest: {
-            /** @example Possible root cause is the connection pool configuration in v2.4.1 */
-            content: string;
-        };
         /**
          * @description Latest AI-generated postmortem draft for a resolved incident (GET in a later release; structured LLM output contract today).
          *
@@ -577,6 +607,68 @@ export interface components {
             timeline: string[];
             actionItems: string[];
         };
+        /** @description Request to create a new incident manually. */
+        CreateIncidentRequest: {
+            /** @example Database migration rollback needed */
+            title: string;
+            severity: components["schemas"]["Severity"];
+        };
+        /** @description Request to update incident status. */
+        UpdateStatusRequest: {
+            status: components["schemas"]["IncidentStatus"];
+        };
+        /** @description Request to escalate severity (only higher severities allowed). */
+        EscalateSeverityRequest: {
+            severity: components["schemas"]["Severity"];
+        };
+        /** @description Request to assign or unassign responders. */
+        AssignIncidentRequest: {
+            /**
+             * @description UUIDs of users to assign. Send empty array to clear all assignments.
+             * @example [
+             *       "018e2c5f-1234-7abc-8def-0000000000aa"
+             *     ]
+             */
+            userIds: string[];
+        };
+        /** @description Request to add a comment to an incident. */
+        CreateCommentRequest: {
+            /** @example Rolled back deployment v2.4.1; monitoring error rate now. */
+            text: string;
+        };
+        /** @description An immutable comment on an incident, authored by a user. */
+        Comment: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            incidentId: string;
+            /**
+             * Format: uuid
+             * @description UUID of the user who wrote the comment
+             */
+            authorId: string;
+            text: string;
+            /** Format: date-time */
+            createdAt: string;
+        };
+        CommentListResponse: {
+            items: components["schemas"]["Comment"][];
+            /** @example 3 */
+            total: number;
+            /** @example 0 */
+            page: number;
+            /** @example 50 */
+            size: number;
+        };
+        IncidentListResponse: {
+            items: components["schemas"]["Incident"][];
+            /** @example 5 */
+            total: number;
+            /** @example 0 */
+            page: number;
+            /** @example 50 */
+            size: number;
+        };
     };
     responses: {
         /** @description Regeneration task accepted for async processing */
@@ -606,8 +698,10 @@ export interface components {
     parameters: {
         /** @description Maximum number of users to return (default 50, max 100). */
         UserListLimitParam: number;
+        PageParam: number;
         /** @description Number of users to skip for pagination. */
         UserListOffsetParam: number;
+        SizeParam: number;
         /** @description UUID of the target incident. */
         IncidentIdParam: string;
     };
@@ -652,188 +746,6 @@ export interface operations {
                 };
                 content?: never;
             };
-        };
-    };
-    listIncidents: {
-        parameters: {
-            query?: {
-                status?: components["schemas"]["IncidentStatus"];
-                severity?: components["schemas"]["Severity"];
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Incidents in reverse-chronological order */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Incident"][];
-                };
-            };
-        };
-    };
-    createIncident: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["CreateIncidentRequest"];
-            };
-        };
-        responses: {
-            /** @description Incident created; starts in open state */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Incident"];
-                };
-            };
-            /** @description Validation failed */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    getIncident: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description UUID of the target incident. */
-                incidentId: components["parameters"]["IncidentIdParam"];
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Incident found */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Incident"];
-                };
-            };
-            404: components["responses"]["IncidentNotFound"];
-        };
-    };
-    updateIncident: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description UUID of the target incident. */
-                incidentId: components["parameters"]["IncidentIdParam"];
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["UpdateIncidentRequest"];
-            };
-        };
-        responses: {
-            /** @description Updated incident */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Incident"];
-                };
-            };
-            404: components["responses"]["IncidentNotFound"];
-        };
-    };
-    listIncidentEvents: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description UUID of the target incident. */
-                incidentId: components["parameters"]["IncidentIdParam"];
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Event log entries in chronological order */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["IncidentEvent"][];
-                };
-            };
-            404: components["responses"]["IncidentNotFound"];
-        };
-    };
-    listComments: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description UUID of the target incident. */
-                incidentId: components["parameters"]["IncidentIdParam"];
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Comments in chronological order */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Comment"][];
-                };
-            };
-            404: components["responses"]["IncidentNotFound"];
-        };
-    };
-    addComment: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description UUID of the target incident. */
-                incidentId: components["parameters"]["IncidentIdParam"];
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["CreateCommentRequest"];
-            };
-        };
-        responses: {
-            /** @description Comment created */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Comment"];
-                };
-            };
-            404: components["responses"]["IncidentNotFound"];
         };
     };
     regenerateSummary: {
@@ -899,6 +811,66 @@ export interface operations {
             202: components["responses"]["RegenAccepted"];
             404: components["responses"]["IncidentNotFound"];
             409: components["responses"]["IncidentNotResolved"];
+        };
+    };
+    getIncident: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description UUID of the target incident. */
+                incidentId: components["parameters"]["IncidentIdParam"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Incident"];
+                };
+            };
+            /** @description Incident not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    listIncidentEvents: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description UUID of the target incident. */
+                incidentId: components["parameters"]["IncidentIdParam"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IncidentEvent"][];
+                };
+            };
+            /** @description Incident not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
         };
     };
     writeIncidentSummary: {
@@ -1034,6 +1006,311 @@ export interface operations {
                 };
                 content?: never;
             };
+        };
+    };
+    listIncidents: {
+        parameters: {
+            query?: {
+                /** @description Filter by incident status */
+                status?: components["schemas"]["IncidentStatus"];
+                /** @description Filter by incident severity */
+                severity?: components["schemas"]["Severity"];
+                page?: components["parameters"]["PageParam"];
+                size?: components["parameters"]["SizeParam"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description List of incidents */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IncidentListResponse"];
+                };
+            };
+            /** @description Not authenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    createIncident: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateIncidentRequest"];
+            };
+        };
+        responses: {
+            /** @description Incident created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Incident"];
+                };
+            };
+            /** @description Invalid request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not authenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    updateIncidentStatus: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description UUID of the target incident. */
+                incidentId: components["parameters"]["IncidentIdParam"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateStatusRequest"];
+            };
+        };
+        responses: {
+            /** @description Status updated */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Incident"];
+                };
+            };
+            /** @description Invalid status transition */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not authenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Insufficient permissions */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            404: components["responses"]["IncidentNotFound"];
+        };
+    };
+    escalateIncidentSeverity: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description UUID of the target incident. */
+                incidentId: components["parameters"]["IncidentIdParam"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EscalateSeverityRequest"];
+            };
+        };
+        responses: {
+            /** @description Severity escalated */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Incident"];
+                };
+            };
+            /** @description Invalid severity or downgrade attempted */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not authenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Insufficient permissions */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            404: components["responses"]["IncidentNotFound"];
+        };
+    };
+    assignIncident: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description UUID of the target incident. */
+                incidentId: components["parameters"]["IncidentIdParam"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AssignIncidentRequest"];
+            };
+        };
+        responses: {
+            /** @description Assignment updated */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Incident"];
+                };
+            };
+            /** @description Invalid request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not authenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Insufficient permissions */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            404: components["responses"]["IncidentNotFound"];
+        };
+    };
+    listComments: {
+        parameters: {
+            query?: {
+                page?: components["parameters"]["PageParam"];
+                size?: components["parameters"]["SizeParam"];
+            };
+            header?: never;
+            path: {
+                /** @description UUID of the target incident. */
+                incidentId: components["parameters"]["IncidentIdParam"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description List of comments */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommentListResponse"];
+                };
+            };
+            /** @description Not authenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            404: components["responses"]["IncidentNotFound"];
+        };
+    };
+    addComment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description UUID of the target incident. */
+                incidentId: components["parameters"]["IncidentIdParam"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateCommentRequest"];
+            };
+        };
+        responses: {
+            /** @description Comment created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Comment"];
+                };
+            };
+            /** @description Invalid request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not authenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            404: components["responses"]["IncidentNotFound"];
         };
     };
     registerUser: {

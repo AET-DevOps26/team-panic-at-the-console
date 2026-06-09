@@ -5,27 +5,29 @@ from typing import Any, TypeVar
 
 from attrs import define as _attrs_define
 
-T = TypeVar("T", bound="CreateCommentRequest")
+from ..models.incident_status import IncidentStatus
+
+T = TypeVar("T", bound="UpdateStatusRequest")
 
 
 @_attrs_define
-class CreateCommentRequest:
-    """Request to add a comment to an incident.
+class UpdateStatusRequest:
+    """Request to update incident status.
 
     Attributes:
-        text (str):  Example: Rolled back deployment v2.4.1; monitoring error rate now..
+        status (IncidentStatus):
     """
 
-    text: str
+    status: IncidentStatus
 
     def to_dict(self) -> dict[str, Any]:
-        text = self.text
+        status = self.status.value
 
         field_dict: dict[str, Any] = {}
 
         field_dict.update(
             {
-                "text": text,
+                "status": status,
             }
         )
 
@@ -34,10 +36,10 @@ class CreateCommentRequest:
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
         d = dict(src_dict)
-        text = d.pop("text")
+        status = IncidentStatus(d.pop("status"))
 
-        create_comment_request = cls(
-            text=text,
+        update_status_request = cls(
+            status=status,
         )
 
-        return create_comment_request
+        return update_status_request

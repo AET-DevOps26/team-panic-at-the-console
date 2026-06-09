@@ -9,7 +9,9 @@ export type Severity = components["schemas"]["Severity"];
 export type IncidentEvent = components["schemas"]["IncidentEvent"];
 export type Comment = components["schemas"]["Comment"];
 export type CreateIncidentRequest = components["schemas"]["CreateIncidentRequest"];
-export type UpdateIncidentRequest = components["schemas"]["UpdateIncidentRequest"];
+export type UpdateStatusRequest = components["schemas"]["UpdateStatusRequest"];
+export type EscalateSeverityRequest = components["schemas"]["EscalateSeverityRequest"];
+export type AssignIncidentRequest = components["schemas"]["AssignIncidentRequest"];
 export type CreateCommentRequest = components["schemas"]["CreateCommentRequest"];
 
 const MOCK = import.meta.env.VITE_MOCK === "true";
@@ -87,8 +89,8 @@ export function useIncidents(params?: { status?: IncidentStatus; severity?: Seve
       const { data, error } = await apiClient.GET("/incidents", {
         params: { query: params },
       });
-      if (error) throw new Error("Failed to fetch incidents");
-      return data;
+      if (error || !data) throw new Error("Failed to fetch incidents");
+      return data.items;
     },
   });
 }
@@ -123,21 +125,61 @@ export function useCreateIncident() {
   });
 }
 
-export function useUpdateIncident(id: string) {
+function invalidateIncident(queryClient: ReturnType<typeof useQueryClient>, id: string, updated: Incident) {
+  queryClient.setQueryData(["incidents", id], updated);
+  void queryClient.invalidateQueries({ queryKey: ["incidents"] });
+}
+
+export function useUpdateIncidentStatus(id: string) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (body: UpdateIncidentRequest) => {
+    mutationFn: async (body: UpdateStatusRequest) => {
       if (MOCK) return {} as Incident;
-      const { data, error } = await apiClient.PATCH("/incidents/{incidentId}", {
+      const { data, error } = await apiClient.PATCH("/incidents/{incidentId}/status", {
         params: { path: { incidentId: id } },
         body,
       });
-      if (error) throw new Error("Failed to update incident");
+      if (error) throw new Error("Failed to update incident status");
       return data;
     },
     onSuccess: (updated) => {
-      queryClient.setQueryData(["incidents", id], updated);
-      void queryClient.invalidateQueries({ queryKey: ["incidents"] });
+      if (updated) invalidateIncident(queryClient, id, updated);
+    },
+  });
+}
+
+export function useEscalateIncidentSeverity(id: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (body: EscalateSeverityRequest) => {
+      if (MOCK) return {} as Incident;
+      const { data, error } = await apiClient.PATCH("/incidents/{incidentId}/severity", {
+        params: { path: { incidentId: id } },
+        body,
+      });
+      if (error) throw new Error("Failed to escalate incident severity");
+      return data;
+    },
+    onSuccess: (updated) => {
+      if (updated) invalidateIncident(queryClient, id, updated);
+    },
+  });
+}
+
+export function useAssignIncident(id: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (body: AssignIncidentRequest) => {
+      if (MOCK) return {} as Incident;
+      const { data, error } = await apiClient.PATCH("/incidents/{incidentId}/assign", {
+        params: { path: { incidentId: id } },
+        body,
+      });
+      if (error) throw new Error("Failed to assign incident");
+      return data;
+    },
+    onSuccess: (updated) => {
+      if (updated) invalidateIncident(queryClient, id, updated);
     },
   });
 }
@@ -169,8 +211,8 @@ export function useComments(incidentId: string) {
       const { data, error } = await apiClient.GET("/incidents/{incidentId}/comments", {
         params: { path: { incidentId } },
       });
-      if (error) throw new Error("Failed to fetch comments");
-      return data;
+      if (error || !data) throw new Error("Failed to fetch comments");
+      return data.items;
     },
     enabled: Boolean(incidentId),
   });

@@ -63,7 +63,7 @@ def sync_detailed(
     *,
     client: AuthenticatedClient | Client,
 ) -> Response[Any | list[IncidentEvent]]:
-    """Get the event log for an incident
+    """List Events from the Event Log for one incident, in chronological order
 
     Args:
         incident_id (UUID):  Example: 018e2c5f-1234-7abc-8def-000000000001.
@@ -92,7 +92,7 @@ def sync(
     *,
     client: AuthenticatedClient | Client,
 ) -> Any | list[IncidentEvent] | None:
-    """Get the event log for an incident
+    """List Events from the Event Log for one incident, in chronological order
 
     Args:
         incident_id (UUID):  Example: 018e2c5f-1234-7abc-8def-000000000001.
@@ -116,7 +116,7 @@ async def asyncio_detailed(
     *,
     client: AuthenticatedClient | Client,
 ) -> Response[Any | list[IncidentEvent]]:
-    """Get the event log for an incident
+    """List Events from the Event Log for one incident, in chronological order
 
     Args:
         incident_id (UUID):  Example: 018e2c5f-1234-7abc-8def-000000000001.
@@ -143,7 +143,7 @@ async def asyncio(
     *,
     client: AuthenticatedClient | Client,
 ) -> Any | list[IncidentEvent] | None:
-    """Get the event log for an incident
+    """List Events from the Event Log for one incident, in chronological order
 
     Args:
         incident_id (UUID):  Example: 018e2c5f-1234-7abc-8def-000000000001.

@@ -7,6 +7,7 @@ import java.util.Comparator;
 import java.util.List;
 
 import org.openapitools.jackson.nullable.JsonNullable;
+import org.openapitools.model.Comment;
 import org.openapitools.model.IncidentEvent;
 import org.openapitools.model.IncidentStatus;
 import org.openapitools.model.Severity;
@@ -34,6 +35,15 @@ final class IncidentMapper {
         return api;
     }
 
+    static Comment commentToApi(com.panicattheconsole.incidentservice.incident.Comment comment) {
+        return new Comment(
+                comment.getId(),
+                comment.getIncident().getId(),
+                comment.getAuthorId(),
+                comment.getContent(),
+                OffsetDateTime.ofInstant(comment.getCreatedAt(), ZoneOffset.UTC));
+    }
+
     static IncidentStatus toApiStatus(com.panicattheconsole.incidentservice.incident.IncidentStatus status) {
         return IncidentStatus.fromValue(status.name().toLowerCase());
     }
@@ -42,7 +52,7 @@ final class IncidentMapper {
         return Severity.fromValue(severity.name());
     }
 
-    static List<IncidentEvent> toApiEvents(Incident incident, List<Comment> comments) {
+    static List<IncidentEvent> toApiEvents(Incident incident, List<com.panicattheconsole.incidentservice.incident.Comment> comments) {
         List<IncidentEvent> events = new ArrayList<>();
 
         String title = incident.getTitle() != null ? incident.getTitle() : "(no title)";
@@ -51,7 +61,7 @@ final class IncidentMapper {
                 "incident_created",
                 "Incident created: " + title + " (" + incident.getSeverity() + ")"));
 
-        for (Comment comment : comments) {
+        for (com.panicattheconsole.incidentservice.incident.Comment comment : comments) {
             events.add(new IncidentEvent(
                     OffsetDateTime.ofInstant(comment.getCreatedAt(), ZoneOffset.UTC),
                     "comment_added",

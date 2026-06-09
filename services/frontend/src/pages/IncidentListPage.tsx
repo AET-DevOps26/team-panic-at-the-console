@@ -9,7 +9,6 @@ import { SeverityBadge, StatusBadge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { useIncidents, useCreateIncident, type Incident, type IncidentStatus, type Severity } from "@/api/queries";
 import { formatRelativeTime } from "@/lib/utils";
 
@@ -17,16 +16,14 @@ import { formatRelativeTime } from "@/lib/utils";
 function CreateIncidentDialog() {
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
   const [severity, setSeverity] = useState<Severity>("SEV3");
   const createIncident = useCreateIncident();
 
   async function handleCreate() {
     try {
-      await createIncident.mutateAsync({ title, description: description || null, severity });
+      await createIncident.mutateAsync({ title, severity });
       setOpen(false);
       setTitle("");
-      setDescription("");
     } catch {
       // error exposed via createIncident.isError / createIncident.error
     }
@@ -49,10 +46,6 @@ function CreateIncidentDialog() {
           <div className="space-y-2">
             <Label htmlFor="title">Title *</Label>
             <Input id="title" placeholder="Brief description of the issue" value={title} onChange={(e) => setTitle(e.target.value)} />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="desc">Description</Label>
-            <Textarea id="desc" placeholder="Additional context (optional)" value={description} onChange={(e) => setDescription(e.target.value)} />
           </div>
           <div className="space-y-2">
             <Label>Initial severity</Label>

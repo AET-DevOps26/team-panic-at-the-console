@@ -13,20 +13,20 @@ T = TypeVar("T", bound="Comment")
 
 @_attrs_define
 class Comment:
-    """An immutable comment left on an incident.
+    """An immutable comment on an incident, authored by a user.
 
     Attributes:
         id (UUID):
         incident_id (UUID):
-        author_id (UUID):
-        content (str):  Example: Possible root cause is the connection pool configuration in v2.4.1.
+        author_id (UUID): UUID of the user who wrote the comment
+        text (str):
         created_at (datetime.datetime):
     """
 
     id: UUID
     incident_id: UUID
     author_id: UUID
-    content: str
+    text: str
     created_at: datetime.datetime
 
     def to_dict(self) -> dict[str, Any]:
@@ -36,7 +36,7 @@ class Comment:
 
         author_id = str(self.author_id)
 
-        content = self.content
+        text = self.text
 
         created_at = self.created_at.isoformat()
 
@@ -47,7 +47,7 @@ class Comment:
                 "id": id,
                 "incidentId": incident_id,
                 "authorId": author_id,
-                "content": content,
+                "text": text,
                 "createdAt": created_at,
             }
         )
@@ -63,7 +63,7 @@ class Comment:
 
         author_id = UUID(d.pop("authorId"))
 
-        content = d.pop("content")
+        text = d.pop("text")
 
         created_at = isoparse(d.pop("createdAt"))
 
@@ -71,7 +71,7 @@ class Comment:
             id=id,
             incident_id=incident_id,
             author_id=author_id,
-            content=content,
+            text=text,
             created_at=created_at,
         )
 

@@ -7,33 +7,46 @@ import httpx
 
 from ... import errors
 from ...client import AuthenticatedClient, Client
-from ...models.comment import Comment
-from ...types import Response
+from ...models.comment_list_response import CommentListResponse
+from ...types import UNSET, Response, Unset
 
 
 def _get_kwargs(
     incident_id: UUID,
+    *,
+    page: int | Unset = 0,
+    size: int | Unset = 50,
 ) -> dict[str, Any]:
+    params: dict[str, Any] = {}
+
+    params["page"] = page
+
+    params["size"] = size
+
+    params = {k: v for k, v in params.items() if v is not UNSET and v is not None}
+
     _kwargs: dict[str, Any] = {
         "method": "get",
         "url": "/incidents/{incident_id}/comments".format(
             incident_id=quote(str(incident_id), safe=""),
         ),
+        "params": params,
     }
 
     return _kwargs
 
 
-def _parse_response(*, client: AuthenticatedClient | Client, response: httpx.Response) -> Any | list[Comment] | None:
+def _parse_response(
+    *, client: AuthenticatedClient | Client, response: httpx.Response
+) -> Any | CommentListResponse | None:
     if response.status_code == 200:
-        response_200 = []
-        _response_200 = response.json()
-        for response_200_item_data in _response_200:
-            response_200_item = Comment.from_dict(response_200_item_data)
-
-            response_200.append(response_200_item)
+        response_200 = CommentListResponse.from_dict(response.json())
 
         return response_200
+
+    if response.status_code == 401:
+        response_401 = cast(Any, None)
+        return response_401
 
     if response.status_code == 404:
         response_404 = cast(Any, None)
@@ -45,7 +58,9 @@ def _parse_response(*, client: AuthenticatedClient | Client, response: httpx.Res
         return None
 
 
-def _build_response(*, client: AuthenticatedClient | Client, response: httpx.Response) -> Response[Any | list[Comment]]:
+def _build_response(
+    *, client: AuthenticatedClient | Client, response: httpx.Response
+) -> Response[Any | CommentListResponse]:
     return Response(
         status_code=HTTPStatus(response.status_code),
         content=response.content,
@@ -58,22 +73,28 @@ def sync_detailed(
     incident_id: UUID,
     *,
     client: AuthenticatedClient | Client,
-) -> Response[Any | list[Comment]]:
+    page: int | Unset = 0,
+    size: int | Unset = 50,
+) -> Response[Any | CommentListResponse]:
     """List comments on an incident
 
     Args:
         incident_id (UUID):  Example: 018e2c5f-1234-7abc-8def-000000000001.
+        page (int | Unset):  Default: 0.
+        size (int | Unset):  Default: 50.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
         httpx.TimeoutException: If the request takes longer than Client.timeout.
 
     Returns:
-        Response[Any | list[Comment]]
+        Response[Any | CommentListResponse]
     """
 
     kwargs = _get_kwargs(
         incident_id=incident_id,
+        page=page,
+        size=size,
     )
 
     response = client.get_httpx_client().request(
@@ -87,23 +108,29 @@ def sync(
     incident_id: UUID,
     *,
     client: AuthenticatedClient | Client,
-) -> Any | list[Comment] | None:
+    page: int | Unset = 0,
+    size: int | Unset = 50,
+) -> Any | CommentListResponse | None:
     """List comments on an incident
 
     Args:
         incident_id (UUID):  Example: 018e2c5f-1234-7abc-8def-000000000001.
+        page (int | Unset):  Default: 0.
+        size (int | Unset):  Default: 50.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
         httpx.TimeoutException: If the request takes longer than Client.timeout.
 
     Returns:
-        Any | list[Comment]
+        Any | CommentListResponse
     """
 
     return sync_detailed(
         incident_id=incident_id,
         client=client,
+        page=page,
+        size=size,
     ).parsed
 
 
@@ -111,22 +138,28 @@ async def asyncio_detailed(
     incident_id: UUID,
     *,
     client: AuthenticatedClient | Client,
-) -> Response[Any | list[Comment]]:
+    page: int | Unset = 0,
+    size: int | Unset = 50,
+) -> Response[Any | CommentListResponse]:
     """List comments on an incident
 
     Args:
         incident_id (UUID):  Example: 018e2c5f-1234-7abc-8def-000000000001.
+        page (int | Unset):  Default: 0.
+        size (int | Unset):  Default: 50.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
         httpx.TimeoutException: If the request takes longer than Client.timeout.
 
     Returns:
-        Response[Any | list[Comment]]
+        Response[Any | CommentListResponse]
     """
 
     kwargs = _get_kwargs(
         incident_id=incident_id,
+        page=page,
+        size=size,
     )
 
     response = await client.get_async_httpx_client().request(**kwargs)
@@ -138,23 +171,29 @@ async def asyncio(
     incident_id: UUID,
     *,
     client: AuthenticatedClient | Client,
-) -> Any | list[Comment] | None:
+    page: int | Unset = 0,
+    size: int | Unset = 50,
+) -> Any | CommentListResponse | None:
     """List comments on an incident
 
     Args:
         incident_id (UUID):  Example: 018e2c5f-1234-7abc-8def-000000000001.
+        page (int | Unset):  Default: 0.
+        size (int | Unset):  Default: 50.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
         httpx.TimeoutException: If the request takes longer than Client.timeout.
 
     Returns:
-        Any | list[Comment]
+        Any | CommentListResponse
     """
 
     return (
         await asyncio_detailed(
             incident_id=incident_id,
             client=client,
+            page=page,
+            size=size,
         )
     ).parsed

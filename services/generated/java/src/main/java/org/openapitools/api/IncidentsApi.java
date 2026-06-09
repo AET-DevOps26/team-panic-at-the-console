@@ -5,11 +5,16 @@
  */
 package org.openapitools.api;
 
+import org.openapitools.model.AssignIncidentRequest;
 import org.openapitools.model.Comment;
+import org.openapitools.model.CommentListResponse;
 import org.openapitools.model.CreateCommentRequest;
 import org.openapitools.model.CreateIncidentRequest;
+import org.openapitools.model.ErrorResponse;
+import org.openapitools.model.EscalateSeverityRequest;
 import org.openapitools.model.Incident;
 import org.openapitools.model.IncidentEvent;
+import org.openapitools.model.IncidentListResponse;
 import org.openapitools.model.IncidentStatus;
 import org.openapitools.model.PostmortemPatch;
 import org.openapitools.model.Severity;
@@ -17,7 +22,7 @@ import org.openapitools.model.SeverityPatch;
 import org.openapitools.model.SolutionsPatch;
 import org.openapitools.model.SummaryPatch;
 import java.util.UUID;
-import org.openapitools.model.UpdateIncidentRequest;
+import org.openapitools.model.UpdateStatusRequest;
 import io.swagger.v3.oas.annotations.ExternalDocumentation;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -56,21 +61,27 @@ public interface IncidentsApi {
     }
 
     /**
-     * POST /incidents/{incidentId}/comments : Add a comment to an incident
+     * POST /incidents/{incidentId}/comments : Add a comment to an incident (immutable)
      *
      * @param incidentId UUID of the target incident. (required)
      * @param createCommentRequest  (required)
      * @return Comment created (status code 201)
+     *         or Invalid request (status code 400)
+     *         or Not authenticated (status code 401)
      *         or No incident exists with the given ID (status code 404)
      */
     @Operation(
         operationId = "addComment",
-        summary = "Add a comment to an incident",
+        summary = "Add a comment to an incident (immutable)",
         tags = { "incidents" },
         responses = {
             @ApiResponse(responseCode = "201", description = "Comment created", content = {
                 @Content(mediaType = "application/json", schema = @Schema(implementation = Comment.class))
             }),
+            @ApiResponse(responseCode = "400", description = "Invalid request", content = {
+                @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))
+            }),
+            @ApiResponse(responseCode = "401", description = "Not authenticated"),
             @ApiResponse(responseCode = "404", description = "No incident exists with the given ID")
         }
     )
@@ -88,7 +99,12 @@ public interface IncidentsApi {
         getRequest().ifPresent(request -> {
             for (MediaType mediaType: MediaType.parseMediaTypes(request.getHeader("Accept"))) {
                 if (mediaType.isCompatibleWith(MediaType.valueOf("application/json"))) {
-                    String exampleString = "{ \"createdAt\" : \"2000-01-23T04:56:07.000+00:00\", \"id\" : \"046b6c7f-0b8a-43b9-b35d-6489e6daee91\", \"incidentId\" : \"046b6c7f-0b8a-43b9-b35d-6489e6daee91\", \"authorId\" : \"046b6c7f-0b8a-43b9-b35d-6489e6daee91\", \"content\" : \"Possible root cause is the connection pool configuration in v2.4.1\" }";
+                    String exampleString = "{ \"createdAt\" : \"2000-01-23T04:56:07.000+00:00\", \"id\" : \"046b6c7f-0b8a-43b9-b35d-6489e6daee91\", \"text\" : \"text\", \"incidentId\" : \"046b6c7f-0b8a-43b9-b35d-6489e6daee91\", \"authorId\" : \"046b6c7f-0b8a-43b9-b35d-6489e6daee91\" }";
+                    ApiUtil.setExampleResponse(request, "application/json", exampleString);
+                    break;
+                }
+                if (mediaType.isCompatibleWith(MediaType.valueOf("application/json"))) {
+                    String exampleString = "{ \"message\" : \"Invalid email or password\" }";
                     ApiUtil.setExampleResponse(request, "application/json", exampleString);
                     break;
                 }
@@ -100,21 +116,84 @@ public interface IncidentsApi {
 
 
     /**
-     * POST /incidents : Manually create a new incident
+     * PATCH /incidents/{incidentId}/assign : Assign or unassign responders to an incident
+     * Requires COMMANDER or RESPONDER role (can assign themselves).
+     *
+     * @param incidentId UUID of the target incident. (required)
+     * @param assignIncidentRequest  (required)
+     * @return Assignment updated (status code 200)
+     *         or Invalid request (status code 400)
+     *         or Not authenticated (status code 401)
+     *         or Insufficient permissions (status code 403)
+     *         or No incident exists with the given ID (status code 404)
+     */
+    @Operation(
+        operationId = "assignIncident",
+        summary = "Assign or unassign responders to an incident",
+        description = "Requires COMMANDER or RESPONDER role (can assign themselves).",
+        tags = { "incidents" },
+        responses = {
+            @ApiResponse(responseCode = "200", description = "Assignment updated", content = {
+                @Content(mediaType = "application/json", schema = @Schema(implementation = Incident.class))
+            }),
+            @ApiResponse(responseCode = "400", description = "Invalid request", content = {
+                @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))
+            }),
+            @ApiResponse(responseCode = "401", description = "Not authenticated"),
+            @ApiResponse(responseCode = "403", description = "Insufficient permissions"),
+            @ApiResponse(responseCode = "404", description = "No incident exists with the given ID")
+        }
+    )
+    @RequestMapping(
+        method = RequestMethod.PATCH,
+        value = "/incidents/{incidentId}/assign",
+        produces = { "application/json" },
+        consumes = { "application/json" }
+    )
+
+    default ResponseEntity<Incident> assignIncident(
+        @Parameter(name = "incidentId", description = "UUID of the target incident.", required = true, in = ParameterIn.PATH) @PathVariable("incidentId") UUID incidentId,
+        @Parameter(name = "AssignIncidentRequest", description = "", required = true) @Valid @RequestBody AssignIncidentRequest assignIncidentRequest
+    ) {
+        getRequest().ifPresent(request -> {
+            for (MediaType mediaType: MediaType.parseMediaTypes(request.getHeader("Accept"))) {
+                if (mediaType.isCompatibleWith(MediaType.valueOf("application/json"))) {
+                    String exampleString = "{ \"severity\" : \"SEV1\", \"createdAt\" : \"2000-01-23T04:56:07.000+00:00\", \"resolvedAt\" : \"2000-01-23T04:56:07.000+00:00\", \"description\" : \"description\", \"id\" : \"046b6c7f-0b8a-43b9-b35d-6489e6daee91\", \"title\" : \"Checkout 5xx spike\", \"status\" : \"open\" }";
+                    ApiUtil.setExampleResponse(request, "application/json", exampleString);
+                    break;
+                }
+                if (mediaType.isCompatibleWith(MediaType.valueOf("application/json"))) {
+                    String exampleString = "{ \"message\" : \"Invalid email or password\" }";
+                    ApiUtil.setExampleResponse(request, "application/json", exampleString);
+                    break;
+                }
+            }
+        });
+        return new ResponseEntity<>(HttpStatus.NOT_IMPLEMENTED);
+
+    }
+
+
+    /**
+     * POST /incidents : Create a new incident manually
      *
      * @param createIncidentRequest  (required)
-     * @return Incident created; starts in open state (status code 201)
-     *         or Validation failed (status code 400)
+     * @return Incident created (status code 201)
+     *         or Invalid request (status code 400)
+     *         or Not authenticated (status code 401)
      */
     @Operation(
         operationId = "createIncident",
-        summary = "Manually create a new incident",
+        summary = "Create a new incident manually",
         tags = { "incidents" },
         responses = {
-            @ApiResponse(responseCode = "201", description = "Incident created; starts in open state", content = {
+            @ApiResponse(responseCode = "201", description = "Incident created", content = {
                 @Content(mediaType = "application/json", schema = @Schema(implementation = Incident.class))
             }),
-            @ApiResponse(responseCode = "400", description = "Validation failed")
+            @ApiResponse(responseCode = "400", description = "Invalid request", content = {
+                @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))
+            }),
+            @ApiResponse(responseCode = "401", description = "Not authenticated")
         }
     )
     @RequestMapping(
@@ -134,6 +213,11 @@ public interface IncidentsApi {
                     ApiUtil.setExampleResponse(request, "application/json", exampleString);
                     break;
                 }
+                if (mediaType.isCompatibleWith(MediaType.valueOf("application/json"))) {
+                    String exampleString = "{ \"message\" : \"Invalid email or password\" }";
+                    ApiUtil.setExampleResponse(request, "application/json", exampleString);
+                    break;
+                }
             }
         });
         return new ResponseEntity<>(HttpStatus.NOT_IMPLEMENTED);
@@ -142,21 +226,80 @@ public interface IncidentsApi {
 
 
     /**
-     * GET /incidents/{incidentId} : Get a single incident by ID
+     * PATCH /incidents/{incidentId}/severity : Manually escalate incident severity
+     * Requires COMMANDER role.
      *
      * @param incidentId UUID of the target incident. (required)
-     * @return Incident found (status code 200)
+     * @param escalateSeverityRequest  (required)
+     * @return Severity escalated (status code 200)
+     *         or Invalid severity or downgrade attempted (status code 400)
+     *         or Not authenticated (status code 401)
+     *         or Insufficient permissions (status code 403)
      *         or No incident exists with the given ID (status code 404)
      */
     @Operation(
-        operationId = "getIncident",
-        summary = "Get a single incident by ID",
+        operationId = "escalateIncidentSeverity",
+        summary = "Manually escalate incident severity",
+        description = "Requires COMMANDER role.",
         tags = { "incidents" },
         responses = {
-            @ApiResponse(responseCode = "200", description = "Incident found", content = {
+            @ApiResponse(responseCode = "200", description = "Severity escalated", content = {
                 @Content(mediaType = "application/json", schema = @Schema(implementation = Incident.class))
             }),
+            @ApiResponse(responseCode = "400", description = "Invalid severity or downgrade attempted", content = {
+                @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))
+            }),
+            @ApiResponse(responseCode = "401", description = "Not authenticated"),
+            @ApiResponse(responseCode = "403", description = "Insufficient permissions"),
             @ApiResponse(responseCode = "404", description = "No incident exists with the given ID")
+        }
+    )
+    @RequestMapping(
+        method = RequestMethod.PATCH,
+        value = "/incidents/{incidentId}/severity",
+        produces = { "application/json" },
+        consumes = { "application/json" }
+    )
+
+    default ResponseEntity<Incident> escalateIncidentSeverity(
+        @Parameter(name = "incidentId", description = "UUID of the target incident.", required = true, in = ParameterIn.PATH) @PathVariable("incidentId") UUID incidentId,
+        @Parameter(name = "EscalateSeverityRequest", description = "", required = true) @Valid @RequestBody EscalateSeverityRequest escalateSeverityRequest
+    ) {
+        getRequest().ifPresent(request -> {
+            for (MediaType mediaType: MediaType.parseMediaTypes(request.getHeader("Accept"))) {
+                if (mediaType.isCompatibleWith(MediaType.valueOf("application/json"))) {
+                    String exampleString = "{ \"severity\" : \"SEV1\", \"createdAt\" : \"2000-01-23T04:56:07.000+00:00\", \"resolvedAt\" : \"2000-01-23T04:56:07.000+00:00\", \"description\" : \"description\", \"id\" : \"046b6c7f-0b8a-43b9-b35d-6489e6daee91\", \"title\" : \"Checkout 5xx spike\", \"status\" : \"open\" }";
+                    ApiUtil.setExampleResponse(request, "application/json", exampleString);
+                    break;
+                }
+                if (mediaType.isCompatibleWith(MediaType.valueOf("application/json"))) {
+                    String exampleString = "{ \"message\" : \"Invalid email or password\" }";
+                    ApiUtil.setExampleResponse(request, "application/json", exampleString);
+                    break;
+                }
+            }
+        });
+        return new ResponseEntity<>(HttpStatus.NOT_IMPLEMENTED);
+
+    }
+
+
+    /**
+     * GET /incidents/{incidentId} : Fetch a single incident
+     *
+     * @param incidentId UUID of the target incident. (required)
+     * @return OK (status code 200)
+     *         or Incident not found (status code 404)
+     */
+    @Operation(
+        operationId = "getIncident",
+        summary = "Fetch a single incident",
+        tags = { "incidents" },
+        responses = {
+            @ApiResponse(responseCode = "200", description = "OK", content = {
+                @Content(mediaType = "application/json", schema = @Schema(implementation = Incident.class))
+            }),
+            @ApiResponse(responseCode = "404", description = "Incident not found")
         }
     )
     @RequestMapping(
@@ -186,7 +329,10 @@ public interface IncidentsApi {
      * GET /incidents/{incidentId}/comments : List comments on an incident
      *
      * @param incidentId UUID of the target incident. (required)
-     * @return Comments in chronological order (status code 200)
+     * @param page  (optional, default to 0)
+     * @param size  (optional, default to 50)
+     * @return List of comments (status code 200)
+     *         or Not authenticated (status code 401)
      *         or No incident exists with the given ID (status code 404)
      */
     @Operation(
@@ -194,9 +340,10 @@ public interface IncidentsApi {
         summary = "List comments on an incident",
         tags = { "incidents" },
         responses = {
-            @ApiResponse(responseCode = "200", description = "Comments in chronological order", content = {
-                @Content(mediaType = "application/json", array = @ArraySchema(schema = @Schema(implementation = Comment.class)))
+            @ApiResponse(responseCode = "200", description = "List of comments", content = {
+                @Content(mediaType = "application/json", schema = @Schema(implementation = CommentListResponse.class))
             }),
+            @ApiResponse(responseCode = "401", description = "Not authenticated"),
             @ApiResponse(responseCode = "404", description = "No incident exists with the given ID")
         }
     )
@@ -206,13 +353,15 @@ public interface IncidentsApi {
         produces = { "application/json" }
     )
 
-    default ResponseEntity<List<Comment>> listComments(
-        @Parameter(name = "incidentId", description = "UUID of the target incident.", required = true, in = ParameterIn.PATH) @PathVariable("incidentId") UUID incidentId
+    default ResponseEntity<CommentListResponse> listComments(
+        @Parameter(name = "incidentId", description = "UUID of the target incident.", required = true, in = ParameterIn.PATH) @PathVariable("incidentId") UUID incidentId,
+        @Min(0) @Parameter(name = "page", description = "", in = ParameterIn.QUERY) @Valid @RequestParam(value = "page", required = false, defaultValue = "0") Integer page,
+        @Min(1) @Max(100) @Parameter(name = "size", description = "", in = ParameterIn.QUERY) @Valid @RequestParam(value = "size", required = false, defaultValue = "50") Integer size
     ) {
         getRequest().ifPresent(request -> {
             for (MediaType mediaType: MediaType.parseMediaTypes(request.getHeader("Accept"))) {
                 if (mediaType.isCompatibleWith(MediaType.valueOf("application/json"))) {
-                    String exampleString = "[ { \"createdAt\" : \"2000-01-23T04:56:07.000+00:00\", \"id\" : \"046b6c7f-0b8a-43b9-b35d-6489e6daee91\", \"incidentId\" : \"046b6c7f-0b8a-43b9-b35d-6489e6daee91\", \"authorId\" : \"046b6c7f-0b8a-43b9-b35d-6489e6daee91\", \"content\" : \"Possible root cause is the connection pool configuration in v2.4.1\" }, { \"createdAt\" : \"2000-01-23T04:56:07.000+00:00\", \"id\" : \"046b6c7f-0b8a-43b9-b35d-6489e6daee91\", \"incidentId\" : \"046b6c7f-0b8a-43b9-b35d-6489e6daee91\", \"authorId\" : \"046b6c7f-0b8a-43b9-b35d-6489e6daee91\", \"content\" : \"Possible root cause is the connection pool configuration in v2.4.1\" } ]";
+                    String exampleString = "{ \"total\" : 3, \"size\" : 50, \"page\" : 0, \"items\" : [ { \"createdAt\" : \"2000-01-23T04:56:07.000+00:00\", \"id\" : \"046b6c7f-0b8a-43b9-b35d-6489e6daee91\", \"text\" : \"text\", \"incidentId\" : \"046b6c7f-0b8a-43b9-b35d-6489e6daee91\", \"authorId\" : \"046b6c7f-0b8a-43b9-b35d-6489e6daee91\" }, { \"createdAt\" : \"2000-01-23T04:56:07.000+00:00\", \"id\" : \"046b6c7f-0b8a-43b9-b35d-6489e6daee91\", \"text\" : \"text\", \"incidentId\" : \"046b6c7f-0b8a-43b9-b35d-6489e6daee91\", \"authorId\" : \"046b6c7f-0b8a-43b9-b35d-6489e6daee91\" } ] }";
                     ApiUtil.setExampleResponse(request, "application/json", exampleString);
                     break;
                 }
@@ -224,21 +373,21 @@ public interface IncidentsApi {
 
 
     /**
-     * GET /incidents/{incidentId}/events : Get the event log for an incident
+     * GET /incidents/{incidentId}/events : List Events from the Event Log for one incident, in chronological order
      *
      * @param incidentId UUID of the target incident. (required)
-     * @return Event log entries in chronological order (status code 200)
-     *         or No incident exists with the given ID (status code 404)
+     * @return OK (status code 200)
+     *         or Incident not found (status code 404)
      */
     @Operation(
         operationId = "listIncidentEvents",
-        summary = "Get the event log for an incident",
+        summary = "List Events from the Event Log for one incident, in chronological order",
         tags = { "incidents" },
         responses = {
-            @ApiResponse(responseCode = "200", description = "Event log entries in chronological order", content = {
+            @ApiResponse(responseCode = "200", description = "OK", content = {
                 @Content(mediaType = "application/json", array = @ArraySchema(schema = @Schema(implementation = IncidentEvent.class)))
             }),
-            @ApiResponse(responseCode = "404", description = "No incident exists with the given ID")
+            @ApiResponse(responseCode = "404", description = "Incident not found")
         }
     )
     @RequestMapping(
@@ -265,20 +414,24 @@ public interface IncidentsApi {
 
 
     /**
-     * GET /incidents : List all incidents
+     * GET /incidents : List incidents with optional filtering
      *
-     * @param status  (optional)
-     * @param severity  (optional)
-     * @return Incidents in reverse-chronological order (status code 200)
+     * @param status Filter by incident status (optional)
+     * @param severity Filter by incident severity (optional)
+     * @param page  (optional, default to 0)
+     * @param size  (optional, default to 50)
+     * @return List of incidents (status code 200)
+     *         or Not authenticated (status code 401)
      */
     @Operation(
         operationId = "listIncidents",
-        summary = "List all incidents",
+        summary = "List incidents with optional filtering",
         tags = { "incidents" },
         responses = {
-            @ApiResponse(responseCode = "200", description = "Incidents in reverse-chronological order", content = {
-                @Content(mediaType = "application/json", array = @ArraySchema(schema = @Schema(implementation = Incident.class)))
-            })
+            @ApiResponse(responseCode = "200", description = "List of incidents", content = {
+                @Content(mediaType = "application/json", schema = @Schema(implementation = IncidentListResponse.class))
+            }),
+            @ApiResponse(responseCode = "401", description = "Not authenticated")
         }
     )
     @RequestMapping(
@@ -287,14 +440,16 @@ public interface IncidentsApi {
         produces = { "application/json" }
     )
 
-    default ResponseEntity<List<Incident>> listIncidents(
-        @Parameter(name = "status", description = "", in = ParameterIn.QUERY) @Valid @RequestParam(value = "status", required = false) @Nullable IncidentStatus status,
-        @Parameter(name = "severity", description = "", in = ParameterIn.QUERY) @Valid @RequestParam(value = "severity", required = false) @Nullable Severity severity
+    default ResponseEntity<IncidentListResponse> listIncidents(
+        @Parameter(name = "status", description = "Filter by incident status", in = ParameterIn.QUERY) @Valid @RequestParam(value = "status", required = false) @Nullable IncidentStatus status,
+        @Parameter(name = "severity", description = "Filter by incident severity", in = ParameterIn.QUERY) @Valid @RequestParam(value = "severity", required = false) @Nullable Severity severity,
+        @Min(0) @Parameter(name = "page", description = "", in = ParameterIn.QUERY) @Valid @RequestParam(value = "page", required = false, defaultValue = "0") Integer page,
+        @Min(1) @Max(100) @Parameter(name = "size", description = "", in = ParameterIn.QUERY) @Valid @RequestParam(value = "size", required = false, defaultValue = "50") Integer size
     ) {
         getRequest().ifPresent(request -> {
             for (MediaType mediaType: MediaType.parseMediaTypes(request.getHeader("Accept"))) {
                 if (mediaType.isCompatibleWith(MediaType.valueOf("application/json"))) {
-                    String exampleString = "[ { \"severity\" : \"SEV1\", \"createdAt\" : \"2000-01-23T04:56:07.000+00:00\", \"resolvedAt\" : \"2000-01-23T04:56:07.000+00:00\", \"description\" : \"description\", \"id\" : \"046b6c7f-0b8a-43b9-b35d-6489e6daee91\", \"title\" : \"Checkout 5xx spike\", \"status\" : \"open\" }, { \"severity\" : \"SEV1\", \"createdAt\" : \"2000-01-23T04:56:07.000+00:00\", \"resolvedAt\" : \"2000-01-23T04:56:07.000+00:00\", \"description\" : \"description\", \"id\" : \"046b6c7f-0b8a-43b9-b35d-6489e6daee91\", \"title\" : \"Checkout 5xx spike\", \"status\" : \"open\" } ]";
+                    String exampleString = "{ \"total\" : 5, \"size\" : 50, \"page\" : 0, \"items\" : [ { \"severity\" : \"SEV1\", \"createdAt\" : \"2000-01-23T04:56:07.000+00:00\", \"resolvedAt\" : \"2000-01-23T04:56:07.000+00:00\", \"description\" : \"description\", \"id\" : \"046b6c7f-0b8a-43b9-b35d-6489e6daee91\", \"title\" : \"Checkout 5xx spike\", \"status\" : \"open\" }, { \"severity\" : \"SEV1\", \"createdAt\" : \"2000-01-23T04:56:07.000+00:00\", \"resolvedAt\" : \"2000-01-23T04:56:07.000+00:00\", \"description\" : \"description\", \"id\" : \"046b6c7f-0b8a-43b9-b35d-6489e6daee91\", \"title\" : \"Checkout 5xx spike\", \"status\" : \"open\" } ] }";
                     ApiUtil.setExampleResponse(request, "application/json", exampleString);
                     break;
                 }
@@ -306,39 +461,54 @@ public interface IncidentsApi {
 
 
     /**
-     * PATCH /incidents/{incidentId} : Update incident status or severity
+     * PATCH /incidents/{incidentId}/status : Transition incident status
+     * Allowed transitions: open → investigating, investigating → resolved. Requires RESPONDER or COMMANDER role.
      *
      * @param incidentId UUID of the target incident. (required)
-     * @param updateIncidentRequest  (required)
-     * @return Updated incident (status code 200)
+     * @param updateStatusRequest  (required)
+     * @return Status updated (status code 200)
+     *         or Invalid status transition (status code 400)
+     *         or Not authenticated (status code 401)
+     *         or Insufficient permissions (status code 403)
      *         or No incident exists with the given ID (status code 404)
      */
     @Operation(
-        operationId = "updateIncident",
-        summary = "Update incident status or severity",
+        operationId = "updateIncidentStatus",
+        summary = "Transition incident status",
+        description = "Allowed transitions: open → investigating, investigating → resolved. Requires RESPONDER or COMMANDER role. ",
         tags = { "incidents" },
         responses = {
-            @ApiResponse(responseCode = "200", description = "Updated incident", content = {
+            @ApiResponse(responseCode = "200", description = "Status updated", content = {
                 @Content(mediaType = "application/json", schema = @Schema(implementation = Incident.class))
             }),
+            @ApiResponse(responseCode = "400", description = "Invalid status transition", content = {
+                @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))
+            }),
+            @ApiResponse(responseCode = "401", description = "Not authenticated"),
+            @ApiResponse(responseCode = "403", description = "Insufficient permissions"),
             @ApiResponse(responseCode = "404", description = "No incident exists with the given ID")
         }
     )
     @RequestMapping(
         method = RequestMethod.PATCH,
-        value = "/incidents/{incidentId}",
+        value = "/incidents/{incidentId}/status",
         produces = { "application/json" },
         consumes = { "application/json" }
     )
 
-    default ResponseEntity<Incident> updateIncident(
+    default ResponseEntity<Incident> updateIncidentStatus(
         @Parameter(name = "incidentId", description = "UUID of the target incident.", required = true, in = ParameterIn.PATH) @PathVariable("incidentId") UUID incidentId,
-        @Parameter(name = "UpdateIncidentRequest", description = "", required = true) @Valid @RequestBody UpdateIncidentRequest updateIncidentRequest
+        @Parameter(name = "UpdateStatusRequest", description = "", required = true) @Valid @RequestBody UpdateStatusRequest updateStatusRequest
     ) {
         getRequest().ifPresent(request -> {
             for (MediaType mediaType: MediaType.parseMediaTypes(request.getHeader("Accept"))) {
                 if (mediaType.isCompatibleWith(MediaType.valueOf("application/json"))) {
                     String exampleString = "{ \"severity\" : \"SEV1\", \"createdAt\" : \"2000-01-23T04:56:07.000+00:00\", \"resolvedAt\" : \"2000-01-23T04:56:07.000+00:00\", \"description\" : \"description\", \"id\" : \"046b6c7f-0b8a-43b9-b35d-6489e6daee91\", \"title\" : \"Checkout 5xx spike\", \"status\" : \"open\" }";
+                    ApiUtil.setExampleResponse(request, "application/json", exampleString);
+                    break;
+                }
+                if (mediaType.isCompatibleWith(MediaType.valueOf("application/json"))) {
+                    String exampleString = "{ \"message\" : \"Invalid email or password\" }";
                     ApiUtil.setExampleResponse(request, "application/json", exampleString);
                     break;
                 }

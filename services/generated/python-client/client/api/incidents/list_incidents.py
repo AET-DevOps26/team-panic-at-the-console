@@ -1,11 +1,11 @@
 from http import HTTPStatus
-from typing import Any
+from typing import Any, cast
 
 import httpx
 
 from ... import errors
 from ...client import AuthenticatedClient, Client
-from ...models.incident import Incident
+from ...models.incident_list_response import IncidentListResponse
 from ...models.incident_status import IncidentStatus
 from ...models.severity import Severity
 from ...types import UNSET, Response, Unset
@@ -15,6 +15,8 @@ def _get_kwargs(
     *,
     status: IncidentStatus | Unset = UNSET,
     severity: Severity | Unset = UNSET,
+    page: int | Unset = 0,
+    size: int | Unset = 50,
 ) -> dict[str, Any]:
     params: dict[str, Any] = {}
 
@@ -30,6 +32,10 @@ def _get_kwargs(
 
     params["severity"] = json_severity
 
+    params["page"] = page
+
+    params["size"] = size
+
     params = {k: v for k, v in params.items() if v is not UNSET and v is not None}
 
     _kwargs: dict[str, Any] = {
@@ -41,16 +47,17 @@ def _get_kwargs(
     return _kwargs
 
 
-def _parse_response(*, client: AuthenticatedClient | Client, response: httpx.Response) -> list[Incident] | None:
+def _parse_response(
+    *, client: AuthenticatedClient | Client, response: httpx.Response
+) -> Any | IncidentListResponse | None:
     if response.status_code == 200:
-        response_200 = []
-        _response_200 = response.json()
-        for response_200_item_data in _response_200:
-            response_200_item = Incident.from_dict(response_200_item_data)
-
-            response_200.append(response_200_item)
+        response_200 = IncidentListResponse.from_dict(response.json())
 
         return response_200
+
+    if response.status_code == 401:
+        response_401 = cast(Any, None)
+        return response_401
 
     if client.raise_on_unexpected_status:
         raise errors.UnexpectedStatus(response.status_code, response.content)
@@ -58,7 +65,9 @@ def _parse_response(*, client: AuthenticatedClient | Client, response: httpx.Res
         return None
 
 
-def _build_response(*, client: AuthenticatedClient | Client, response: httpx.Response) -> Response[list[Incident]]:
+def _build_response(
+    *, client: AuthenticatedClient | Client, response: httpx.Response
+) -> Response[Any | IncidentListResponse]:
     return Response(
         status_code=HTTPStatus(response.status_code),
         content=response.content,
@@ -72,24 +81,30 @@ def sync_detailed(
     client: AuthenticatedClient | Client,
     status: IncidentStatus | Unset = UNSET,
     severity: Severity | Unset = UNSET,
-) -> Response[list[Incident]]:
-    """List all incidents
+    page: int | Unset = 0,
+    size: int | Unset = 50,
+) -> Response[Any | IncidentListResponse]:
+    """List incidents with optional filtering
 
     Args:
         status (IncidentStatus | Unset):
         severity (Severity | Unset): Incident severity. SEV1 is highest impact.
+        page (int | Unset):  Default: 0.
+        size (int | Unset):  Default: 50.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
         httpx.TimeoutException: If the request takes longer than Client.timeout.
 
     Returns:
-        Response[list[Incident]]
+        Response[Any | IncidentListResponse]
     """
 
     kwargs = _get_kwargs(
         status=status,
         severity=severity,
+        page=page,
+        size=size,
     )
 
     response = client.get_httpx_client().request(
@@ -104,25 +119,31 @@ def sync(
     client: AuthenticatedClient | Client,
     status: IncidentStatus | Unset = UNSET,
     severity: Severity | Unset = UNSET,
-) -> list[Incident] | None:
-    """List all incidents
+    page: int | Unset = 0,
+    size: int | Unset = 50,
+) -> Any | IncidentListResponse | None:
+    """List incidents with optional filtering
 
     Args:
         status (IncidentStatus | Unset):
         severity (Severity | Unset): Incident severity. SEV1 is highest impact.
+        page (int | Unset):  Default: 0.
+        size (int | Unset):  Default: 50.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
         httpx.TimeoutException: If the request takes longer than Client.timeout.
 
     Returns:
-        list[Incident]
+        Any | IncidentListResponse
     """
 
     return sync_detailed(
         client=client,
         status=status,
         severity=severity,
+        page=page,
+        size=size,
     ).parsed
 
 
@@ -131,24 +152,30 @@ async def asyncio_detailed(
     client: AuthenticatedClient | Client,
     status: IncidentStatus | Unset = UNSET,
     severity: Severity | Unset = UNSET,
-) -> Response[list[Incident]]:
-    """List all incidents
+    page: int | Unset = 0,
+    size: int | Unset = 50,
+) -> Response[Any | IncidentListResponse]:
+    """List incidents with optional filtering
 
     Args:
         status (IncidentStatus | Unset):
         severity (Severity | Unset): Incident severity. SEV1 is highest impact.
+        page (int | Unset):  Default: 0.
+        size (int | Unset):  Default: 50.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
         httpx.TimeoutException: If the request takes longer than Client.timeout.
 
     Returns:
-        Response[list[Incident]]
+        Response[Any | IncidentListResponse]
     """
 
     kwargs = _get_kwargs(
         status=status,
         severity=severity,
+        page=page,
+        size=size,
     )
 
     response = await client.get_async_httpx_client().request(**kwargs)
@@ -161,19 +188,23 @@ async def asyncio(
     client: AuthenticatedClient | Client,
     status: IncidentStatus | Unset = UNSET,
     severity: Severity | Unset = UNSET,
-) -> list[Incident] | None:
-    """List all incidents
+    page: int | Unset = 0,
+    size: int | Unset = 50,
+) -> Any | IncidentListResponse | None:
+    """List incidents with optional filtering
 
     Args:
         status (IncidentStatus | Unset):
         severity (Severity | Unset): Incident severity. SEV1 is highest impact.
+        page (int | Unset):  Default: 0.
+        size (int | Unset):  Default: 50.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
         httpx.TimeoutException: If the request takes longer than Client.timeout.
 
     Returns:
-        list[Incident]
+        Any | IncidentListResponse
     """
 
     return (
@@ -181,5 +212,7 @@ async def asyncio(
             client=client,
             status=status,
             severity=severity,
+            page=page,
+            size=size,
         )
     ).parsed

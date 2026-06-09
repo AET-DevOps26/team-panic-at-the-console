@@ -7,21 +7,22 @@ import httpx
 
 from ... import errors
 from ...client import AuthenticatedClient, Client
+from ...models.assign_incident_request import AssignIncidentRequest
+from ...models.error_response import ErrorResponse
 from ...models.incident import Incident
-from ...models.update_incident_request import UpdateIncidentRequest
 from ...types import Response
 
 
 def _get_kwargs(
     incident_id: UUID,
     *,
-    body: UpdateIncidentRequest,
+    body: AssignIncidentRequest,
 ) -> dict[str, Any]:
     headers: dict[str, Any] = {}
 
     _kwargs: dict[str, Any] = {
         "method": "patch",
-        "url": "/incidents/{incident_id}".format(
+        "url": "/incidents/{incident_id}/assign".format(
             incident_id=quote(str(incident_id), safe=""),
         ),
     }
@@ -34,11 +35,26 @@ def _get_kwargs(
     return _kwargs
 
 
-def _parse_response(*, client: AuthenticatedClient | Client, response: httpx.Response) -> Any | Incident | None:
+def _parse_response(
+    *, client: AuthenticatedClient | Client, response: httpx.Response
+) -> Any | ErrorResponse | Incident | None:
     if response.status_code == 200:
         response_200 = Incident.from_dict(response.json())
 
         return response_200
+
+    if response.status_code == 400:
+        response_400 = ErrorResponse.from_dict(response.json())
+
+        return response_400
+
+    if response.status_code == 401:
+        response_401 = cast(Any, None)
+        return response_401
+
+    if response.status_code == 403:
+        response_403 = cast(Any, None)
+        return response_403
 
     if response.status_code == 404:
         response_404 = cast(Any, None)
@@ -50,7 +66,9 @@ def _parse_response(*, client: AuthenticatedClient | Client, response: httpx.Res
         return None
 
 
-def _build_response(*, client: AuthenticatedClient | Client, response: httpx.Response) -> Response[Any | Incident]:
+def _build_response(
+    *, client: AuthenticatedClient | Client, response: httpx.Response
+) -> Response[Any | ErrorResponse | Incident]:
     return Response(
         status_code=HTTPStatus(response.status_code),
         content=response.content,
@@ -63,20 +81,22 @@ def sync_detailed(
     incident_id: UUID,
     *,
     client: AuthenticatedClient | Client,
-    body: UpdateIncidentRequest,
-) -> Response[Any | Incident]:
-    """Update incident status or severity
+    body: AssignIncidentRequest,
+) -> Response[Any | ErrorResponse | Incident]:
+    """Assign or unassign responders to an incident
+
+     Requires COMMANDER or RESPONDER role (can assign themselves).
 
     Args:
         incident_id (UUID):  Example: 018e2c5f-1234-7abc-8def-000000000001.
-        body (UpdateIncidentRequest): Partial update for an incident's mutable fields.
+        body (AssignIncidentRequest): Request to assign or unassign responders.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
         httpx.TimeoutException: If the request takes longer than Client.timeout.
 
     Returns:
-        Response[Any | Incident]
+        Response[Any | ErrorResponse | Incident]
     """
 
     kwargs = _get_kwargs(
@@ -95,20 +115,22 @@ def sync(
     incident_id: UUID,
     *,
     client: AuthenticatedClient | Client,
-    body: UpdateIncidentRequest,
-) -> Any | Incident | None:
-    """Update incident status or severity
+    body: AssignIncidentRequest,
+) -> Any | ErrorResponse | Incident | None:
+    """Assign or unassign responders to an incident
+
+     Requires COMMANDER or RESPONDER role (can assign themselves).
 
     Args:
         incident_id (UUID):  Example: 018e2c5f-1234-7abc-8def-000000000001.
-        body (UpdateIncidentRequest): Partial update for an incident's mutable fields.
+        body (AssignIncidentRequest): Request to assign or unassign responders.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
         httpx.TimeoutException: If the request takes longer than Client.timeout.
 
     Returns:
-        Any | Incident
+        Any | ErrorResponse | Incident
     """
 
     return sync_detailed(
@@ -122,20 +144,22 @@ async def asyncio_detailed(
     incident_id: UUID,
     *,
     client: AuthenticatedClient | Client,
-    body: UpdateIncidentRequest,
-) -> Response[Any | Incident]:
-    """Update incident status or severity
+    body: AssignIncidentRequest,
+) -> Response[Any | ErrorResponse | Incident]:
+    """Assign or unassign responders to an incident
+
+     Requires COMMANDER or RESPONDER role (can assign themselves).
 
     Args:
         incident_id (UUID):  Example: 018e2c5f-1234-7abc-8def-000000000001.
-        body (UpdateIncidentRequest): Partial update for an incident's mutable fields.
+        body (AssignIncidentRequest): Request to assign or unassign responders.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
         httpx.TimeoutException: If the request takes longer than Client.timeout.
 
     Returns:
-        Response[Any | Incident]
+        Response[Any | ErrorResponse | Incident]
     """
 
     kwargs = _get_kwargs(
@@ -152,20 +176,22 @@ async def asyncio(
     incident_id: UUID,
     *,
     client: AuthenticatedClient | Client,
-    body: UpdateIncidentRequest,
-) -> Any | Incident | None:
-    """Update incident status or severity
+    body: AssignIncidentRequest,
+) -> Any | ErrorResponse | Incident | None:
+    """Assign or unassign responders to an incident
+
+     Requires COMMANDER or RESPONDER role (can assign themselves).
 
     Args:
         incident_id (UUID):  Example: 018e2c5f-1234-7abc-8def-000000000001.
-        body (UpdateIncidentRequest): Partial update for an incident's mutable fields.
+        body (AssignIncidentRequest): Request to assign or unassign responders.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
         httpx.TimeoutException: If the request takes longer than Client.timeout.
 
     Returns:
-        Any | Incident
+        Any | ErrorResponse | Incident
     """
 
     return (

@@ -4,6 +4,8 @@ import java.net.URI;
 import java.util.Objects;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonValue;
+import org.openapitools.model.IncidentStatus;
 import org.springframework.lang.Nullable;
 import org.openapitools.jackson.nullable.JsonNullable;
 import java.time.OffsetDateTime;
@@ -16,44 +18,44 @@ import java.util.*;
 import jakarta.annotation.Generated;
 
 /**
- * Request to add a comment to an incident.
+ * Request to update incident status.
  */
 
-@Schema(name = "CreateCommentRequest", description = "Request to add a comment to an incident.")
+@Schema(name = "UpdateStatusRequest", description = "Request to update incident status.")
 @Generated(value = "org.openapitools.codegen.languages.SpringCodegen", comments = "Generator version: 7.14.0")
-public class CreateCommentRequest {
+public class UpdateStatusRequest {
 
-  private String text;
+  private IncidentStatus status;
 
-  public CreateCommentRequest() {
+  public UpdateStatusRequest() {
     super();
   }
 
   /**
    * Constructor with only required parameters
    */
-  public CreateCommentRequest(String text) {
-    this.text = text;
+  public UpdateStatusRequest(IncidentStatus status) {
+    this.status = status;
   }
 
-  public CreateCommentRequest text(String text) {
-    this.text = text;
+  public UpdateStatusRequest status(IncidentStatus status) {
+    this.status = status;
     return this;
   }
 
   /**
-   * Get text
-   * @return text
+   * Get status
+   * @return status
    */
-  @NotNull @Size(min = 1, max = 5000)
-  @Schema(name = "text", example = "Rolled back deployment v2.4.1; monitoring error rate now.", requiredMode = Schema.RequiredMode.REQUIRED)
-  @JsonProperty("text")
-  public String getText() {
-    return text;
+  @NotNull @Valid
+  @Schema(name = "status", requiredMode = Schema.RequiredMode.REQUIRED)
+  @JsonProperty("status")
+  public IncidentStatus getStatus() {
+    return status;
   }
 
-  public void setText(String text) {
-    this.text = text;
+  public void setStatus(IncidentStatus status) {
+    this.status = status;
   }
 
   @Override
@@ -64,20 +66,20 @@ public class CreateCommentRequest {
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    CreateCommentRequest createCommentRequest = (CreateCommentRequest) o;
-    return Objects.equals(this.text, createCommentRequest.text);
+    UpdateStatusRequest updateStatusRequest = (UpdateStatusRequest) o;
+    return Objects.equals(this.status, updateStatusRequest.status);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(text);
+    return Objects.hash(status);
   }
 
   @Override
   public String toString() {
     StringBuilder sb = new StringBuilder();
-    sb.append("class CreateCommentRequest {\n");
-    sb.append("    text: ").append(toIndentedString(text)).append("\n");
+    sb.append("class UpdateStatusRequest {\n");
+    sb.append("    status: ").append(toIndentedString(status)).append("\n");
     sb.append("}");
     return sb.toString();
   }

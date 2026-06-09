@@ -54,7 +54,7 @@ def sync_detailed(
     *,
     client: AuthenticatedClient | Client,
 ) -> Response[Any | Incident]:
-    """Get a single incident by ID
+    """Fetch a single incident
 
     Args:
         incident_id (UUID):  Example: 018e2c5f-1234-7abc-8def-000000000001.
@@ -83,7 +83,7 @@ def sync(
     *,
     client: AuthenticatedClient | Client,
 ) -> Any | Incident | None:
-    """Get a single incident by ID
+    """Fetch a single incident
 
     Args:
         incident_id (UUID):  Example: 018e2c5f-1234-7abc-8def-000000000001.
@@ -107,7 +107,7 @@ async def asyncio_detailed(
     *,
     client: AuthenticatedClient | Client,
 ) -> Response[Any | Incident]:
-    """Get a single incident by ID
+    """Fetch a single incident
 
     Args:
         incident_id (UUID):  Example: 018e2c5f-1234-7abc-8def-000000000001.
@@ -134,7 +134,7 @@ async def asyncio(
     *,
     client: AuthenticatedClient | Client,
 ) -> Any | Incident | None:
-    """Get a single incident by ID
+    """Fetch a single incident
 
     Args:
         incident_id (UUID):  Example: 018e2c5f-1234-7abc-8def-000000000001.

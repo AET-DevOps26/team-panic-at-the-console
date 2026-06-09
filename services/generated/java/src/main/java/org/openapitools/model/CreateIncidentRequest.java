@@ -5,11 +5,8 @@ import java.util.Objects;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
-import java.util.Arrays;
-import org.openapitools.jackson.nullable.JsonNullable;
 import org.openapitools.model.Severity;
 import org.springframework.lang.Nullable;
-import java.util.NoSuchElementException;
 import org.openapitools.jackson.nullable.JsonNullable;
 import java.time.OffsetDateTime;
 import jakarta.validation.Valid;
@@ -21,16 +18,14 @@ import java.util.*;
 import jakarta.annotation.Generated;
 
 /**
- * Payload for manually creating a new incident.
+ * Request to create a new incident manually.
  */
 
-@Schema(name = "CreateIncidentRequest", description = "Payload for manually creating a new incident.")
+@Schema(name = "CreateIncidentRequest", description = "Request to create a new incident manually.")
 @Generated(value = "org.openapitools.codegen.languages.SpringCodegen", comments = "Generator version: 7.14.0")
 public class CreateIncidentRequest {
 
   private String title;
-
-  private JsonNullable<String> description = JsonNullable.<String>undefined();
 
   private Severity severity;
 
@@ -55,8 +50,8 @@ public class CreateIncidentRequest {
    * Get title
    * @return title
    */
-  @NotNull
-  @Schema(name = "title", example = "Checkout 5xx spike", requiredMode = Schema.RequiredMode.REQUIRED)
+  @NotNull @Size(min = 1, max = 500)
+  @Schema(name = "title", example = "Database migration rollback needed", requiredMode = Schema.RequiredMode.REQUIRED)
   @JsonProperty("title")
   public String getTitle() {
     return title;
@@ -64,26 +59,6 @@ public class CreateIncidentRequest {
 
   public void setTitle(String title) {
     this.title = title;
-  }
-
-  public CreateIncidentRequest description(String description) {
-    this.description = JsonNullable.of(description);
-    return this;
-  }
-
-  /**
-   * Get description
-   * @return description
-   */
-
-  @Schema(name = "description", example = "High error rate on checkout API after deploy v2.4.1", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
-  @JsonProperty("description")
-  public JsonNullable<String> getDescription() {
-    return description;
-  }
-
-  public void setDescription(JsonNullable<String> description) {
-    this.description = description;
   }
 
   public CreateIncidentRequest severity(Severity severity) {
@@ -116,24 +91,12 @@ public class CreateIncidentRequest {
     }
     CreateIncidentRequest createIncidentRequest = (CreateIncidentRequest) o;
     return Objects.equals(this.title, createIncidentRequest.title) &&
-        equalsNullable(this.description, createIncidentRequest.description) &&
         Objects.equals(this.severity, createIncidentRequest.severity);
-  }
-
-  private static <T> boolean equalsNullable(JsonNullable<T> a, JsonNullable<T> b) {
-    return a == b || (a != null && b != null && a.isPresent() && b.isPresent() && Objects.deepEquals(a.get(), b.get()));
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(title, hashCodeNullable(description), severity);
-  }
-
-  private static <T> int hashCodeNullable(JsonNullable<T> a) {
-    if (a == null) {
-      return 1;
-    }
-    return a.isPresent() ? Arrays.deepHashCode(new Object[]{a.get()}) : 31;
+    return Objects.hash(title, severity);
   }
 
   @Override
@@ -141,7 +104,6 @@ public class CreateIncidentRequest {
     StringBuilder sb = new StringBuilder();
     sb.append("class CreateIncidentRequest {\n");
     sb.append("    title: ").append(toIndentedString(title)).append("\n");
-    sb.append("    description: ").append(toIndentedString(description)).append("\n");
     sb.append("    severity: ").append(toIndentedString(severity)).append("\n");
     sb.append("}");
     return sb.toString();

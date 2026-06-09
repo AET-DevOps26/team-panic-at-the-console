@@ -19,10 +19,10 @@ import java.util.*;
 import jakarta.annotation.Generated;
 
 /**
- * An immutable comment left on an incident.
+ * An immutable comment on an incident, authored by a user.
  */
 
-@Schema(name = "Comment", description = "An immutable comment left on an incident.")
+@Schema(name = "Comment", description = "An immutable comment on an incident, authored by a user.")
 @Generated(value = "org.openapitools.codegen.languages.SpringCodegen", comments = "Generator version: 7.14.0")
 public class Comment {
 
@@ -32,7 +32,7 @@ public class Comment {
 
   private UUID authorId;
 
-  private String content;
+  private String text;
 
   @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
   private OffsetDateTime createdAt;
@@ -44,11 +44,11 @@ public class Comment {
   /**
    * Constructor with only required parameters
    */
-  public Comment(UUID id, UUID incidentId, UUID authorId, String content, OffsetDateTime createdAt) {
+  public Comment(UUID id, UUID incidentId, UUID authorId, String text, OffsetDateTime createdAt) {
     this.id = id;
     this.incidentId = incidentId;
     this.authorId = authorId;
-    this.content = content;
+    this.text = text;
     this.createdAt = createdAt;
   }
 
@@ -98,11 +98,11 @@ public class Comment {
   }
 
   /**
-   * Get authorId
+   * UUID of the user who wrote the comment
    * @return authorId
    */
   @NotNull @Valid
-  @Schema(name = "authorId", requiredMode = Schema.RequiredMode.REQUIRED)
+  @Schema(name = "authorId", description = "UUID of the user who wrote the comment", requiredMode = Schema.RequiredMode.REQUIRED)
   @JsonProperty("authorId")
   public UUID getAuthorId() {
     return authorId;
@@ -112,24 +112,24 @@ public class Comment {
     this.authorId = authorId;
   }
 
-  public Comment content(String content) {
-    this.content = content;
+  public Comment text(String text) {
+    this.text = text;
     return this;
   }
 
   /**
-   * Get content
-   * @return content
+   * Get text
+   * @return text
    */
   @NotNull
-  @Schema(name = "content", example = "Possible root cause is the connection pool configuration in v2.4.1", requiredMode = Schema.RequiredMode.REQUIRED)
-  @JsonProperty("content")
-  public String getContent() {
-    return content;
+  @Schema(name = "text", requiredMode = Schema.RequiredMode.REQUIRED)
+  @JsonProperty("text")
+  public String getText() {
+    return text;
   }
 
-  public void setContent(String content) {
-    this.content = content;
+  public void setText(String text) {
+    this.text = text;
   }
 
   public Comment createdAt(OffsetDateTime createdAt) {
@@ -164,13 +164,13 @@ public class Comment {
     return Objects.equals(this.id, comment.id) &&
         Objects.equals(this.incidentId, comment.incidentId) &&
         Objects.equals(this.authorId, comment.authorId) &&
-        Objects.equals(this.content, comment.content) &&
+        Objects.equals(this.text, comment.text) &&
         Objects.equals(this.createdAt, comment.createdAt);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(id, incidentId, authorId, content, createdAt);
+    return Objects.hash(id, incidentId, authorId, text, createdAt);
   }
 
   @Override
@@ -180,7 +180,7 @@ public class Comment {
     sb.append("    id: ").append(toIndentedString(id)).append("\n");
     sb.append("    incidentId: ").append(toIndentedString(incidentId)).append("\n");
     sb.append("    authorId: ").append(toIndentedString(authorId)).append("\n");
-    sb.append("    content: ").append(toIndentedString(content)).append("\n");
+    sb.append("    text: ").append(toIndentedString(text)).append("\n");
     sb.append("    createdAt: ").append(toIndentedString(createdAt)).append("\n");
     sb.append("}");
     return sb.toString();
