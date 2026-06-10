@@ -43,6 +43,9 @@ jobs:
           - service: incident-service
             build_context: ./services
             build_dockerfile: ./services/incident-service/Dockerfile
+          - service: event-service
+            build_context: ./services
+            build_dockerfile: ./services/event-service/Dockerfile
           - service: user-service
             build_context: ./services
             build_dockerfile: ./services/user-service/Dockerfile
