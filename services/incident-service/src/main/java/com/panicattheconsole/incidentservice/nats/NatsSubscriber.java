@@ -16,6 +16,10 @@ import org.springframework.stereotype.Component;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.panicattheconsole.incidentservice.incident.IncidentService;
 import com.panicattheconsole.incidentservice.incident.Severity;
+import com.panicattheconsole.incidentservice.nats.dto.GenaiPostmortemGeneratedEvent;
+import com.panicattheconsole.incidentservice.nats.dto.GenaiSeverityGeneratedEvent;
+import com.panicattheconsole.incidentservice.nats.dto.GenaiSolutionsGeneratedEvent;
+import com.panicattheconsole.incidentservice.nats.dto.GenaiSummaryGeneratedEvent;
 import com.panicattheconsole.incidentservice.nats.dto.IncidentCreateRequestedEvent;
 import com.panicattheconsole.incidentservice.nats.dto.IncidentSeverityEscalateRequestedEvent;
 
@@ -56,9 +60,12 @@ public class NatsSubscriber {
 
             dispatcher.subscribe("incident.create.requested");
             dispatcher.subscribe("incident.severity.escalate.requested");
+            dispatcher.subscribe("incident.genai.summary.generated");
+            dispatcher.subscribe("incident.genai.severity.generated");
+            dispatcher.subscribe("incident.genai.solutions.generated");
+            dispatcher.subscribe("incident.genai.postmortem.generated");
 
-            log.info(
-                    "NATS subscribers registered for incident.create.requested and incident.severity.escalate.requested");
+            log.info("NATS subscribers registered");
         } catch (Exception e) {
             log.error("Failed to initialize NATS subscribers", e);
             // Subscriber initialization failed but don't crash - service can still operate
@@ -75,6 +82,18 @@ public class NatsSubscriber {
                     break;
                 case "incident.severity.escalate.requested":
                     handleSeverityEscalationRequested(payload);
+                    break;
+                case "incident.genai.summary.generated":
+                    handleGenaiSummaryGenerated(payload);
+                    break;
+                case "incident.genai.severity.generated":
+                    handleGenaiSeverityGenerated(payload);
+                    break;
+                case "incident.genai.solutions.generated":
+                    handleGenaiSolutionsGenerated(payload);
+                    break;
+                case "incident.genai.postmortem.generated":
+                    handleGenaiPostmortemGenerated(payload);
                     break;
                 default:
                     log.warn("Unhandled subject: {}", subject);
@@ -146,6 +165,37 @@ public class NatsSubscriber {
         } catch (Exception ex) {
             log.error("Failed to escalate severity for incident {}", incidentId, ex);
         }
+    }
+
+    private void handleGenaiSummaryGenerated(String payload) throws Exception {
+        GenaiSummaryGeneratedEvent evt = objectMapper.readValue(payload, GenaiSummaryGeneratedEvent.class);
+        UUID incidentId = UUID.fromString(evt.getIncidentId());
+        incidentService.updateSummary(incidentId, evt.getSummary());
+        log.info("Applied genai summary [incidentId={}]", incidentId);
+    }
+
+    private void handleGenaiSeverityGenerated(String payload) throws Exception {
+        GenaiSeverityGeneratedEvent evt = objectMapper.readValue(payload, GenaiSeverityGeneratedEvent.class);
+        UUID incidentId = UUID.fromString(evt.getIncidentId());
+        incidentService.updateSeveritySuggestion(incidentId, evt.getSeverity() + ": " + evt.getReason());
+        log.info("Applied genai severity suggestion [incidentId={}, severity={}]", incidentId, evt.getSeverity());
+    }
+
+    private void handleGenaiSolutionsGenerated(String payload) throws Exception {
+        GenaiSolutionsGeneratedEvent evt = objectMapper.readValue(payload, GenaiSolutionsGeneratedEvent.class);
+        UUID incidentId = UUID.fromString(evt.getIncidentId());
+        incidentService.updateSolutions(incidentId, String.join("\n", evt.getSolutions()));
+        log.info("Applied genai solutions [incidentId={}, count={}]", incidentId, evt.getSolutions().size());
+    }
+
+    private void handleGenaiPostmortemGenerated(String payload) throws Exception {
+        GenaiPostmortemGeneratedEvent evt = objectMapper.readValue(payload, GenaiPostmortemGeneratedEvent.class);
+        UUID incidentId = UUID.fromString(evt.getIncidentId());
+        String postmortem = "Root cause: " + evt.getRootCause()
+                + "\nTimeline:\n" + String.join("\n", evt.getTimeline())
+                + "\nAction items:\n" + String.join("\n", evt.getActionItems());
+        incidentService.updatePostmortem(incidentId, postmortem);
+        log.info("Applied genai postmortem [incidentId={}]", incidentId);
     }
 
     @PreDestroy

@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema",
+  "$id": "https://github.com/aet-devops26/team-panic-at-the-console/api/specs/nats/incident.genai.summary.generated.schema.json",
+  "description": "Published by genai-service after generating an incident summary. incident-service subscribes and persists the result.",
+  "type": "object",
+  "required": ["incidentId", "timestamp", "summary"],
+  "additionalProperties": false,
+  "properties": {
+    "incidentId": { "type": "string", "format": "uuid" },
+    "timestamp": { "type": "string", "format": "date-time" },
+    "summary": { "type": "string", "minLength": 1 }
+  }
+}
