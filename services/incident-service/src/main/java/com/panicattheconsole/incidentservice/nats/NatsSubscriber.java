@@ -58,7 +58,7 @@ public class NatsSubscriber {
             dispatcher.subscribe("incident.severity.escalate.requested");
 
             log.info(
-                    "NATS subscribers registered for incident.create.requested and incident.severity.escalate.requested");
+                    "NATS subscribers registered");
         } catch (Exception e) {
             log.error("Failed to initialize NATS subscribers", e);
             // Subscriber initialization failed but don't crash - service can still operate
