@@ -15,7 +15,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.nats.client.Connection;
 
 /**
- * Publishes incident events to NATS subjects using the core NATS connection API.
+ * Publishes incident events to NATS subjects using the core NATS connection
+ * API.
  * Events are thin by default: {incidentId, timestamp}.
  */
 @Service
@@ -38,7 +39,6 @@ public class NatsEventPublisher {
     public void publishIncidentUpdated(UUID incidentId) {
         publishEvent("incident.updated", createBaseEvent(incidentId));
     }
-
 
     public void publishIncidentSeverityEscalated(UUID incidentId, String newSeverity) {
         Map<String, Object> event = createBaseEvent(incidentId);
@@ -78,6 +78,10 @@ public class NatsEventPublisher {
     }
 
     private void publishEvent(String subject, Map<String, Object> event) {
+        if (natsConnection == null) {
+            log.warn("NATS connection is null; skipping publish for subject={}", subject);
+            return;
+        }
         try {
             String payload = objectMapper.writeValueAsString(event);
             log.info("Publishing NATS event [subject={}, payload={}]", subject, payload);
