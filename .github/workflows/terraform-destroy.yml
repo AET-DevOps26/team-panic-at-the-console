@@ -25,9 +25,8 @@ env:
 
 jobs:
   gate:
-    name: Await approval
+    name: Confirm
     runs-on: ubuntu-latest
-    environment: azure
     steps:
       - name: Check confirmation input
         run: |
@@ -40,6 +39,7 @@ jobs:
     name: Terraform Destroy
     needs: gate
     runs-on: ubuntu-latest
+    environment: azure
     steps:
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
