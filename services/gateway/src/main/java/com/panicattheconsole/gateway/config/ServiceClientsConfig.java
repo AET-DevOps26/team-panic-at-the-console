@@ -13,4 +13,9 @@ class ServiceClientsConfig {
     RestClient incidentServiceClient(GatewayProperties properties, RestClient.Builder builder) {
         return builder.baseUrl(properties.getIncidentServiceUrl()).build();
     }
+
+    @Bean
+    RestClient userServiceClient(GatewayProperties properties, RestClient.Builder builder) {
+        return builder.clone().baseUrl(properties.getUserServiceUrl()).build();
+    }
 }
