@@ -50,10 +50,8 @@ def _client_with(
     *,
     incident: dict,
     events: list[dict] | None = None,
-    patches: list[dict] | None = None,
 ) -> Client:
-    """Wires a `Client` to an httpx MockTransport that serves GET incident/events
-    and records PATCH bodies into the supplied `patches` list."""
+    """Wires a Client to an httpx MockTransport that serves GET incident/events."""
 
     def handler(request: httpx.Request) -> httpx.Response:
         path = request.url.path
@@ -63,10 +61,6 @@ def _client_with(
             f"/incidents/{INCIDENT_ID}/events"
         ):
             return httpx.Response(200, json=events or [])
-        if request.method == "PATCH" and "/genai/" in path:
-            if patches is not None:
-                patches.append({"path": path, "body": json.loads(request.content)})
-            return httpx.Response(204)
         return httpx.Response(404)
 
     return Client(
@@ -80,86 +74,105 @@ def ollama() -> AsyncMock:
     return AsyncMock()
 
 
-async def test_on_created_generates_summary_severity_solutions_and_patches(ollama):
-    patches: list[dict] = []
-    c = _client_with(incident=_incident_json(), events=_events_json(), patches=patches)
+@pytest.fixture()
+def mock_nats() -> AsyncMock:
+    nc = AsyncMock()
+    nc.publish = AsyncMock()
+    return nc
+
+
+def _published_payloads(mock_nats: AsyncMock) -> dict[str, dict]:
+    """Return {subject: payload_dict} for all publish calls."""
+    result = {}
+    for call in mock_nats.publish.call_args_list:
+        subject = call.args[0]
+        payload = json.loads(call.args[1].decode())
+        result[subject] = payload
+    return result
+
+
+async def test_on_created_generates_summary_severity_solutions_and_publishes(
+    ollama, mock_nats
+):
+    c = _client_with(incident=_incident_json(), events=_events_json())
     ollama.generate.side_effect = [
         SummaryResponse(summary="things are bad"),
         SeverityResponse(severity=Severity.SEV1, reason="checkout down"),
         SolutionsResponse(solutions=["restart", "rollback"]),
     ]
-    handlers = IncidentHandlers(c, ollama, PromptBuilder())
+    handlers = IncidentHandlers(c, ollama, PromptBuilder(), nats_client=mock_nats)
 
     await handlers.on_incident_created(str(INCIDENT_ID))
 
-    suffixes = {p["path"].rsplit("/", 2)[-2] for p in patches}
-    assert suffixes == {"summary", "severity", "solutions"}
-    by_path = {p["path"].rsplit("/", 2)[-2]: p["body"] for p in patches}
-    assert by_path["summary"] == {"summary": "things are bad"}
-    assert by_path["severity"] == {
-        "severity": "SEV1",
-        "reason": "checkout down",
-    }
-    assert by_path["solutions"] == {"solutions": ["restart", "rollback"]}
     assert ollama.generate.await_count == 3
+    payloads = _published_payloads(mock_nats)
+    assert set(payloads) == {
+        "incident.genai.summary.generated",
+        "incident.genai.severity.generated",
+        "incident.genai.solutions.generated",
+    }
+    assert payloads["incident.genai.summary.generated"]["summary"] == "things are bad"
+    assert payloads["incident.genai.severity.generated"]["severity"] == "SEV1"
+    assert payloads["incident.genai.severity.generated"]["reason"] == "checkout down"
+    assert payloads["incident.genai.solutions.generated"]["solutions"] == [
+        "restart",
+        "rollback",
+    ]
 
 
-async def test_on_resolved_generates_postmortem(ollama):
-    patches: list[dict] = []
+async def test_on_resolved_generates_postmortem(ollama, mock_nats):
     c = _client_with(
         incident=_incident_json(
             status=IncidentStatus.RESOLVED, resolved_at="2026-05-20T10:00:00+00:00"
         ),
         events=_events_json(),
-        patches=patches,
     )
     ollama.generate.return_value = PostmortemResponse(
         root_cause="bad config", timeline=["t1"], action_items=["a1"]
     )
-    handlers = IncidentHandlers(c, ollama, PromptBuilder())
+    handlers = IncidentHandlers(c, ollama, PromptBuilder(), nats_client=mock_nats)
 
     await handlers.on_incident_resolved(str(INCIDENT_ID))
 
-    assert len(patches) == 1
-    assert patches[0]["path"].endswith("/genai/postmortem/result")
-    assert patches[0]["body"] == {
-        "rootCause": "bad config",
-        "timeline": ["t1"],
-        "actionItems": ["a1"],
-    }
+    mock_nats.publish.assert_awaited_once()
+    subject, raw = mock_nats.publish.call_args.args
+    assert subject == "incident.genai.postmortem.generated"
+    payload = json.loads(raw.decode())
+    assert payload["rootCause"] == "bad config"
+    assert payload["timeline"] == ["t1"]
+    assert payload["actionItems"] == ["a1"]
 
 
-async def test_on_regen_requested_runs_only_requested_task(ollama):
-    patches: list[dict] = []
-    c = _client_with(incident=_incident_json(), events=_events_json(), patches=patches)
+async def test_on_regen_requested_runs_only_requested_task(ollama, mock_nats):
+    c = _client_with(incident=_incident_json(), events=_events_json())
     ollama.generate.return_value = SummaryResponse(summary="s")
-    handlers = IncidentHandlers(c, ollama, PromptBuilder())
+    handlers = IncidentHandlers(c, ollama, PromptBuilder(), nats_client=mock_nats)
 
     await handlers.on_regen_requested(str(INCIDENT_ID), RegenTask.SUMMARY)
 
-    assert len(patches) == 1
-    assert patches[0]["path"].endswith("/genai/summary/result")
     assert ollama.generate.await_count == 1
+    mock_nats.publish.assert_awaited_once()
+    subject, _ = mock_nats.publish.call_args.args
+    assert subject == "incident.genai.summary.generated"
 
 
-async def test_on_regen_postmortem_runs_postmortem_only(ollama):
-    patches: list[dict] = []
+async def test_on_regen_postmortem_runs_postmortem_only(ollama, mock_nats):
     c = _client_with(
         incident=_incident_json(
             status=IncidentStatus.RESOLVED, resolved_at="2026-05-20T10:00:00+00:00"
         ),
         events=_events_json(),
-        patches=patches,
     )
     ollama.generate.return_value = PostmortemResponse(
         root_cause="x", timeline=["t"], action_items=["a"]
     )
-    handlers = IncidentHandlers(c, ollama, PromptBuilder())
+    handlers = IncidentHandlers(c, ollama, PromptBuilder(), nats_client=mock_nats)
 
     await handlers.on_regen_requested(str(INCIDENT_ID), RegenTask.POSTMORTEM)
 
-    assert len(patches) == 1
-    assert patches[0]["path"].endswith("/genai/postmortem/result")
+    mock_nats.publish.assert_awaited_once()
+    subject, _ = mock_nats.publish.call_args.args
+    assert subject == "incident.genai.postmortem.generated"
 
 
 async def test_handler_swallows_errors(ollama):
@@ -179,20 +192,18 @@ async def test_handler_swallows_errors(ollama):
     ollama.generate.assert_not_awaited()
 
 
-async def test_on_resolved_skips_when_incident_not_resolved(ollama):
-    """PromptBuilder rejects postmortem on unresolved incident; handler logs and stops."""
-    patches: list[dict] = []
+async def test_on_resolved_skips_when_incident_not_resolved(ollama, mock_nats):
+    """Handler skips postmortem generation when incident is still open."""
     c = _client_with(
         incident=_incident_json(status=IncidentStatus.OPEN),
         events=_events_json(),
-        patches=patches,
     )
-    handlers = IncidentHandlers(c, ollama, PromptBuilder())
+    handlers = IncidentHandlers(c, ollama, PromptBuilder(), nats_client=mock_nats)
 
     await handlers.on_incident_resolved(str(INCIDENT_ID))
 
     ollama.generate.assert_not_awaited()
-    assert patches == []
+    mock_nats.publish.assert_not_awaited()
 
 
 async def test_handler_rejects_non_uuid_incident_id(ollama):
@@ -204,35 +215,18 @@ async def test_handler_rejects_non_uuid_incident_id(ollama):
     ollama.generate.assert_not_awaited()
 
 
-async def test_on_created_continues_after_summary_patch_fails(ollama):
-    call = 0
-
-    def handler(request: httpx.Request) -> httpx.Response:
-        nonlocal call
-        path = request.url.path
-        if request.method == "GET" and path.endswith(f"/incidents/{INCIDENT_ID}"):
-            return httpx.Response(200, json=_incident_json())
-        if request.method == "GET" and path.endswith("/events"):
-            return httpx.Response(200, json=_events_json())
-        if request.method == "PATCH" and path.endswith("/summary/result"):
-            return httpx.Response(404)
-        if request.method == "PATCH":
-            call += 1
-            return httpx.Response(204)
-        return httpx.Response(404)
-
-    c = Client(
-        base_url="http://incident-service",
-        httpx_args={"transport": httpx.MockTransport(handler)},
-    )
+async def test_on_created_continues_after_first_publish_fails(ollama, mock_nats):
+    """A failed publish for one task should not prevent the others from running."""
+    c = _client_with(incident=_incident_json(), events=_events_json())
     ollama.generate.side_effect = [
         SummaryResponse(summary="s"),
         SeverityResponse(severity=Severity.SEV2, reason="r"),
         SolutionsResponse(solutions=["a"]),
     ]
-    handlers = IncidentHandlers(c, ollama, PromptBuilder())
+    mock_nats.publish.side_effect = [RuntimeError("publish failed"), None, None]
+    handlers = IncidentHandlers(c, ollama, PromptBuilder(), nats_client=mock_nats)
 
     await handlers.on_incident_created(str(INCIDENT_ID))
 
     assert ollama.generate.await_count == 3
-    assert call == 2
+    assert mock_nats.publish.await_count == 3

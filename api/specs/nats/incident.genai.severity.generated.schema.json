@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema",
+  "$id": "https://github.com/aet-devops26/team-panic-at-the-console/api/specs/nats/incident.genai.severity.generated.schema.json",
+  "description": "Published by genai-service after generating a severity suggestion. incident-service subscribes and persists the result.",
+  "type": "object",
+  "required": ["incidentId", "timestamp", "severity", "reason"],
+  "additionalProperties": false,
+  "properties": {
+    "incidentId": { "type": "string", "format": "uuid" },
+    "timestamp": { "type": "string", "format": "date-time" },
+    "severity": { "type": "string", "enum": ["SEV1", "SEV2", "SEV3", "SEV4"] },
+    "reason": { "type": "string", "minLength": 1 }
+  }
+}

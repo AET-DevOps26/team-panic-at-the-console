@@ -21,68 +21,18 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/incidents/{incidentId}/genai/summary": {
+    "/incidents": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /** List incidents with optional filtering */
+        get: operations["listIncidents"];
         put?: never;
-        /** Trigger summary regeneration for an incident */
-        post: operations["regenerateSummary"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/incidents/{incidentId}/genai/severity": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Trigger severity suggestion regeneration for an incident */
-        post: operations["regenerateSeverity"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/incidents/{incidentId}/genai/solutions": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Trigger solution suggestions regeneration for an incident */
-        post: operations["regenerateSolutions"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/incidents/{incidentId}/genai/postmortem": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Trigger postmortem regeneration for a resolved incident */
-        post: operations["regeneratePostmortem"];
+        /** Create a new incident manually */
+        post: operations["createIncident"];
         delete?: never;
         options?: never;
         head?: never;
@@ -100,114 +50,6 @@ export interface paths {
         get: operations["getIncident"];
         put?: never;
         post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/incidents/{incidentId}/events": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** List Events from the Event Log for one incident, in chronological order */
-        get: operations["listIncidentEvents"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/incidents/{incidentId}/genai/summary/result": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        /**
-         * (internal) Write AI-generated Summary back to incident-service
-         * @description Called by genai-service after an Ollama generation completes.
-         *     Cluster-internal only; not exposed via the gateway.
-         *
-         */
-        patch: operations["writeIncidentSummary"];
-        trace?: never;
-    };
-    "/incidents/{incidentId}/genai/severity/result": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        /** (internal) Write AI-suggested Severity back to incident-service */
-        patch: operations["writeIncidentSeveritySuggestion"];
-        trace?: never;
-    };
-    "/incidents/{incidentId}/genai/solutions/result": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        /** (internal) Write AI-generated Solution Suggestions back to incident-service */
-        patch: operations["writeIncidentSolutions"];
-        trace?: never;
-    };
-    "/incidents/{incidentId}/genai/postmortem/result": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        /** (internal) Write AI-generated Postmortem back to incident-service */
-        patch: operations["writeIncidentPostmortem"];
-        trace?: never;
-    };
-    "/incidents": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** List incidents with optional filtering */
-        get: operations["listIncidents"];
-        put?: never;
-        /** Create a new incident manually */
-        post: operations["createIncident"];
         delete?: never;
         options?: never;
         head?: never;
@@ -276,6 +118,23 @@ export interface paths {
         patch: operations["assignIncident"];
         trace?: never;
     };
+    "/incidents/{incidentId}/events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Events from the Event Log for one incident, in chronological order */
+        get: operations["listIncidentEvents"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/incidents/{incidentId}/comments": {
         parameters: {
             query?: never;
@@ -288,6 +147,74 @@ export interface paths {
         put?: never;
         /** Add a comment to an incident (immutable) */
         post: operations["addComment"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/incidents/{incidentId}/genai/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Trigger summary regeneration for an incident */
+        post: operations["regenerateSummary"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/incidents/{incidentId}/genai/severity": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Trigger severity suggestion regeneration for an incident */
+        post: operations["regenerateSeverity"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/incidents/{incidentId}/genai/solutions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Trigger solution suggestions regeneration for an incident */
+        post: operations["regenerateSolutions"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/incidents/{incidentId}/genai/postmortem": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Trigger postmortem regeneration for a resolved incident */
+        post: operations["regeneratePostmortem"];
         delete?: never;
         options?: never;
         head?: never;
@@ -563,6 +490,68 @@ export interface components {
              *     ] */
             solutions: string[];
         };
+        /** @description Request to create a new incident manually. */
+        CreateIncidentRequest: {
+            /** @example Database migration rollback needed */
+            title: string;
+            severity: components["schemas"]["Severity"];
+        };
+        /** @description Request to update incident status. */
+        UpdateStatusRequest: {
+            status: components["schemas"]["IncidentStatus"];
+        };
+        /** @description Request to escalate severity (only higher severities allowed). */
+        EscalateSeverityRequest: {
+            severity: components["schemas"]["Severity"];
+        };
+        /** @description Request to assign or unassign responders. */
+        AssignIncidentRequest: {
+            /**
+             * @description UUIDs of users to assign. Send empty array to clear all assignments.
+             * @example [
+             *       "018e2c5f-1234-7abc-8def-0000000000aa"
+             *     ]
+             */
+            userIds: string[];
+        };
+        /** @description An immutable comment on an incident, authored by a user. */
+        Comment: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            incidentId: string;
+            /**
+             * Format: uuid
+             * @description UUID of the user who wrote the comment
+             */
+            authorId: string;
+            text: string;
+            /** Format: date-time */
+            createdAt: string;
+        };
+        /** @description Request to add a comment to an incident. */
+        CreateCommentRequest: {
+            /** @example Rolled back deployment v2.4.1; monitoring error rate now. */
+            text: string;
+        };
+        CommentListResponse: {
+            items: components["schemas"]["Comment"][];
+            /** @example 3 */
+            total: number;
+            /** @example 0 */
+            page: number;
+            /** @example 50 */
+            size: number;
+        };
+        IncidentListResponse: {
+            items: components["schemas"]["Incident"][];
+            /** @example 5 */
+            total: number;
+            /** @example 0 */
+            page: number;
+            /** @example 50 */
+            size: number;
+        };
         /**
          * @description Latest AI-generated postmortem draft for a resolved incident (GET in a later release; structured LLM output contract today).
          *
@@ -591,83 +580,6 @@ export interface components {
              *       "Alert on checkout latency SLO burn"
              *     ] */
             actionItems: string[];
-        };
-        SummaryPatch: {
-            summary: string;
-        };
-        SeverityPatch: {
-            severity: components["schemas"]["Severity"];
-            reason: string;
-        };
-        SolutionsPatch: {
-            solutions: string[];
-        };
-        PostmortemPatch: {
-            rootCause: string;
-            timeline: string[];
-            actionItems: string[];
-        };
-        /** @description Request to create a new incident manually. */
-        CreateIncidentRequest: {
-            /** @example Database migration rollback needed */
-            title: string;
-            severity: components["schemas"]["Severity"];
-        };
-        /** @description Request to update incident status. */
-        UpdateStatusRequest: {
-            status: components["schemas"]["IncidentStatus"];
-        };
-        /** @description Request to escalate severity (only higher severities allowed). */
-        EscalateSeverityRequest: {
-            severity: components["schemas"]["Severity"];
-        };
-        /** @description Request to assign or unassign responders. */
-        AssignIncidentRequest: {
-            /**
-             * @description UUIDs of users to assign. Send empty array to clear all assignments.
-             * @example [
-             *       "018e2c5f-1234-7abc-8def-0000000000aa"
-             *     ]
-             */
-            userIds: string[];
-        };
-        /** @description Request to add a comment to an incident. */
-        CreateCommentRequest: {
-            /** @example Rolled back deployment v2.4.1; monitoring error rate now. */
-            text: string;
-        };
-        /** @description An immutable comment on an incident, authored by a user. */
-        Comment: {
-            /** Format: uuid */
-            id: string;
-            /** Format: uuid */
-            incidentId: string;
-            /**
-             * Format: uuid
-             * @description UUID of the user who wrote the comment
-             */
-            authorId: string;
-            text: string;
-            /** Format: date-time */
-            createdAt: string;
-        };
-        CommentListResponse: {
-            items: components["schemas"]["Comment"][];
-            /** @example 3 */
-            total: number;
-            /** @example 0 */
-            page: number;
-            /** @example 50 */
-            size: number;
-        };
-        IncidentListResponse: {
-            items: components["schemas"]["Incident"][];
-            /** @example 5 */
-            total: number;
-            /** @example 0 */
-            page: number;
-            /** @example 50 */
-            size: number;
         };
     };
     responses: {
@@ -698,9 +610,9 @@ export interface components {
     parameters: {
         /** @description Maximum number of users to return (default 50, max 100). */
         UserListLimitParam: number;
-        PageParam: number;
         /** @description Number of users to skip for pagination. */
         UserListOffsetParam: number;
+        PageParam: number;
         SizeParam: number;
         /** @description UUID of the target incident. */
         IncidentIdParam: string;
@@ -741,266 +653,6 @@ export interface operations {
             };
             /** @description Service unavailable */
             503: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    regenerateSummary: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description UUID of the target incident. */
-                incidentId: components["parameters"]["IncidentIdParam"];
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            202: components["responses"]["RegenAccepted"];
-            404: components["responses"]["IncidentNotFound"];
-        };
-    };
-    regenerateSeverity: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description UUID of the target incident. */
-                incidentId: components["parameters"]["IncidentIdParam"];
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            202: components["responses"]["RegenAccepted"];
-            404: components["responses"]["IncidentNotFound"];
-        };
-    };
-    regenerateSolutions: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description UUID of the target incident. */
-                incidentId: components["parameters"]["IncidentIdParam"];
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            202: components["responses"]["RegenAccepted"];
-            404: components["responses"]["IncidentNotFound"];
-        };
-    };
-    regeneratePostmortem: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description UUID of the target incident. */
-                incidentId: components["parameters"]["IncidentIdParam"];
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            202: components["responses"]["RegenAccepted"];
-            404: components["responses"]["IncidentNotFound"];
-            409: components["responses"]["IncidentNotResolved"];
-        };
-    };
-    getIncident: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description UUID of the target incident. */
-                incidentId: components["parameters"]["IncidentIdParam"];
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Incident"];
-                };
-            };
-            /** @description Incident not found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    listIncidentEvents: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description UUID of the target incident. */
-                incidentId: components["parameters"]["IncidentIdParam"];
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["IncidentEvent"][];
-                };
-            };
-            /** @description Incident not found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    writeIncidentSummary: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description UUID of the target incident. */
-                incidentId: components["parameters"]["IncidentIdParam"];
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["SummaryPatch"];
-            };
-        };
-        responses: {
-            /** @description Saved */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Incident not found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    writeIncidentSeveritySuggestion: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description UUID of the target incident. */
-                incidentId: components["parameters"]["IncidentIdParam"];
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["SeverityPatch"];
-            };
-        };
-        responses: {
-            /** @description Saved */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Incident not found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    writeIncidentSolutions: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description UUID of the target incident. */
-                incidentId: components["parameters"]["IncidentIdParam"];
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["SolutionsPatch"];
-            };
-        };
-        responses: {
-            /** @description Saved */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Incident not found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    writeIncidentPostmortem: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description UUID of the target incident. */
-                incidentId: components["parameters"]["IncidentIdParam"];
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["PostmortemPatch"];
-            };
-        };
-        responses: {
-            /** @description Saved */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Incident not found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Incident not in resolved state */
-            409: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -1075,6 +727,36 @@ export interface operations {
             };
             /** @description Not authenticated */
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getIncident: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description UUID of the target incident. */
+                incidentId: components["parameters"]["IncidentIdParam"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Incident"];
+                };
+            };
+            /** @description Incident not found */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -1235,6 +917,36 @@ export interface operations {
             404: components["responses"]["IncidentNotFound"];
         };
     };
+    listIncidentEvents: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description UUID of the target incident. */
+                incidentId: components["parameters"]["IncidentIdParam"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IncidentEvent"][];
+                };
+            };
+            /** @description Incident not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     listComments: {
         parameters: {
             query?: {
@@ -1311,6 +1023,71 @@ export interface operations {
                 content?: never;
             };
             404: components["responses"]["IncidentNotFound"];
+        };
+    };
+    regenerateSummary: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description UUID of the target incident. */
+                incidentId: components["parameters"]["IncidentIdParam"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            202: components["responses"]["RegenAccepted"];
+            404: components["responses"]["IncidentNotFound"];
+        };
+    };
+    regenerateSeverity: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description UUID of the target incident. */
+                incidentId: components["parameters"]["IncidentIdParam"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            202: components["responses"]["RegenAccepted"];
+            404: components["responses"]["IncidentNotFound"];
+        };
+    };
+    regenerateSolutions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description UUID of the target incident. */
+                incidentId: components["parameters"]["IncidentIdParam"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            202: components["responses"]["RegenAccepted"];
+            404: components["responses"]["IncidentNotFound"];
+        };
+    };
+    regeneratePostmortem: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description UUID of the target incident. */
+                incidentId: components["parameters"]["IncidentIdParam"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            202: components["responses"]["RegenAccepted"];
+            404: components["responses"]["IncidentNotFound"];
+            409: components["responses"]["IncidentNotResolved"];
         };
     };
     registerUser: {

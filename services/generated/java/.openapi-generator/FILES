@@ -17,16 +17,12 @@ src/main/java/org/openapitools/model/IncidentEvent.java
 src/main/java/org/openapitools/model/IncidentListResponse.java
 src/main/java/org/openapitools/model/IncidentStatus.java
 src/main/java/org/openapitools/model/LoginRequest.java
-src/main/java/org/openapitools/model/PostmortemPatch.java
 src/main/java/org/openapitools/model/PostmortemResponse.java
 src/main/java/org/openapitools/model/RegenAccepted.java
 src/main/java/org/openapitools/model/RegisterRequest.java
 src/main/java/org/openapitools/model/Severity.java
-src/main/java/org/openapitools/model/SeverityPatch.java
 src/main/java/org/openapitools/model/SeverityResponse.java
-src/main/java/org/openapitools/model/SolutionsPatch.java
 src/main/java/org/openapitools/model/SolutionsResponse.java
-src/main/java/org/openapitools/model/SummaryPatch.java
 src/main/java/org/openapitools/model/SummaryResponse.java
 src/main/java/org/openapitools/model/UpdateStatusRequest.java
 src/main/java/org/openapitools/model/User.java

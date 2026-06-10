@@ -55,6 +55,10 @@ class NatsConsumer:
 
         logger.info("nats_consumer_started", url=self._url, queue=self._queue)
 
+    @property
+    def nats_client(self) -> NatsClient | None:
+        return self._nc
+
     async def stop(self) -> None:
         if self._nc is not None and not self._nc.is_closed:
             await self._nc.drain()
