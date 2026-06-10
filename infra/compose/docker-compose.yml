@@ -128,8 +128,8 @@ services:
   event-service:
     image: ghcr.io/aet-devops26/team-panic-at-the-console/event-service:${IMAGE_TAG:-latest}
     build:
-      context: ./services/event-service
-      dockerfile: Dockerfile
+      context: ./services
+      dockerfile: event-service/Dockerfile
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/events
       SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-devops}
@@ -137,6 +137,9 @@ services:
       NATS_URL: ${NATS_URL:-nats://nats:4222}
     ports:
       - "8082:8082"
+    healthcheck:
+      <<: *healthcheck-spring
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://127.0.0.1:8082/health || exit 1"]
     depends_on:
       postgres:
         condition: service_healthy
