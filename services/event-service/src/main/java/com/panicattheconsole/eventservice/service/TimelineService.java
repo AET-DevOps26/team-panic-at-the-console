@@ -29,7 +29,6 @@ public class TimelineService {
     public void append(EventEnvelope event) {
 
         TimelineEvent timelineEvent = new TimelineEvent(
-                UUID.randomUUID(),
                 event.incidentId(),
                 event.eventType(),
                 event.timestamp(),

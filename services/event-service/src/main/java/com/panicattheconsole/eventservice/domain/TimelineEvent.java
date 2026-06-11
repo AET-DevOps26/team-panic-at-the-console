@@ -37,12 +37,11 @@ public class TimelineEvent {
     private JsonNode payload;
 
     public TimelineEvent(
-            UUID id,
             UUID incidentId,
             String eventType,
             Instant eventTimestamp,
             JsonNode payload) {
-        this.id = id;
+        this.id = UUID.randomUUID();
         this.incidentId = incidentId;
         this.eventType = eventType;
         this.eventTimestamp = eventTimestamp;
