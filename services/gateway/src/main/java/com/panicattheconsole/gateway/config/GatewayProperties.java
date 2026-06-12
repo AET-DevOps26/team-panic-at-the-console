@@ -12,11 +12,22 @@ public class GatewayProperties {
     @NotBlank
     private String incidentServiceUrl;
 
+    @NotBlank
+    private String userServiceUrl;
+
     public String getIncidentServiceUrl() {
         return incidentServiceUrl;
     }
 
     public void setIncidentServiceUrl(String incidentServiceUrl) {
         this.incidentServiceUrl = incidentServiceUrl;
+    }
+
+    public String getUserServiceUrl() {
+        return userServiceUrl;
+    }
+
+    public void setUserServiceUrl(String userServiceUrl) {
+        this.userServiceUrl = userServiceUrl;
     }
 }
