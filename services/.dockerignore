@@ -4,6 +4,7 @@
 !gateway/
 !frontend/
 !incident-service/
+!event-service/
 !genai-service/
 !user-service/
 !generated/
