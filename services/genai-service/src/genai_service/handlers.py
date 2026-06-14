@@ -26,7 +26,8 @@ from client.models import (
     SummaryPatch,
 )
 from client.types import Response
-from genai_service.llm import LLMClient
+from genai_service.llm import LLMClient, provider_name
+from genai_service.metrics import time_generation
 from genai_service.prompts import PromptBuilder, PromptTask
 from genai_service.regen_task import RegenTask
 
@@ -172,15 +173,18 @@ class IncidentHandlers:
     ) -> None:
         spec = _PATCH_SPECS[task]
         prompt = self._prompts.build(incident, events, task)
-        result = await self._llm.generate(
-            prompt.user, system=prompt.system, response_model=prompt.response_model
-        )
-        response = await spec.write(
-            incident_id=_uuid(incident_id),
-            client=self._client,
-            body=spec.to_body(result),
-        )
-        _expect_no_content(response, operation=f"write {task.value}")
+        with time_generation(task.value, provider=lambda: provider_name(self._llm)):
+            result = await self._llm.generate(
+                prompt.user,
+                system=prompt.system,
+                response_model=prompt.response_model,
+            )
+            response = await spec.write(
+                incident_id=_uuid(incident_id),
+                client=self._client,
+                body=spec.to_body(result),
+            )
+            _expect_no_content(response, operation=f"write {task.value}")
 
     async def _fetch(self, incident_id: str) -> tuple[Incident, list[IncidentEvent]]:
         incident = await get_incident.asyncio(

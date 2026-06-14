@@ -129,7 +129,11 @@ An enumeration of what the `PromptBuilder` is asked to produce: `SUMMARY`, `SEVE
 | `incidents_total` | counter | `source=manual\|auto`, `severity` |
 | `active_incidents` | gauge | `severity` |
 | `incident_resolution_seconds` | histogram | — |
-| `ai_generation_seconds` | histogram | `type=summary\|postmortem` |
+| `ai_generation_seconds` | histogram | `type`, `provider=ollama\|logos` |
+| `ai_generations_total` | counter | `type`, `provider`, `outcome=success\|error` |
+| `llm_fallback_total` | counter | `from_provider`, `to_provider` |
+| `nats_messages_total` | counter | `subject`, `outcome` |
+| `nats_consumer_connected` | gauge | — |
 | `rule_evaluations_total` | counter | `matched=true\|false` |
 | `webhooks_received_total` | counter | `source_type` |
 
