@@ -1,0 +1,52 @@
+name: Release
+
+# Single orchestrator for a published GitHub Release: build and push all images,
+# then deploy to every target. Deploy jobs use `needs: build`, so they start only
+# after the entire image matrix has been built and pushed (no GHCR polling, and a
+# failed build aborts every deploy). The deploy workflows are also runnable on
+# their own via workflow_dispatch for ad-hoc deploys.
+
+on:
+  release:
+    types: [published]
+
+concurrency:
+  group: release-${{ github.event.release.tag_name }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build and push images
+    uses: ./.github/workflows/_build-images.yml
+    permissions:
+      contents: read
+      packages: write
+    with:
+      push: true
+      primary_tag: ${{ github.event.release.tag_name }}
+      sha_tag: latest
+
+  deploy-k8s:
+    name: Deploy to Kubernetes
+    needs: build
+    permissions:
+      contents: read
+    uses: ./.github/workflows/deploy-k8s.yml
+    with:
+      tag: ${{ github.event.release.tag_name }}
+    secrets: inherit
+
+  deploy-azure:
+    name: Deploy to Azure VM
+    needs: build
+    permissions:
+      contents: read
+      id-token: write
+    uses: ./.github/workflows/deploy-azure-vm.yml
+    with:
+      tag: ${{ github.event.release.tag_name }}
+      action: full
+    secrets: inherit

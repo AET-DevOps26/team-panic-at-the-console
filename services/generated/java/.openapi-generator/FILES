@@ -4,10 +4,17 @@ src/main/java/org/openapitools/api/GenaiApi.java
 src/main/java/org/openapitools/api/HealthApi.java
 src/main/java/org/openapitools/api/IncidentsApi.java
 src/main/java/org/openapitools/api/UsersApi.java
+src/main/java/org/openapitools/model/AssignIncidentRequest.java
+src/main/java/org/openapitools/model/Comment.java
+src/main/java/org/openapitools/model/CommentListResponse.java
+src/main/java/org/openapitools/model/CreateCommentRequest.java
+src/main/java/org/openapitools/model/CreateIncidentRequest.java
 src/main/java/org/openapitools/model/ErrorResponse.java
+src/main/java/org/openapitools/model/EscalateSeverityRequest.java
 src/main/java/org/openapitools/model/HealthCheck200Response.java
 src/main/java/org/openapitools/model/Incident.java
 src/main/java/org/openapitools/model/IncidentEvent.java
+src/main/java/org/openapitools/model/IncidentListResponse.java
 src/main/java/org/openapitools/model/IncidentStatus.java
 src/main/java/org/openapitools/model/LoginRequest.java
 src/main/java/org/openapitools/model/PostmortemPatch.java
@@ -21,6 +28,7 @@ src/main/java/org/openapitools/model/SolutionsPatch.java
 src/main/java/org/openapitools/model/SolutionsResponse.java
 src/main/java/org/openapitools/model/SummaryPatch.java
 src/main/java/org/openapitools/model/SummaryResponse.java
+src/main/java/org/openapitools/model/UpdateStatusRequest.java
 src/main/java/org/openapitools/model/User.java
 src/main/java/org/openapitools/model/UserListResponse.java
 src/main/java/org/openapitools/model/UserRole.java

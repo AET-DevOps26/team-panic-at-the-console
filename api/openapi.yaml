@@ -11,10 +11,10 @@ info:
 tags:
   - name: health
     description: Service health and readiness.
+  - name: incidents
+    description: Incident lifecycle management (incident-service).
   - name: genai
     description: AI-assisted incident analysis (on-demand regeneration triggers).
-  - name: incidents
-    description: Incident read APIs and internal write-back endpoints used by genai-service.
   - name: auth
     description: |
       Registration, login, and logout (user-service). On login, user-service sets an httpOnly `session`
@@ -57,6 +57,258 @@ paths:
           description: Service unavailable
         "400":
           description: Bad request
+
+  /incidents:
+    get:
+      operationId: listIncidents
+      summary: List incidents with optional filtering
+      tags: [incidents]
+      security: []
+      parameters:
+        - name: status
+          in: query
+          required: false
+          description: Filter by incident status
+          schema:
+            $ref: "#/components/schemas/IncidentStatus"
+        - name: severity
+          in: query
+          required: false
+          description: Filter by incident severity
+          schema:
+            $ref: "#/components/schemas/Severity"
+        - $ref: "#/components/parameters/PageParam"
+        - $ref: "#/components/parameters/SizeParam"
+      responses:
+        "200":
+          description: List of incidents
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IncidentListResponse"
+        "401":
+          description: Not authenticated
+    post:
+      operationId: createIncident
+      summary: Create a new incident manually
+      tags: [incidents]
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateIncidentRequest"
+      responses:
+        "201":
+          description: Incident created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Incident"
+        "400":
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Not authenticated
+
+  /incidents/{incidentId}:
+    get:
+      operationId: getIncident
+      summary: Fetch a single incident
+      tags: [incidents]
+      parameters:
+        - $ref: "#/components/parameters/IncidentIdParam"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Incident"
+        "404":
+          description: Incident not found
+
+  /incidents/{incidentId}/status:
+    patch:
+      operationId: updateIncidentStatus
+      summary: Transition incident status
+      description: |
+        Allowed transitions: open → investigating, investigating → resolved.
+        Requires RESPONDER or COMMANDER role.
+      tags: [incidents]
+      security: []
+      parameters:
+        - $ref: "#/components/parameters/IncidentIdParam"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateStatusRequest"
+      responses:
+        "200":
+          description: Status updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Incident"
+        "400":
+          description: Invalid status transition
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Not authenticated
+        "403":
+          description: Insufficient permissions
+        "404":
+          $ref: "#/components/responses/IncidentNotFound"
+
+  /incidents/{incidentId}/severity:
+    patch:
+      operationId: escalateIncidentSeverity
+      summary: Manually escalate incident severity
+      description: Requires COMMANDER role.
+      tags: [incidents]
+      security: []
+      parameters:
+        - $ref: "#/components/parameters/IncidentIdParam"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EscalateSeverityRequest"
+      responses:
+        "200":
+          description: Severity escalated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Incident"
+        "400":
+          description: Invalid severity or downgrade attempted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Not authenticated
+        "403":
+          description: Insufficient permissions
+        "404":
+          $ref: "#/components/responses/IncidentNotFound"
+
+  /incidents/{incidentId}/assign:
+    patch:
+      operationId: assignIncident
+      summary: Assign or unassign responders to an incident
+      description: Requires COMMANDER or RESPONDER role (can assign themselves).
+      tags: [incidents]
+      security: []
+      parameters:
+        - $ref: "#/components/parameters/IncidentIdParam"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AssignIncidentRequest"
+      responses:
+        "200":
+          description: Assignment updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Incident"
+        "400":
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Not authenticated
+        "403":
+          description: Insufficient permissions
+        "404":
+          $ref: "#/components/responses/IncidentNotFound"
+
+  /incidents/{incidentId}/events:
+    get:
+      operationId: listIncidentEvents
+      summary: List Events from the Event Log for one incident, in chronological order
+      tags: [incidents]
+      parameters:
+        - $ref: "#/components/parameters/IncidentIdParam"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/IncidentEvent"
+        "404":
+          description: Incident not found
+
+  /incidents/{incidentId}/comments:
+    get:
+      operationId: listComments
+      summary: List comments on an incident
+      tags: [incidents]
+      security: []
+      parameters:
+        - $ref: "#/components/parameters/IncidentIdParam"
+        - $ref: "#/components/parameters/PageParam"
+        - $ref: "#/components/parameters/SizeParam"
+      responses:
+        "200":
+          description: List of comments
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CommentListResponse"
+        "401":
+          description: Not authenticated
+        "404":
+          $ref: "#/components/responses/IncidentNotFound"
+    post:
+      operationId: addComment
+      summary: Add a comment to an incident (immutable)
+      tags: [incidents]
+      security: []
+      parameters:
+        - $ref: "#/components/parameters/IncidentIdParam"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateCommentRequest"
+      responses:
+        "201":
+          description: Comment created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Comment"
+        "400":
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Not authenticated
+        "404":
+          $ref: "#/components/responses/IncidentNotFound"
 
   /incidents/{incidentId}/genai/summary:
     post:
@@ -111,42 +363,6 @@ paths:
           $ref: "#/components/responses/IncidentNotFound"
         "409":
           $ref: "#/components/responses/IncidentNotResolved"
-
-  /incidents/{incidentId}:
-    get:
-      operationId: getIncident
-      summary: Fetch a single incident
-      tags: [incidents]
-      parameters:
-        - $ref: "#/components/parameters/IncidentIdParam"
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Incident"
-        "404":
-          description: Incident not found
-
-  /incidents/{incidentId}/events:
-    get:
-      operationId: listIncidentEvents
-      summary: List Events from the Event Log for one incident, in chronological order
-      tags: [incidents]
-      parameters:
-        - $ref: "#/components/parameters/IncidentIdParam"
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/IncidentEvent"
-        "404":
-          description: Incident not found
 
   /incidents/{incidentId}/genai/summary/result:
     patch:
@@ -397,6 +613,25 @@ components:
         type: integer
         minimum: 0
         default: 0
+
+    PageParam:
+      name: page
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 0
+        default: 0
+
+    SizeParam:
+      name: size
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 50
 
     IncidentIdParam:
       name: incidentId
@@ -649,6 +884,132 @@ components:
           example:
             - Roll back payment-service to v2.3.9
             - Scale checkout-api replicas to 6
+
+    CreateIncidentRequest:
+      type: object
+      description: Request to create a new incident manually.
+      required: [title, severity]
+      additionalProperties: false
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 500
+          example: Database migration rollback needed
+        severity:
+          $ref: "#/components/schemas/Severity"
+
+    UpdateStatusRequest:
+      type: object
+      description: Request to update incident status.
+      required: [status]
+      additionalProperties: false
+      properties:
+        status:
+          $ref: "#/components/schemas/IncidentStatus"
+
+    EscalateSeverityRequest:
+      type: object
+      description: Request to escalate severity (only higher severities allowed).
+      required: [severity]
+      additionalProperties: false
+      properties:
+        severity:
+          $ref: "#/components/schemas/Severity"
+
+    AssignIncidentRequest:
+      type: object
+      description: Request to assign or unassign responders.
+      required: [userIds]
+      additionalProperties: false
+      properties:
+        userIds:
+          type: array
+          items:
+            type: string
+            format: uuid
+          description: UUIDs of users to assign. Send empty array to clear all assignments.
+          example: ["018e2c5f-1234-7abc-8def-0000000000aa"]
+
+    Comment:
+      type: object
+      description: An immutable comment on an incident, authored by a user.
+      required: [id, incidentId, authorId, text, createdAt]
+      additionalProperties: false
+      properties:
+        id:
+          type: string
+          format: uuid
+        incidentId:
+          type: string
+          format: uuid
+        authorId:
+          type: string
+          format: uuid
+          description: UUID of the user who wrote the comment
+        text:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+
+    CreateCommentRequest:
+      type: object
+      description: Request to add a comment to an incident.
+      required: [text]
+      additionalProperties: false
+      properties:
+        text:
+          type: string
+          minLength: 1
+          maxLength: 5000
+          example: "Rolled back deployment v2.4.1; monitoring error rate now."
+
+    CommentListResponse:
+      type: object
+      required: [items, total, page, size]
+      additionalProperties: false
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/Comment"
+        total:
+          type: integer
+          minimum: 0
+          example: 3
+        page:
+          type: integer
+          minimum: 0
+          example: 0
+        size:
+          type: integer
+          minimum: 1
+          maximum: 100
+          example: 50
+
+    IncidentListResponse:
+      type: object
+      required: [items, total, page, size]
+      additionalProperties: false
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/Incident"
+        total:
+          type: integer
+          minimum: 0
+          example: 5
+        page:
+          type: integer
+          minimum: 0
+          example: 0
+        size:
+          type: integer
+          minimum: 1
+          maximum: 100
+          example: 50
 
     PostmortemResponse:
       type: object

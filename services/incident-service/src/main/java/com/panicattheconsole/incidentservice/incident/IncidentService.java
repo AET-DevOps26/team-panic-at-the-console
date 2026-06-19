@@ -5,12 +5,15 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.Set;
 import java.util.UUID;
 
 import org.openapitools.model.RegenAccepted;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -31,8 +34,8 @@ public class IncidentService {
     private final ApplicationEventPublisher applicationEventPublisher;
 
     public IncidentService(IncidentRepository incidentRepository,
-                          CommentRepository commentRepository,
-                          ApplicationEventPublisher applicationEventPublisher) {
+            CommentRepository commentRepository,
+            ApplicationEventPublisher applicationEventPublisher) {
         this.incidentRepository = incidentRepository;
         this.commentRepository = commentRepository;
         this.applicationEventPublisher = applicationEventPublisher;
@@ -49,7 +52,6 @@ public class IncidentService {
         applicationEventPublisher.publishEvent(new IncidentNatsEvent(subject, payload));
     }
 
-
     public Incident createIncident(UUID incidentId, Severity severity, String title, UUID sourceId) {
         log.info("Creating incident [id={}, severity={}, title={}]", incidentId, severity, title);
 
@@ -62,7 +64,6 @@ public class IncidentService {
         return saved;
     }
 
-
     public Incident getIncident(UUID incidentId) {
         return incidentRepository.findById(incidentId)
                 .orElseThrow(() -> new NoSuchElementException("Incident not found: " + incidentId));
@@ -70,14 +71,14 @@ public class IncidentService {
 
     /**
      * Timeline entries for genai prompts and internal reads.
-     * event-service is not wired yet; synthesize from incident state and comments until then.
+     * event-service is not wired yet; synthesize from incident state and comments
+     * until then.
      */
     public List<org.openapitools.model.IncidentEvent> listIncidentEvents(UUID incidentId) {
         Incident incident = getIncident(incidentId);
         List<Comment> comments = commentRepository.findByIncident_IdOrderByCreatedAtAsc(incidentId);
         return IncidentMapper.toApiEvents(incident, comments);
     }
-
 
     public Incident updateIncidentStatus(UUID incidentId, IncidentStatus newStatus) {
         Incident incident = getIncident(incidentId);
@@ -158,7 +159,8 @@ public class IncidentService {
 
     /**
      * Update AI-generated postmortem.
-     * Called by genai-service after incident resolution. Publishes incident.updated event.
+     * Called by genai-service after incident resolution. Publishes incident.updated
+     * event.
      * Requires incident to be in RESOLVED status.
      */
     public void updatePostmortem(UUID incidentId, String postmortem) {
@@ -210,7 +212,8 @@ public class IncidentService {
 
     /**
      * Trigger on-demand regeneration of one AI field.
-     * Publishes incident.regen.requested with a task the genai consumer understands.
+     * Publishes incident.regen.requested with a task the genai consumer
+     * understands.
      */
     public void requestRegeneration(UUID incidentId, RegenAccepted.TaskEnum task) {
         getIncident(incidentId);
@@ -246,5 +249,76 @@ public class IncidentService {
             throw new IllegalStateException(
                     "Cannot regenerate postmortem for non-resolved incident: " + incidentId);
         }
+    }
+
+    /**
+     * List all incidents with optional filtering by status and severity.
+     */
+    public List<Incident> listIncidents(
+            IncidentStatus status,
+            Severity severity,
+            int page,
+            int size) {
+        Pageable pageable = PageRequest.of(page, size);
+
+        if (status != null && severity != null) {
+            return incidentRepository.findByStatusAndSeverity(status, severity, pageable).getContent();
+        }
+
+        if (status != null) {
+            return incidentRepository.findByStatus(status, pageable).getContent();
+        }
+
+        if (severity != null) {
+            return incidentRepository.findBySeverity(severity, pageable).getContent();
+        }
+
+        return incidentRepository.findAll(pageable).getContent();
+    }
+
+    /**
+     * Get total count of incidents matching filters.
+     */
+    public long countIncidents(IncidentStatus status, Severity severity) {
+        if (status != null && severity != null) {
+            return incidentRepository.countByStatusAndSeverity(status, severity);
+        } else if (status != null) {
+            return incidentRepository.countByStatus(status);
+        } else if (severity != null) {
+            return incidentRepository.countBySeverity(severity);
+        } else {
+            return incidentRepository.count();
+        }
+    }
+
+    /**
+     * Update assigned users for an incident.
+     * Replaces the current assignment set with the provided one.
+     * Publishes incident.updated event.
+     */
+    public Incident updateAssignedUsers(UUID incidentId, Set<UUID> userIds) {
+        Incident incident = getIncident(incidentId);
+        incident.setAssignedUsers(userIds);
+        Incident saved = incidentRepository.save(incident);
+        publishAfterCommit("incident.updated", createBaseEvent(incidentId));
+        log.info("Updated assigned users for incident [id={}, count={}]", incidentId, userIds.size());
+        return saved;
+    }
+
+    /**
+     * List comments for an incident.
+     */
+    public List<Comment> listComments(UUID incidentId, int page, int size) {
+        // Validate incident exists
+        getIncident(incidentId);
+        Pageable pageable = PageRequest.of(page, size);
+        return commentRepository.findByIncident_IdOrderByCreatedAtAsc(incidentId, pageable).getContent();
+    }
+
+    /**
+     * Count comments for an incident.
+     */
+    public long countComments(UUID incidentId) {
+        return commentRepository.countByIncident_Id(incidentId);
     }
 }
