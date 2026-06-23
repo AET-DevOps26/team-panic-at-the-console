@@ -251,7 +251,7 @@ In another, deploy with `infra/helm/values.local-k8s.yaml` so Grafana serves at 
 
 Then open **http://localhost:3030/** (`admin` / `admin`).
 
-Prometheus UI (optional): `kubectl port-forward -n production svc/devops-platform-kube-prome-prometheus 9090:9090`
+Prometheus UI (optional): `kubectl port-forward -n production devops-platform-kube-prometheus-stack-prometheus 9090:9090`
 
 #### Debug the cluster
 
