@@ -3,12 +3,14 @@ from contextlib import asynccontextmanager
 import httpx
 import structlog
 from fastapi import FastAPI
+from prometheus_fastapi_instrumentator import Instrumentator
 
 from client import Client as IncidentApiClient
 from genai_service.config import settings
 from genai_service.handlers import IncidentHandlers
 from genai_service.llm import FallbackLLMClient, LLMClient
 from genai_service.logos_client import LogosClient
+from genai_service.metrics import init_prometheus_labelsets, set_nats_consumer_connected
 from genai_service.nats_consumer import NatsConsumer
 from genai_service.ollama_client import OllamaClient
 from genai_service.prompts import PromptBuilder
@@ -55,6 +57,7 @@ def _build_llm_client(http: httpx.AsyncClient, ollama: OllamaClient) -> LLMClien
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    init_prometheus_labelsets()
     http = httpx.AsyncClient()
     ollama = OllamaClient(
         http,
@@ -82,7 +85,10 @@ async def lifespan(app: FastAPI):
         except Exception as exc:
             # Don't block /health on a broker outage; log degraded and continue.
             logger.error("nats_consumer_start_failed", error=str(exc))
+            set_nats_consumer_connected(False)
             consumer = None
+    else:
+        set_nats_consumer_connected(False)
 
     app.state.http = http
     app.state.ollama_client = ollama
@@ -113,6 +119,10 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="GenAI Service", version="0.1.0", lifespan=lifespan)
+
+Instrumentator(excluded_handlers=["/metrics"]).instrument(app).expose(
+    app, endpoint="/metrics", include_in_schema=False
+)
 
 
 @app.get("/health")

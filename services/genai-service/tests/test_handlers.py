@@ -77,7 +77,9 @@ def _client_with(
 
 @pytest.fixture()
 def ollama() -> AsyncMock:
-    return AsyncMock()
+    mock = AsyncMock()
+    mock.provider = "ollama"
+    return mock
 
 
 async def test_on_created_generates_summary_severity_solutions_and_patches(ollama):
@@ -236,3 +238,178 @@ async def test_on_created_continues_after_summary_patch_fails(ollama):
 
     assert ollama.generate.await_count == 3
     assert call == 2
+
+
+async def test_on_created_records_generation_metrics(ollama):
+    from genai_service.metrics import ai_generations_total
+
+    c = _client_with(incident=_incident_json(), events=_events_json())
+    ollama.generate.side_effect = [
+        SummaryResponse(summary="ok"),
+        SeverityResponse(severity=Severity.SEV2, reason="r"),
+        SolutionsResponse(solutions=["restart"]),
+    ]
+
+    provider = "ollama"
+    before_summary = ai_generations_total.labels(
+        type="summary", provider=provider, outcome="success"
+    )._value.get()
+    before_severity = ai_generations_total.labels(
+        type="severity_suggestion", provider=provider, outcome="success"
+    )._value.get()
+    before_solutions = ai_generations_total.labels(
+        type="solution_suggestions", provider=provider, outcome="success"
+    )._value.get()
+
+    handlers = IncidentHandlers(c, ollama, PromptBuilder())
+    await handlers.on_incident_created(str(INCIDENT_ID))
+
+    assert (
+        ai_generations_total.labels(
+            type="summary", provider=provider, outcome="success"
+        )._value.get()
+        == before_summary + 1
+    )
+    assert (
+        ai_generations_total.labels(
+            type="severity_suggestion", provider=provider, outcome="success"
+        )._value.get()
+        == before_severity + 1
+    )
+    assert (
+        ai_generations_total.labels(
+            type="solution_suggestions", provider=provider, outcome="success"
+        )._value.get()
+        == before_solutions + 1
+    )
+
+
+async def test_on_created_records_error_outcome_when_llm_fails(ollama):
+    from genai_service.metrics import ai_generations_total
+    from genai_service.ollama_client import OllamaError
+
+    c = _client_with(incident=_incident_json(), events=_events_json())
+    ollama.generate.side_effect = OllamaError("ollama down")
+
+    before = ai_generations_total.labels(
+        type="summary", provider="ollama", outcome="error"
+    )._value.get()
+
+    handlers = IncidentHandlers(c, ollama, PromptBuilder())
+    await handlers.on_incident_created(str(INCIDENT_ID))
+
+    assert (
+        ai_generations_total.labels(
+            type="summary", provider="ollama", outcome="error"
+        )._value.get()
+        == before + 1
+    )
+
+
+async def test_on_created_records_logos_provider_via_fallback_client():
+    from genai_service.llm import FallbackLLMClient
+    from genai_service.metrics import ai_generations_total
+
+    primary = AsyncMock()
+    primary.model = "logos-model"
+    primary.provider = "logos"
+    primary.generate.return_value = SummaryResponse(summary="ok")
+
+    backup = AsyncMock()
+    backup.model = "ollama-model"
+    backup.provider = "ollama"
+
+    llm = FallbackLLMClient(primary, backup)
+    c = _client_with(incident=_incident_json(), events=_events_json())
+    primary.generate.side_effect = [
+        SummaryResponse(summary="ok"),
+        SeverityResponse(severity=Severity.SEV2, reason="r"),
+        SolutionsResponse(solutions=["restart"]),
+    ]
+
+    before = ai_generations_total.labels(
+        type="summary", provider="logos", outcome="success"
+    )._value.get()
+
+    handlers = IncidentHandlers(c, llm, PromptBuilder())
+    await handlers.on_incident_created(str(INCIDENT_ID))
+
+    assert (
+        ai_generations_total.labels(
+            type="summary", provider="logos", outcome="success"
+        )._value.get()
+        == before + 1
+    )
+
+
+async def test_on_created_records_ollama_provider_after_fallback():
+    from genai_service.llm import FallbackLLMClient
+    from genai_service.metrics import ai_generations_total
+
+    primary = AsyncMock()
+    primary.model = "logos-model"
+    primary.provider = "logos"
+    primary.generate.side_effect = RuntimeError("logos down")
+
+    backup = AsyncMock()
+    backup.model = "ollama-model"
+    backup.provider = "ollama"
+    backup.generate.return_value = SummaryResponse(summary="ok")
+
+    llm = FallbackLLMClient(primary, backup)
+    c = _client_with(incident=_incident_json(), events=_events_json())
+    backup.generate.side_effect = [
+        SummaryResponse(summary="ok"),
+        SeverityResponse(severity=Severity.SEV2, reason="r"),
+        SolutionsResponse(solutions=["restart"]),
+    ]
+
+    before = ai_generations_total.labels(
+        type="summary", provider="ollama", outcome="success"
+    )._value.get()
+
+    handlers = IncidentHandlers(c, llm, PromptBuilder())
+    await handlers.on_incident_created(str(INCIDENT_ID))
+
+    assert (
+        ai_generations_total.labels(
+            type="summary", provider="ollama", outcome="success"
+        )._value.get()
+        == before + 1
+    )
+
+
+async def test_on_created_records_error_when_patch_fails(ollama):
+    from genai_service.metrics import ai_generations_total
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        path = request.url.path
+        if request.method == "GET" and path.endswith(f"/incidents/{INCIDENT_ID}"):
+            return httpx.Response(200, json=_incident_json())
+        if request.method == "GET" and path.endswith(
+            f"/incidents/{INCIDENT_ID}/events"
+        ):
+            return httpx.Response(200, json=_events_json())
+        if request.method == "PATCH" and path.endswith("/genai/summary"):
+            return httpx.Response(500, json={"error": "db down"})
+        return httpx.Response(404)
+
+    c = Client(
+        base_url="http://incident-service",
+        httpx_args={"transport": httpx.MockTransport(handler)},
+    )
+    ollama.generate.return_value = SummaryResponse(summary="ok")
+
+    before = ai_generations_total.labels(
+        type="summary", provider="ollama", outcome="error"
+    )._value.get()
+
+    handlers = IncidentHandlers(c, ollama, PromptBuilder())
+    await handlers.on_incident_created(str(INCIDENT_ID))
+
+    assert (
+        ai_generations_total.labels(
+            type="summary", provider="ollama", outcome="error"
+        )._value.get()
+        == before + 1
+    )
