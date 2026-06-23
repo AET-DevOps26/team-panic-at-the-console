@@ -160,9 +160,8 @@ jobs:
           }
           probe /api/v1/health 200
           probe /swagger 200
-          # Asserts the / -> frontend route is wired. Frontend is still a
-          # placeholder, so edge returns 502; flip this to 200 once it serves.
-          probe / 502
+          # Asserts the / -> frontend route is wired.
+          probe / 200
 
       - name: Probe observability endpoints
         id: probe-observability

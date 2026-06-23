@@ -95,7 +95,7 @@ helm upgrade --install devops-platform "$CHART_STAGE" \
   --namespace "$DEPLOY_NAMESPACE" \
   --create-namespace \
   --wait \
-  --timeout 10m \
+  --timeout 30m \
   --rollback-on-failure \
   --set global.image.tag="$TAG" \
   "${HELM_VALUES[@]}"

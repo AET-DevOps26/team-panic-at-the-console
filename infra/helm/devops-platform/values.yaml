@@ -1,9 +1,9 @@
 global:
   image:
     registry: ghcr.io/aet-devops26/team-panic-at-the-console
-    tag: main
+    tag: latest
   namespace: default
-  # Shared Ollama model tag: genai-service and ollama pull (postStart).
+  # Shared Ollama model tag: genai-service, init pull, and readiness probe.
   ollamaModel: &ollamaModel qwen2.5:3b
   env:
     - name: NATS_URL
@@ -256,19 +256,22 @@ services:
   ollama:
     enabled: true
     port: 11434
+    # Model pull can exceed the default 10m Deployment progress deadline on first deploy.
+    progressDeadlineSeconds: 1800
     image:
       override: "ollama/ollama:0.9.0"
     command: ["ollama", "serve"]
+    # Pull model into the PVC before ollama serve starts (same idea as compose ollama-init).
+    modelInit: true
+    ollamaProbes: true
     env:
       - name: OLLAMA_MODEL
         value: *ollamaModel
-    lifecycle:
-      postStart:
-        exec:
-          command:
-            - "/bin/sh"
-            - "-c"
-            - "until ollama list >/dev/null 2>&1; do sleep 2; done; ollama pull ${OLLAMA_MODEL:-qwen2.5:3b}"
+    resources:
+      requests:
+        memory: 3Gi
+      limits:
+        memory: 4Gi
     persistence:
       size: 10Gi
       mountPath: /root/.ollama

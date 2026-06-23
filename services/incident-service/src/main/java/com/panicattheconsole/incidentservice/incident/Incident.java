@@ -53,7 +53,8 @@ public class Incident {
     private Instant resolvedAt;
 
     /**
-     * Reference to the external event that triggered this incident creation (if auto-created).
+     * Reference to the external event that triggered this incident creation (if
+     * auto-created).
      */
     @Column(name = "source_id")
     private UUID sourceId;
@@ -91,7 +92,7 @@ public class Incident {
     /**
      * Assigned responder IDs.
      */
-    @ElementCollection
+    @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(name = "incident_assigned_users", joinColumns = @JoinColumn(name = "incident_id"))
     @Column(name = "user_id")
     private Set<UUID> assignedUsers = new HashSet<>();
@@ -99,7 +100,7 @@ public class Incident {
     /**
      * Immutable comments on this incident.
      */
-    @OneToMany(mappedBy = "incident", cascade = {CascadeType.PERSIST, CascadeType.MERGE}, fetch = FetchType.LAZY)
+    @OneToMany(mappedBy = "incident", cascade = { CascadeType.PERSIST, CascadeType.MERGE }, fetch = FetchType.LAZY)
     private List<Comment> comments = new ArrayList<>();
 
     // Constructors

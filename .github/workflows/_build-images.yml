@@ -12,7 +12,7 @@ on:
         type: string
         required: true
       sha_tag:
-        description: Secondary image tag (typically commit-sha-derived).
+        description: Secondary image tag (e.g. "latest" on release, or "sha-<sha>" on CI builds).
         type: string
         required: true
 
@@ -20,9 +20,6 @@ jobs:
   build:
     name: Build ${{ matrix.service }} image
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
     strategy:
       fail-fast: false
       matrix:
@@ -37,12 +34,18 @@ jobs:
           - webhook-service
           - genai-service
         include:
+          - service: frontend
+            build_context: ./services
+            build_dockerfile: ./services/frontend/Dockerfile
           - service: gateway
             build_context: ./services
             build_dockerfile: ./services/gateway/Dockerfile
           - service: incident-service
             build_context: ./services
             build_dockerfile: ./services/incident-service/Dockerfile
+          - service: event-service
+            build_context: ./services
+            build_dockerfile: ./services/event-service/Dockerfile
           - service: user-service
             build_context: ./services
             build_dockerfile: ./services/user-service/Dockerfile
