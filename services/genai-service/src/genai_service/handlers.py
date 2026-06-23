@@ -173,16 +173,10 @@ class IncidentHandlers:
     ) -> None:
         spec = _PATCH_SPECS[task]
         prompt = self._prompts.build(incident, events, task)
-        captured_provider = provider_name(self._llm)
-        with time_generation(task.value, provider=lambda: captured_provider):
-            try:
-                result = await self._llm.generate(
-                    prompt.user,
-                    system=prompt.system,
-                    response_model=prompt.response_model,
-                )
-            finally:
-                captured_provider = provider_name(self._llm)
+        with time_generation(task.value, lambda: provider_name(self._llm)):
+            result = await self._llm.generate(
+                prompt.user, system=prompt.system, response_model=prompt.response_model
+            )
             response = await spec.write(
                 incident_id=_uuid(incident_id),
                 client=self._client,

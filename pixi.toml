@@ -34,6 +34,8 @@ test-genai = "pixi run --manifest-path services/genai-service/pixi.toml test"
 compose-up = "docker compose --project-directory . --env-file .env.example -f infra/compose/docker-compose.yml up --build"
 compose-down = "docker compose --project-directory . -f infra/compose/docker-compose.yml down --remove-orphans"
 compose-validate = "docker compose --project-directory . --env-file .env.example -f infra/compose/docker-compose.yml config > /dev/null"
+compose-smoke-genai-metrics = "bash infra/compose/scripts/smoke-genai-metrics.sh"
+grafana-forward = "kubectl port-forward -n ${DEPLOY_NAMESPACE:-production} svc/devops-platform-grafana 3030:80"
 gen-all = "bash api/scripts/gen-all.sh"
 mock-api = "npx --yes @stoplight/prism-cli@4.10.5 mock --cors api/openapi.yaml"
 
