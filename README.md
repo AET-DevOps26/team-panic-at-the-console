@@ -220,9 +220,8 @@ Optional: `VALUES_FILE=path/to/other.enc.yaml` when running `helm-deploy`.
 | `/` | Frontend |
 | `/api` | Gateway (`/api/v1/...`) |
 | `/swagger` | Swagger UI (OpenAPI) |
-| `/grafana` | Grafana (`admin` / `admin`; genai dashboard; requires monitoring Helm values) |
 
-Ingress uses cert-manager (`letsencrypt-prod`) and TLS secret `devops-platform-tls`. Prometheus is cluster-internal only (no public route).
+Ingress uses cert-manager (`letsencrypt-prod`) and TLS secret `devops-platform-tls`. Metrics are not self-hosted on the cluster: the release ships a PodMonitor, PrometheusRule, and a Grafana dashboard ConfigMap that the shared cluster prometheus-operator and Grafana consume.
 
 **Local compose** (via `docker compose up` or `pixi run compose-up`):
 
@@ -239,21 +238,7 @@ Grafana talks to Prometheus at `http://prometheus:9090` inside Docker; use `loca
 
 Populate Grafana panels after boot: `pixi run compose-smoke-genai-metrics`.
 
-**Local Kubernetes (OrbStack):** Grafana has no ingress locally. In one terminal, forward the port (must stay running):
-
-```bash
-pixi run grafana-forward
-```
-
-In another, deploy with `infra/helm/values.local-k8s.yaml` so Grafana serves at the port-forward root (not `/grafana`):
-
-```bash
-# append to your helm upgrade / helm-deploy -f infra/helm/values.local-k8s.yaml
-```
-
-Then open **http://localhost:3030/** (`admin` / `admin`).
-
-Prometheus UI (optional): `kubectl port-forward -n production devops-platform-kube-prometheus-stack-prometheus 9090:9090`
+**On Kubernetes**, the chart does not self-host Grafana or Prometheus. It ships namespaced CRs (PodMonitor, PrometheusRule) and a Grafana dashboard ConfigMap that the shared cluster prometheus-operator scrapes and the shared Grafana renders. View metrics and the GenAI dashboard in the cluster's Grafana.
 
 #### Debug the cluster
 

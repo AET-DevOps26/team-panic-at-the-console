@@ -115,6 +115,20 @@
         dest: "{{ app_dir }}/api/openapi.yaml"
         mode: "0644"
 
+    # Observability config bind-mounted by docker-compose. Trailing slash copies
+    # directory contents, so new config files are shipped without playbook edits.
+    - name: Copy Prometheus config
+      ansible.builtin.copy:
+        src: "{{ local_repo_root }}/infra/compose/prometheus/"
+        dest: "{{ app_dir }}/infra/compose/prometheus/"
+        mode: "0644"
+
+    - name: Copy Grafana provisioning and dashboards
+      ansible.builtin.copy:
+        src: "{{ local_repo_root }}/infra/observability/grafana/"
+        dest: "{{ app_dir }}/infra/observability/grafana/"
+        mode: "0644"
+
     - name: Create .env file
       ansible.builtin.template:
         src: templates/env.j2
