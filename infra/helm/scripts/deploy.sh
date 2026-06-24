@@ -76,6 +76,11 @@ echo ">> copy Grafana dashboards from observability source of truth"
 mkdir -p "$CHART_STAGE/files/grafana"
 cp "$REPO_ROOT/infra/observability/grafana/dashboards/"*.json "$CHART_STAGE/files/grafana/"
 
+echo ">> add chart dependency repos"
+# helm dependency build resolves locked deps but needs their repos registered first.
+helm repo add --force-update prometheus-community https://prometheus-community.github.io/helm-charts
+helm repo update
+
 echo ">> helm dependency build"
 helm dependency build "$CHART_STAGE"
 
