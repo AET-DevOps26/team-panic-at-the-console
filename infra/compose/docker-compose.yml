@@ -16,7 +16,13 @@ services:
       POSTGRES_DB: postgres
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./infra/helm/devops-platform/files/init-dbs.sh:/docker-entrypoint-initdb.d/init-dbs.sh
+      # create_host_path: false so a missing source fails loudly instead of being
+      # auto-created as an empty dir (which then can't mount onto a file).
+      - type: bind
+        source: ./infra/helm/devops-platform/files/init-dbs.sh
+        target: /docker-entrypoint-initdb.d/init-dbs.sh
+        bind:
+          create_host_path: false
     ports:
       - "5432:5432"
     healthcheck:
@@ -68,7 +74,12 @@ services:
     ports:
       - "8080:8080"
     volumes:
-      - ./infra/compose/nginx.conf:/etc/nginx/nginx.conf:ro
+      - type: bind
+        source: ./infra/compose/nginx.conf
+        target: /etc/nginx/nginx.conf
+        read_only: true
+        bind:
+          create_host_path: false
     depends_on:
       frontend:
         condition: service_started
@@ -255,7 +266,12 @@ services:
   swagger-ui:
     image: swaggerapi/swagger-ui:v5.32.6
     volumes:
-      - ./api/openapi.yaml:/openapi.yaml:ro
+      - type: bind
+        source: ./api/openapi.yaml
+        target: /openapi.yaml
+        read_only: true
+        bind:
+          create_host_path: false
     environment:
       SWAGGER_JSON: /openapi.yaml
       BASE_URL: /swagger
@@ -268,8 +284,18 @@ services:
       - --storage.tsdb.path=/prometheus
       - --web.enable-lifecycle
     volumes:
-      - ./infra/compose/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
-      - ./infra/compose/prometheus/alerts.yml:/etc/prometheus/alerts.yml:ro
+      - type: bind
+        source: ./infra/compose/prometheus/prometheus.yml
+        target: /etc/prometheus/prometheus.yml
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ./infra/compose/prometheus/alerts.yml
+        target: /etc/prometheus/alerts.yml
+        read_only: true
+        bind:
+          create_host_path: false
       - prometheus_data:/prometheus
     ports:
       - "9090:9090"
@@ -288,8 +314,18 @@ services:
       GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
       GF_USERS_ALLOW_SIGN_UP: "false"
     volumes:
-      - ./infra/observability/grafana/provisioning:/etc/grafana/provisioning:ro
-      - ./infra/observability/grafana/dashboards:/etc/grafana/dashboards:ro
+      - type: bind
+        source: ./infra/observability/grafana/provisioning
+        target: /etc/grafana/provisioning
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ./infra/observability/grafana/dashboards
+        target: /etc/grafana/dashboards
+        read_only: true
+        bind:
+          create_host_path: false
       - grafana_data:/var/lib/grafana
     ports:
       - "3030:3000"

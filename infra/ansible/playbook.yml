@@ -118,11 +118,11 @@
     # Observability config bind-mounted by docker-compose. Trailing slash copies
     # directory contents, so new config files are shipped without playbook edits.
     #
-    # A failed earlier run leaves Docker-auto-created empty directories where these
-    # files belong (a missing bind-mount source is created as a dir, not a file).
-    # copy drops the file *inside* such a dir instead of replacing it, so the stale
-    # dir persists and the file mount keeps failing. Remove the path first to
-    # guarantee the config lands as files on an already-broken host.
+    # One-time repair for hosts broken before the compose mounts set
+    # create_host_path: false: an earlier failed run left Docker-auto-created empty
+    # directories where these files belong, and copy drops a file *inside* a
+    # same-named dir instead of replacing it. Remove the path first so the config
+    # lands as files. New hosts can't reach this state (compose now fails fast).
     - name: Remove stale Prometheus config path
       ansible.builtin.file:
         path: "{{ app_dir }}/infra/compose/prometheus"
