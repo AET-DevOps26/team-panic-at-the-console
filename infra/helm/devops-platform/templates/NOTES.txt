@@ -19,12 +19,10 @@ Swagger UI (OpenAPI):
 {{ end }}
 {{ if .Values.monitoring.enabled }}
 
-Grafana (metrics + GenAI dashboard):
-  http(s)://<ingress-address>{{ .Values.ingress.paths.grafana }}
-  Default login: admin / (see values.monitoring or kube-prometheus-stack.grafana.adminPassword)
-
-Prometheus (cluster-internal):
-  http://{{ .Release.Name }}-kube-prometheus-stack-prometheus:9090
+Observability (shared cluster prometheus-operator):
+  This release ships a PodMonitor, PrometheusRule, and a Grafana dashboard ConfigMap.
+  The cluster's Prometheus scrapes the PodMonitor; view metrics + the GenAI dashboard
+  in the cluster's shared Grafana.
 {{ end }}
 
 NATS (cluster-internal):

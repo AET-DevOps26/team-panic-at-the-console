@@ -10,9 +10,8 @@
 # Optional env:
 #   VALUES_FILE            path to SOPS-encrypted values file
 #                          (default: infra/helm/secrets/values.prod.enc.yaml)
-#   MONITORING_VALUES_FILE path to SOPS-encrypted monitoring values file
-#                          (default: infra/helm/secrets/values.monitoring.enc.yaml)
-#                          Required: overrides adminPassword=admin from values.yaml
+#   MONITORING_VALUES_FILE path to an extra SOPS-encrypted values file, merged last
+#                          if it exists (default: infra/helm/secrets/values.monitoring.enc.yaml)
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
@@ -76,25 +75,16 @@ echo ">> copy Grafana dashboards from observability source of truth"
 mkdir -p "$CHART_STAGE/files/grafana"
 cp "$REPO_ROOT/infra/observability/grafana/dashboards/"*.json "$CHART_STAGE/files/grafana/"
 
-echo ">> add chart dependency repos"
-# helm dependency build resolves locked deps but needs their repos registered first.
-helm repo add --force-update prometheus-community https://prometheus-community.github.io/helm-charts
-helm repo update
-
-echo ">> helm dependency build"
-helm dependency build "$CHART_STAGE"
-
 echo ">> helm upgrade --install (namespace=$DEPLOY_NAMESPACE tag=$TAG)"
 HELM_VALUES=(--values "$DEC_VALUES")
+# Optional extra encrypted values, merged last. Absent by default since the chart no
+# longer self-hosts Grafana; kept as a hook for deploy-specific secret overrides.
 MONITORING_ENC="${MONITORING_VALUES_FILE:-$REPO_ROOT/infra/helm/secrets/values.monitoring.enc.yaml}"
-if [ ! -f "$MONITORING_ENC" ]; then
-  echo "::error:: monitoring values file not found: $MONITORING_ENC" >&2
-  echo "::error:: set MONITORING_VALUES_FILE or create infra/helm/secrets/values.monitoring.enc.yaml to avoid shipping adminPassword=admin" >&2
-  exit 1
+if [ -f "$MONITORING_ENC" ]; then
+  echo ">> merge monitoring values from $MONITORING_ENC"
+  sops --decrypt "$MONITORING_ENC" > "$WORK_DIR/values.monitoring.dec.yaml"
+  HELM_VALUES+=(--values "$WORK_DIR/values.monitoring.dec.yaml")
 fi
-echo ">> merge monitoring values from $MONITORING_ENC"
-sops --decrypt "$MONITORING_ENC" > "$WORK_DIR/values.monitoring.dec.yaml"
-HELM_VALUES+=(--values "$WORK_DIR/values.monitoring.dec.yaml")
 
 helm upgrade --install devops-platform "$CHART_STAGE" \
   --namespace "$DEPLOY_NAMESPACE" \

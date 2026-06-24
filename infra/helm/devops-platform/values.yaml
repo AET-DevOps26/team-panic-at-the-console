@@ -55,61 +55,14 @@ ingress:
     frontend: /
     api: /api
     swagger: /swagger
-    grafana: /grafana
 
-# Prometheus + Grafana via kube-prometheus-stack subchart (see templates/monitoring-*.yaml).
+# Observability uses the shared cluster prometheus-operator (see templates/monitoring-*.yaml).
+# We only ship namespaced CRs (PodMonitor, PrometheusRule) and a Grafana dashboard
+# ConfigMap; the cluster operator scrapes them and the shared Grafana renders them.
+# We do not self-host kube-prometheus-stack: the deploy user is namespace-scoped and
+# cannot create the cluster-scoped resources (ClusterRoles, CRDs) it requires.
 monitoring:
   enabled: true
-
-kube-prometheus-stack:
-  # Keep resource use modest on the course cluster.
-  prometheus:
-    prometheusSpec:
-      retention: 7d
-      podMonitorSelectorNilUsesHelmValues: false
-      podMonitorSelector: {}
-      ruleSelectorNilUsesHelmValues: false
-      ruleSelector: {}
-      resources:
-        requests:
-          memory: 512Mi
-          cpu: 200m
-        limits:
-          memory: 1Gi
-          cpu: 500m
-  alertmanager:
-    enabled: true
-  grafana:
-    enabled: true
-    # Override in infra/helm/secrets/values.monitoring.enc.yaml for deploys.
-    adminPassword: admin
-    defaultDashboardsEnabled: true
-    sidecar:
-      dashboards:
-        enabled: true
-        label: grafana_dashboard
-        labelValue: "1"
-    grafana.ini:
-      server:
-        root_url: "%(protocol)s://%(domain)s/grafana/"
-        serve_from_sub_path: true
-    ingress:
-      enabled: true
-      ingressClassName: nginx
-      annotations:
-        cert-manager.io/cluster-issuer: letsencrypt-prod
-      hosts:
-        - team-panic-at-the-console-devops26.stud.k8s.aet.cit.tum.de
-      path: /grafana
-      pathType: Prefix
-      tls:
-        - secretName: devops-platform-tls
-          hosts:
-            - team-panic-at-the-console-devops26.stud.k8s.aet.cit.tum.de
-  kubeStateMetrics:
-    enabled: true
-  nodeExporter:
-    enabled: true
 
 services:
   frontend:
