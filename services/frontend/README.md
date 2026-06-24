@@ -28,9 +28,13 @@ To regenerate after changing the spec:
 pixi run gen-all   # from the repo root
 ```
 
-## Mock mode
+## Mock modes
 
-`VITE_MOCK=true` short-circuits all API queries to return hardcoded data from `src/api/queries.ts`. No backend required.
+There are two independent ways to run the frontend without the real backend:
+
+### 1. In-file mock (`VITE_MOCK=true`)
+
+Short-circuits all API queries to return hardcoded data from `src/api/queries.ts`. No backend or network required.
 
 | Context                    | How mock mode is set                                                        |
 | -------------------------- | --------------------------------------------------------------------------- |
@@ -39,6 +43,19 @@ pixi run gen-all   # from the repo root
 | Production / compose       | Set `VITE_MOCK=false`                                                       |
 
 The flag is baked into the bundle at build time — it cannot be changed at runtime.
+
+### 2. Prism mock server (`pixi run dev-mock-api`)
+
+Runs the app against the Stoplight Prism mock server (`pixi run mock-api` from the repo root), which serves spec-driven responses from `api/openapi.yaml` on port **4010**. Unlike the in-file mock, this exercises the real `openapi-fetch` + TanStack Query stack over HTTP and stays in sync with the spec.
+
+`VITE_MOCK` is left off in this mode (so queries make real network calls); `.env.mock-api` points `VITE_API_URL` at the Prism server. Prism runs with `--cors`, so the browser can call it cross-origin.
+
+```bash
+pixi run mock-api                  # repo root: Prism on :4010
+# in a second terminal:
+cd services/frontend
+pixi run dev-mock-api              # dev server on :3000 -> :4010
+```
 
 ## Local dev
 
