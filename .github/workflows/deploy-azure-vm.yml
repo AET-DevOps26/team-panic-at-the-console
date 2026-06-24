@@ -4,8 +4,9 @@ name: Deploy to Azure VM
 # any infra changes and Ansible redeploys), or run manually via the Actions tab.
 # The tag and action always come from `inputs`, so there is no resolve step and no
 # GHCR polling: when invoked from a release the orchestrator's `needs: build`
-# already guarantees the images exist. A single `gate` job carries
-# `environment: azure`, so the whole deploy needs one approval.
+# already guarantees the images exist. A single `deploy` job carries
+# `environment: azure` and runs Terraform then Ansible, so the whole deploy needs
+# one approval and the environment's deployment status reflects the real outcome.
 
 on:
   workflow_call:
@@ -63,12 +64,11 @@ permissions:
 # 2. Create a Service Principal:
 #      az ad sp create --id <appId>
 # 3. Add a Federated Credential on the App Registration.
-#      Only the `gate` job sets `environment: azure`; Terraform and Ansible run
-#      with no environment, and GitHub scopes the OIDC subject per job. Their
-#      tokens therefore carry a ref-based subject (e.g.
-#      `repo:AET-DevOps26/team-panic-at-the-console:ref:refs/tags/v1.2.3`), not
-#      `environment:azure`, so an environment-scoped credential would not match.
-#      Use a wildcard subject identifier so every ref (and environment) is accepted:
+#      The `deploy` job sets `environment: azure`, so GitHub scopes its OIDC token
+#      subject to that environment (e.g.
+#      `repo:AET-DevOps26/team-panic-at-the-console:environment:azure`). Manual
+#      runs on other refs produce different subjects, so pin a wildcard subject
+#      identifier that accepts every ref and environment:
 #        claims['sub'] matches 'repo:AET-DevOps26/team-panic-at-the-console:*'
 #      Wildcard subjects are not available for the "GitHub Actions" entity type in
 #      the Azure Portal; create the credential via the Azure CLI (preview feature).
@@ -90,23 +90,15 @@ env:
   ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
 jobs:
-  # ── Approval gate ─────────────────────────────────────────────────────────────
-  # Single environment-protected job so the whole deploy needs exactly one approval,
-  # whether triggered by a release or run manually.
-  gate:
-    name: Await approval
+  # ── Deploy ────────────────────────────────────────────────────────────────────
+  # Single environment-protected job: Terraform then Ansible run in one job so the
+  # whole deploy needs exactly one approval AND the azure environment deployment
+  # status reflects the real outcome. (A separate approval gate would mark the
+  # deployment successful on approval, before Ansible even runs.)
+  deploy:
+    name: Deploy to Azure VM
     runs-on: ubuntu-latest
     environment: azure
-    steps:
-      - run: echo "Approved"
-
-  # ── Terraform ───────────────────────────────────────────────────────────────
-  terraform:
-    name: Terraform
-    needs: gate
-    runs-on: ubuntu-latest
-    outputs:
-      vm_ip: ${{ steps.vm_ip.outputs.ip }}
 
     steps:
       - name: Checkout
@@ -148,21 +140,12 @@ jobs:
           echo "ip=${ip}" >> "$GITHUB_OUTPUT"
         working-directory: ${{ env.TF_DIR }}
 
-  # ── Ansible ─────────────────────────────────────────────────────────────────
-  ansible:
-    name: Ansible Deploy
-    needs: [gate, terraform]
-    if: needs.terraform.result == 'success' && (inputs.action == 'deploy' || inputs.action == 'full')
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-
       - name: Install Ansible
+        if: inputs.action == 'deploy' || inputs.action == 'full'
         run: pip install --quiet ansible
 
       - name: Configure SSH key
+        if: inputs.action == 'deploy' || inputs.action == 'full'
         env:
           VM_SSH_PRIVATE_KEY: ${{ secrets.VM_SSH_PRIVATE_KEY }}
         run: |
@@ -175,15 +158,17 @@ jobs:
           }
 
       - name: Write inventory
+        if: inputs.action == 'deploy' || inputs.action == 'full'
         run: |
           cat > /tmp/inventory.ini <<EOF
           [vm]
-          ${{ needs.terraform.outputs.vm_ip }} ansible_user=azureuser ansible_ssh_private_key_file=${HOME}/.ssh/vm_key ansible_ssh_common_args='-o StrictHostKeyChecking=accept-new -o ConnectTimeout=30'
+          ${{ steps.vm_ip.outputs.ip }} ansible_user=azureuser ansible_ssh_private_key_file=${HOME}/.ssh/vm_key ansible_ssh_common_args='-o StrictHostKeyChecking=accept-new -o ConnectTimeout=30'
           EOF
 
       - name: Wait for SSH to become available
+        if: inputs.action == 'deploy' || inputs.action == 'full'
         run: |
-          vm_ip="${{ needs.terraform.outputs.vm_ip }}"
+          vm_ip="${{ steps.vm_ip.outputs.ip }}"
           ssh_key="${HOME}/.ssh/vm_key"
           max_attempts=60
           ssh_opts=(
@@ -221,6 +206,7 @@ jobs:
           fi
 
       - name: Write Ansible variables
+        if: inputs.action == 'deploy' || inputs.action == 'full'
         run: |
           python3 - <<'EOF'
           import os, yaml
@@ -236,6 +222,7 @@ jobs:
           POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
 
       - name: Run Ansible playbook
+        if: inputs.action == 'deploy' || inputs.action == 'full'
         run: |
           ansible-playbook \
             -i /tmp/inventory.ini \
