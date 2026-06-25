@@ -14,32 +14,23 @@ import org.openapitools.model.Incident;
 import org.openapitools.model.IncidentEvent;
 import org.openapitools.model.IncidentListResponse;
 import org.openapitools.model.IncidentStatus;
-import org.openapitools.model.PostmortemPatch;
 import org.openapitools.model.Severity;
-import org.openapitools.model.SeverityPatch;
-import org.openapitools.model.SolutionsPatch;
-import org.openapitools.model.SummaryPatch;
 import org.openapitools.model.UpdateStatusRequest;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.core.ParameterizedTypeReference;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.util.UriComponentsBuilder;
 
 /**
- * Proxies public incident REST routes to incident-service. Genai write-back PATCH routes are
- * cluster-internal only and are not forwarded (see OpenAPI descriptions on genai result paths).
+ * Proxies public incident REST routes to incident-service.
  */
 @RestController
 class IncidentsProxyController implements IncidentsApi {
 
     private static final ParameterizedTypeReference<List<IncidentEvent>> INCIDENT_EVENTS =
             new ParameterizedTypeReference<>() {};
-
-    private static final ResponseEntity<Void> NOT_EXPOSED_ON_GATEWAY =
-            ResponseEntity.status(HttpStatus.FORBIDDEN).build();
 
     private final RestClient incidentServiceClient;
 
@@ -126,26 +117,6 @@ class IncidentsProxyController implements IncidentsApi {
                 createCommentRequest,
                 Comment.class,
                 incidentId);
-    }
-
-    @Override
-    public ResponseEntity<Void> writeIncidentSummary(UUID incidentId, SummaryPatch summaryPatch) {
-        return NOT_EXPOSED_ON_GATEWAY;
-    }
-
-    @Override
-    public ResponseEntity<Void> writeIncidentSeveritySuggestion(UUID incidentId, SeverityPatch severityPatch) {
-        return NOT_EXPOSED_ON_GATEWAY;
-    }
-
-    @Override
-    public ResponseEntity<Void> writeIncidentSolutions(UUID incidentId, SolutionsPatch solutionsPatch) {
-        return NOT_EXPOSED_ON_GATEWAY;
-    }
-
-    @Override
-    public ResponseEntity<Void> writeIncidentPostmortem(UUID incidentId, PostmortemPatch postmortemPatch) {
-        return NOT_EXPOSED_ON_GATEWAY;
     }
 
     private static String listIncidentsPath(

@@ -20,7 +20,6 @@ import static org.springframework.test.web.client.match.MockRestRequestMatchers.
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withStatus;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -85,17 +84,6 @@ class IncidentsProxyControllerTest {
         mvc.perform(get("/incidents/{id}", INCIDENT_ID))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.title").value("Checkout spike"));
-
-        incidentServer.verify();
-    }
-
-    @Test
-    void writeIncidentSummary_notExposedOnGateway() throws Exception {
-        mvc.perform(
-                        patch("/incidents/{id}/genai/summary/result", INCIDENT_ID)
-                                .contentType(MediaType.APPLICATION_JSON)
-                                .content("{\"summary\":\"test\"}"))
-                .andExpect(status().isForbidden());
 
         incidentServer.verify();
     }
