@@ -13,17 +13,13 @@ from .incident_event import IncidentEvent
 from .incident_list_response import IncidentListResponse
 from .incident_status import IncidentStatus
 from .login_request import LoginRequest
-from .postmortem_patch import PostmortemPatch
 from .postmortem_response import PostmortemResponse
 from .regen_accepted import RegenAccepted
 from .regen_accepted_task import RegenAcceptedTask
 from .register_request import RegisterRequest
 from .severity import Severity
-from .severity_patch import SeverityPatch
 from .severity_response import SeverityResponse
-from .solutions_patch import SolutionsPatch
 from .solutions_response import SolutionsResponse
-from .summary_patch import SummaryPatch
 from .summary_response import SummaryResponse
 from .update_status_request import UpdateStatusRequest
 from .user import User
@@ -44,17 +40,13 @@ __all__ = (
     "IncidentListResponse",
     "IncidentStatus",
     "LoginRequest",
-    "PostmortemPatch",
     "PostmortemResponse",
     "RegenAccepted",
     "RegenAcceptedTask",
     "RegisterRequest",
     "Severity",
-    "SeverityPatch",
     "SeverityResponse",
-    "SolutionsPatch",
     "SolutionsResponse",
-    "SummaryPatch",
     "SummaryResponse",
     "UpdateStatusRequest",
     "User",

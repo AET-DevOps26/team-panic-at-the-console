@@ -82,6 +82,8 @@ async def lifespan(app: FastAPI):
         )
         try:
             await consumer.start()
+            assert consumer.nats_client is not None
+            handlers.set_nats_client(consumer.nats_client)
         except Exception as exc:
             # Don't block /health on a broker outage; log degraded and continue.
             logger.error("nats_consumer_start_failed", error=str(exc))
