@@ -19,16 +19,25 @@ public class NatsConfiguration {
     @Value("${nats.url:nats://localhost:4222}")
     private String natsServer;
 
+    @Value("${nats.failOnStartup:false}")
+    private boolean failOnStartup;
+
     @Bean
     public Connection natsConnection() throws IOException, InterruptedException {
-        log.info("Connecting to NATS at {}", natsServer);
+        log.info("Attempting to connect to NATS at {}", natsServer);
         try {
             Connection connection = Nats.connect(natsServer);
             log.info("Successfully connected to NATS");
             return connection;
         } catch (Exception e) {
-            log.error("Failed to connect to NATS at {}. Service startup will be aborted.", natsServer, e);
-            throw new RuntimeException("Failed to connect to NATS; service startup aborted", e);
+            log.warn(
+                    "Failed to connect to NATS at {}. Continuing with degraded mode (events may not be published/consumed).",
+                    natsServer, e);
+            if (failOnStartup) {
+                log.error("nats.failOnStartup is enabled; aborting service startup");
+                throw new RuntimeException("Failed to connect to NATS; service startup aborted", e);
+            }
+            return null;
         }
     }
 

@@ -98,7 +98,7 @@ An enumeration of what the `PromptBuilder` is asked to produce: `SUMMARY`, `SEVE
 
 **Comments**: Immutable. No edit or delete. Consistent with the append-only Event Log.
 
-**Observability stack**: `kube-prometheus-stack` (Prometheus + Grafana + Alertmanager) + `loki-stack` (Loki + Promtail) as Helm dependencies added to flat `infra/helm/devops-platform` chart. All services expose `/metrics` (Micrometer for Spring Boot, `prometheus-fastapi-instrumentator` for Python). Services log structured JSON to stdout; Promtail ships to Loki. Grafana is the single pane for metrics + logs. Distributed tracing: out of scope.
+**Observability stack**: on Kubernetes the chart relies on the **shared cluster prometheus-operator** rather than self-hosting one. The deploy user is namespace-scoped and cannot create the cluster-scoped resources (ClusterRoles, CRDs) a bundled `kube-prometheus-stack` requires, so the chart ships only namespaced CRs (`PodMonitor`, `PrometheusRule`) and a Grafana dashboard `ConfigMap`; the cluster's Prometheus scrapes them and the cluster's Grafana renders them. The local docker-compose stack still self-hosts Prometheus + Grafana for development. All services expose `/metrics` (Micrometer for Spring Boot, `prometheus-fastapi-instrumentator` for Python). Distributed tracing: out of scope.
 
 **Helm chart structure**: flat chart (one chart, all services as templates). No subcharts.
 
@@ -110,10 +110,8 @@ An enumeration of what the `PromptBuilder` is asked to produce: `SUMMARY`, `SEVE
 | genai-service (Python) | 128Mi / 256Mi | 50m / 200m |
 | Postgres | 256Mi / 512Mi | 100m / 500m |
 | NATS | 64Mi / 128Mi | 50m / 200m |
-| kube-prometheus-stack | 512Mi / 1Gi | 200m / 500m |
-| loki-stack | 256Mi / 512Mi | 100m / 200m |
 
-**Alerting**: Alertmanager (bundled in `kube-prometheus-stack`), routing to Grafana UI only (no Slack/email). Full alert set:
+**Alerting**: `PrometheusRule` CRs evaluated by the shared cluster Alertmanager, routing to Grafana UI only (no Slack/email). Full alert set:
 | Alert | Condition | Severity |
 |---|---|---|
 | Service down | health check fails >1min | critical |
@@ -129,7 +127,11 @@ An enumeration of what the `PromptBuilder` is asked to produce: `SUMMARY`, `SEVE
 | `incidents_total` | counter | `source=manual\|auto`, `severity` |
 | `active_incidents` | gauge | `severity` |
 | `incident_resolution_seconds` | histogram | — |
-| `ai_generation_seconds` | histogram | `type=summary\|postmortem` |
+| `ai_generation_seconds` | histogram | `type`, `provider=ollama\|logos` |
+| `ai_generations_total` | counter | `type`, `provider`, `outcome=success\|error` |
+| `llm_fallback_total` | counter | `from_provider`, `to_provider` |
+| `nats_messages_total` | counter | `subject`, `outcome` |
+| `nats_consumer_connected` | gauge | — |
 | `rule_evaluations_total` | counter | `matched=true\|false` |
 | `webhooks_received_total` | counter | `source_type` |
 

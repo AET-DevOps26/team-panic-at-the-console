@@ -28,6 +28,10 @@ spec:
     metadata:
       labels:
         app.kubernetes.io/name: {{ $name }}
+      {{- with $svc.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
     spec:
       {{- if and $svc.modelInit $svc.persistence }}
       initContainers:

@@ -7,6 +7,7 @@ from nats.aio.client import Client as NatsClient
 from nats.aio.msg import Msg
 
 from genai_service.handlers import IncidentHandlers
+from genai_service.metrics import record_nats_message, set_nats_consumer_connected
 from genai_service.regen_task import RegenTask
 
 logger = structlog.get_logger(__name__)
@@ -53,12 +54,14 @@ class NatsConsumer:
             "incident.regen.requested", self._handlers.on_regen_requested
         )
 
+        set_nats_consumer_connected(True)
         logger.info("nats_consumer_started", url=self._url, queue=self._queue)
 
     async def stop(self) -> None:
         if self._nc is not None and not self._nc.is_closed:
             await self._nc.drain()
             self._nc = None
+            set_nats_consumer_connected(False)
             logger.info("nats_consumer_stopped")
 
     async def _subscribe(self, subject: str, handler: IncidentHandler) -> None:
@@ -93,6 +96,7 @@ class NatsConsumer:
                 ValueError,
             ) as exc:
                 logger.error("nats_payload_invalid", subject=subject, error=str(exc))
+                record_nats_message(subject, "invalid_payload")
                 return
 
             try:
@@ -107,6 +111,10 @@ class NatsConsumer:
                     task=task.value,
                     error=str(exc),
                 )
+                record_nats_message(subject, "handler_error")
+                return
+
+            record_nats_message(subject, "handled")
 
         return callback
 
@@ -124,6 +132,7 @@ class NatsConsumer:
                 TypeError,
             ) as exc:
                 logger.error("nats_payload_invalid", subject=subject, error=str(exc))
+                record_nats_message(subject, "invalid_payload")
                 return
 
             try:
@@ -138,5 +147,9 @@ class NatsConsumer:
                     incident_id=incident_id,
                     error=str(exc),
                 )
+                record_nats_message(subject, "handler_error")
+                return
+
+            record_nats_message(subject, "handled")
 
         return callback

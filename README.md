@@ -211,9 +211,34 @@ pixi run -e deploy helm-uninstall
 
 Optional: `VALUES_FILE=path/to/other.enc.yaml` when running `helm-deploy`.
 
-**Cluster URL:** `https://team-panic-at-the-console-devops26.stud.k8s.aet.cit.tum.de/` (frontend `/`, API `/api`, Swagger `/swagger`).
+#### URLs and routes
 
-Ingress uses cert-manager (`letsencrypt-prod`) and TLS secret `devops-platform-tls`.
+**Stud cluster** (`https://team-panic-at-the-console-devops26.stud.k8s.aet.cit.tum.de/`):
+
+| Path | Service |
+| ---- | ------- |
+| `/` | Frontend |
+| `/api` | Gateway (`/api/v1/...`) |
+| `/swagger` | Swagger UI (OpenAPI) |
+
+Ingress uses cert-manager (`letsencrypt-prod`) and TLS secret `devops-platform-tls`. Metrics are not self-hosted on the cluster: the release ships a PodMonitor, PrometheusRule, and a Grafana dashboard ConfigMap that the shared cluster prometheus-operator and Grafana consume.
+
+**Local compose** (via `docker compose up` or `pixi run compose-up`):
+
+| URL | Service |
+| --- | ------- |
+| `http://localhost:8080/api/v1/` | Gateway (via `edge`) |
+| `http://localhost:8080/swagger` | Swagger UI (via `edge`) |
+| `http://localhost:3000/` | Frontend (direct) |
+| `http://localhost:3030/` | Grafana (`admin` / `admin`) |
+| `http://localhost:9090/` | Prometheus UI |
+| `http://localhost:8087/metrics` | genai-service Prometheus scrape |
+
+Grafana talks to Prometheus at `http://prometheus:9090` inside Docker; use `localhost` from your browser.
+
+Populate Grafana panels after boot: `pixi run compose-smoke-genai-metrics`.
+
+**On Kubernetes**, the chart does not self-host Grafana or Prometheus. It ships namespaced CRs (PodMonitor, PrometheusRule) and a Grafana dashboard ConfigMap that the shared cluster prometheus-operator scrapes and the shared Grafana renders. View metrics and the GenAI dashboard in the cluster's Grafana.
 
 #### Debug the cluster
 
@@ -255,11 +280,18 @@ For local development, the Pixi wrapper builds from source and loads `.env.examp
 pixi run compose-up
 ```
 
-Local URLs (same path layout as the Helm ingress):
+#### URLs and routes
 
-- API gateway: `http://localhost:8080/api/v1/` (e.g. `http://localhost:8080/api/v1/health`)
-- Swagger UI: `http://localhost:8080/swagger`
-- Frontend: `http://localhost:3000/` (unchanged)
+| URL | Service |
+| --- | ------- |
+| `http://localhost:8080/api/v1/` | Gateway (via `edge`; e.g. `/health`) |
+| `http://localhost:8080/swagger` | Swagger UI |
+| `http://localhost:3000/` | Frontend (direct) |
+| `http://localhost:3030/` | Grafana (`admin` / `admin`) |
+| `http://localhost:9090/` | Prometheus |
+| `http://localhost:8087/metrics` | genai-service metrics |
+
+Same path layout as the stud-cluster ingress for app routes (`/api`, `/swagger`). Observability uses dedicated host ports locally. After boot: `pixi run compose-smoke-genai-metrics` to fill the genai dashboard.
 
 Shared non-secret defaults (for example `NATS_URL`) are defined once in `.env.example` and referenced from service-specific environment sections.
 

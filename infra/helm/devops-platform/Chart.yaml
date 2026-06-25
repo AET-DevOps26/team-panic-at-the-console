@@ -4,3 +4,5 @@ description: Helm chart for DevOps Project 2026 services
 type: application
 version: 0.1.0
 appVersion: "0.1.0"
+# No chart dependencies: observability relies on the shared cluster prometheus-operator,
+# so we ship only namespaced CRs (see templates/monitoring-*.yaml), not a bundled stack.

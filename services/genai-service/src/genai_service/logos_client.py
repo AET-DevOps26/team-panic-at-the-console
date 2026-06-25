@@ -38,6 +38,7 @@ class LogosClient:
         self._http = http
         self._base_url = base_url.rstrip("/")
         self.model = model
+        self.provider = "logos"
         self._api_key = api_key
         self._generate_timeout = generate_timeout_seconds
         self._max_retries = max_retries
