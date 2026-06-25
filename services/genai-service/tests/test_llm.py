@@ -4,15 +4,17 @@ import pytest
 from pydantic import BaseModel
 
 from genai_service.llm import FallbackLLMClient
+from genai_service.metrics import llm_fallback_total
 
 
 class Summary(BaseModel):
     title: str
 
 
-def _stub(model: str) -> AsyncMock:
+def _stub(provider: str) -> AsyncMock:
     stub = AsyncMock()
-    stub.model = model
+    stub.model = provider
+    stub.provider = provider
     return stub
 
 
@@ -36,6 +38,10 @@ async def test_falls_back_to_backup_when_primary_raises():
     primary.generate.side_effect = RuntimeError("logos down")
     backup.generate.return_value = Summary(title="ok")
 
+    before = llm_fallback_total.labels(
+        from_provider="logos", to_provider="ollama"
+    )._value.get()
+
     out = await FallbackLLMClient(primary, backup).generate(
         "hi", response_model=Summary
     )
@@ -43,6 +49,12 @@ async def test_falls_back_to_backup_when_primary_raises():
     assert out == Summary(title="ok")
     backup.generate.assert_awaited_once_with(
         "hi", system=None, response_model=Summary, timeout=None
+    )
+    assert (
+        llm_fallback_total.labels(
+            from_provider="logos", to_provider="ollama"
+        )._value.get()
+        == before + 1
     )
 
 

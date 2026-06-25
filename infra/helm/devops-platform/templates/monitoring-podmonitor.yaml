@@ -1,0 +1,17 @@
+{{- if .Values.monitoring.enabled }}
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: genai-service
+  labels:
+    app.kubernetes.io/name: genai-service
+    release: {{ .Release.Name }}
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: genai-service
+  podMetricsEndpoints:
+    - portNumber: {{ (index .Values.services "genai-service").port }}
+      path: /metrics
+      interval: 15s
+{{- end }}

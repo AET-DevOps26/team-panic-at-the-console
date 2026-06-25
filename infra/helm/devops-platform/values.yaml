@@ -56,6 +56,14 @@ ingress:
     api: /api
     swagger: /swagger
 
+# Observability uses the shared cluster prometheus-operator (see templates/monitoring-*.yaml).
+# We only ship namespaced CRs (PodMonitor, PrometheusRule) and a Grafana dashboard
+# ConfigMap; the cluster operator scrapes them and the shared Grafana renders them.
+# We do not self-host kube-prometheus-stack: the deploy user is namespace-scoped and
+# cannot create the cluster-scoped resources (ClusterRoles, CRDs) it requires.
+monitoring:
+  enabled: true
+
 services:
   frontend:
     enabled: true
@@ -158,6 +166,10 @@ services:
     healthPath: /health
     probeInitialDelaySeconds: 15
     probeReadinessInitialDelaySeconds: 5
+    podAnnotations:
+      prometheus.io/scrape: "true"
+      prometheus.io/path: /metrics
+      prometheus.io/port: "8087"
     image:
       repository: genai-service
     env:

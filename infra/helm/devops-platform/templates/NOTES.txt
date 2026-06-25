@@ -17,6 +17,13 @@ API gateway:
 Swagger UI (OpenAPI):
   http(s)://<ingress-address>{{ .Values.ingress.paths.swagger }}
 {{ end }}
+{{ if .Values.monitoring.enabled }}
+
+Observability (shared cluster prometheus-operator):
+  This release ships a PodMonitor, PrometheusRule, and a Grafana dashboard ConfigMap.
+  The cluster's Prometheus scrapes the PodMonitor; view metrics + the GenAI dashboard
+  in the cluster's shared Grafana.
+{{ end }}
 
 NATS (cluster-internal):
   nats://nats:{{ .Values.nats.port }}

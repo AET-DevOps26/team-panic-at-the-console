@@ -14,6 +14,7 @@ on:
       - "services/incident-service/**"
       - "services/user-service/**"
       - "services/gateway/**"
+      - "services/event-service/**"
       - "services/generated/java/**"
       - "api/openapi.yaml"
   pull_request:
@@ -21,6 +22,7 @@ on:
       - "services/incident-service/**"
       - "services/user-service/**"
       - "services/gateway/**"
+      - "services/event-service/**"
       - "services/generated/java/**"
       - "api/openapi.yaml"
   merge_group:
@@ -32,7 +34,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        service: [incident-service, user-service, gateway]
+        service: [incident-service, user-service, gateway, event-service]
 
     steps:
       - name: Checkout branch

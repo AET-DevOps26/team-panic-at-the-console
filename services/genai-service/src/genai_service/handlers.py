@@ -12,7 +12,8 @@ from nats.aio.client import Client as NatsClient
 from client import Client
 from client.api.incidents import get_incident, list_incident_events
 from client.models import Incident, IncidentEvent, IncidentStatus
-from genai_service.llm import LLMClient
+from genai_service.llm import LLMClient, provider_name
+from genai_service.metrics import time_generation
 from genai_service.prompts import PromptBuilder, PromptTask
 from genai_service.regen_task import RegenTask
 
@@ -169,11 +170,12 @@ class IncidentHandlers:
     ) -> None:
         spec = _PUBLISH_SPECS[task]
         prompt = self._prompts.build(incident, events, task)
-        result = await self._llm.generate(
-            prompt.user, system=prompt.system, response_model=prompt.response_model
-        )
-        payload = spec.to_payload(result, incident_id)
-        await self._publish(spec.subject, payload)
+        with time_generation(task.value, lambda: provider_name(self._llm)):
+            result = await self._llm.generate(
+                prompt.user, system=prompt.system, response_model=prompt.response_model
+            )
+            payload = spec.to_payload(result, incident_id)
+            await self._publish(spec.subject, payload)
 
     async def _publish(self, subject: str, payload: dict[str, Any]) -> None:
         if self._nats is None:

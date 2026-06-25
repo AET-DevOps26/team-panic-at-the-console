@@ -1,0 +1,44 @@
+groups:
+  - name: genai-service
+    rules:
+      - alert: GenAIServiceDown
+        expr: up{job="genai-service"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "genai-service is down"
+          description: "Prometheus cannot scrape genai-service /metrics for 1 minute."
+
+      - alert: GenAINatsConsumerDisconnected
+        expr: nats_consumer_connected == 0
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "genai-service NATS consumer disconnected"
+          description: "nats_consumer_connected has been 0 for 2 minutes."
+
+      - alert: SlowAIGeneration
+        expr: |
+          histogram_quantile(
+            0.95,
+            sum by (type, provider, le) (
+              rate(ai_generation_seconds_bucket[5m])
+            )
+          ) > 60
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Slow AI generation for {{ $labels.type }} ({{ $labels.provider }})"
+          description: "p95 ai_generation_seconds exceeds 60s over the last 5 minutes."
+
+      - alert: LLMFallbackSpike
+        expr: increase(llm_fallback_total[5m]) > 3
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Logos to Ollama fallback spike"
+          description: "More than 3 LLM fallbacks in 5 minutes."

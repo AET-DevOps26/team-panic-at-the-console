@@ -8,8 +8,10 @@
 #   DEPLOY_NAMESPACE  target namespace
 #   TAG               image tag to deploy (e.g. main, v0.1.0, sha-<sha>)
 # Optional env:
-#   VALUES_FILE       path to SOPS-encrypted values file
-#                     (default: infra/helm/secrets/values.prod.enc.yaml)
+#   VALUES_FILE            path to SOPS-encrypted values file
+#                          (default: infra/helm/secrets/values.prod.enc.yaml)
+#   MONITORING_VALUES_FILE path to an extra SOPS-encrypted values file, merged last
+#                          if it exists (default: infra/helm/secrets/values.monitoring.enc.yaml)
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
@@ -69,7 +71,21 @@ mkdir -p "$CHART_STAGE/files"
 cp -r "$CHART_DIR"/. "$CHART_STAGE/"
 cp "$REPO_ROOT/api/openapi.yaml" "$CHART_STAGE/files/openapi.yaml"
 
+echo ">> copy Grafana dashboards from observability source of truth"
+mkdir -p "$CHART_STAGE/files/grafana"
+cp "$REPO_ROOT/infra/observability/grafana/dashboards/"*.json "$CHART_STAGE/files/grafana/"
+
 echo ">> helm upgrade --install (namespace=$DEPLOY_NAMESPACE tag=$TAG)"
+HELM_VALUES=(--values "$DEC_VALUES")
+# Optional extra encrypted values, merged last. Absent by default since the chart no
+# longer self-hosts Grafana; kept as a hook for deploy-specific secret overrides.
+MONITORING_ENC="${MONITORING_VALUES_FILE:-$REPO_ROOT/infra/helm/secrets/values.monitoring.enc.yaml}"
+if [ -f "$MONITORING_ENC" ]; then
+  echo ">> merge monitoring values from $MONITORING_ENC"
+  sops --decrypt "$MONITORING_ENC" > "$WORK_DIR/values.monitoring.dec.yaml"
+  HELM_VALUES+=(--values "$WORK_DIR/values.monitoring.dec.yaml")
+fi
+
 helm upgrade --install devops-platform "$CHART_STAGE" \
   --namespace "$DEPLOY_NAMESPACE" \
   --create-namespace \
@@ -77,4 +93,4 @@ helm upgrade --install devops-platform "$CHART_STAGE" \
   --timeout 30m \
   --rollback-on-failure \
   --set global.image.tag="$TAG" \
-  --values "$DEC_VALUES"
+  "${HELM_VALUES[@]}"

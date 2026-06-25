@@ -58,7 +58,7 @@ jobs:
     # Boot via the canonical flag-free `docker compose`, so CI runs what users run.
     # Ollama pulls a multi-GB model on first boot; we cache the volume across runs.
     env:
-      SMOKE_SERVICES: "postgres nats ollama ollama-init gateway incident-service event-service rule-engine user-service notification-service webhook-service genai-service edge swagger-ui"
+      SMOKE_SERVICES: "postgres nats ollama ollama-init gateway incident-service event-service rule-engine user-service notification-service webhook-service genai-service edge swagger-ui prometheus grafana"
       # frontend is WIP (served on :3000, not via edge). The coverage guard below
       # fails if any service is in neither list, so none can escape unnoticed.
       EXCLUDED_SERVICES: "frontend"
@@ -137,7 +137,7 @@ jobs:
             up -d --no-recreate --wait --wait-timeout 600 \
             postgres nats ollama gateway incident-service event-service \
             rule-engine user-service notification-service webhook-service \
-            genai-service edge swagger-ui
+            genai-service edge swagger-ui prometheus grafana
 
       - name: Probe edge proxy over HTTP
         id: probe
@@ -163,6 +163,26 @@ jobs:
           # Asserts the / -> frontend route is wired.
           probe / 200
 
+      - name: Probe observability endpoints
+        id: probe-observability
+        run: |
+          set -euo pipefail
+          probe() {
+            url="$1"; want="$2"
+            for ((i = 0; i < 15; i++)); do
+              code=$(curl -sS -o /dev/null -w '%{http_code}' "${url}" 2>/dev/null || true)
+              if [ "${code}" = "${want}" ]; then
+                echo "GET ${url} -> ${code}"
+                return 0
+              fi
+              sleep 2
+            done
+            echo "::error::GET ${url} -> ${code:-no response} (expected ${want})"
+            return 1
+          }
+          probe http://localhost:9090/-/ready 200
+          probe http://localhost:3030/api/health 200
+
       - name: Save Ollama model cache
         if: success() && steps.ollama-cache.outputs.cache-hit != 'true'
         run: |
@@ -177,7 +197,7 @@ jobs:
             alpine sh -c "cp -a /src/. /dest/ && chmod -R a+rX /dest/"
 
       - name: Dump container status and logs on failure
-        if: failure() && (steps.boot.outcome == 'failure' || steps.ollama-init.outcome == 'failure' || steps.wait.outcome == 'failure' || steps.probe.outcome == 'failure')
+        if: failure() && (steps.boot.outcome == 'failure' || steps.ollama-init.outcome == 'failure' || steps.wait.outcome == 'failure' || steps.probe.outcome == 'failure' || steps.probe-observability.outcome == 'failure')
         run: |
           set -euo pipefail
           read -ra services <<< "${SMOKE_SERVICES}"
