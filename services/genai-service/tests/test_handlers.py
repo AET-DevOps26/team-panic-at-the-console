@@ -234,7 +234,7 @@ async def test_on_created_continues_after_first_publish_fails(ollama, mock_nats)
     assert mock_nats.publish.await_count == 3
 
 
-async def test_on_created_records_generation_metrics(ollama):
+async def test_on_created_records_generation_metrics(ollama, mock_nats):
     from genai_service.metrics import ai_generations_total
 
     c = _client_with(incident=_incident_json(), events=_events_json())
@@ -255,7 +255,7 @@ async def test_on_created_records_generation_metrics(ollama):
         type="solution_suggestions", provider=provider, outcome="success"
     )._value.get()
 
-    handlers = IncidentHandlers(c, ollama, PromptBuilder())
+    handlers = IncidentHandlers(c, ollama, PromptBuilder(), nats_client=mock_nats)
     await handlers.on_incident_created(str(INCIDENT_ID))
 
     assert (
@@ -300,7 +300,7 @@ async def test_on_created_records_error_outcome_when_llm_fails(ollama):
     )
 
 
-async def test_on_created_records_logos_provider_via_fallback_client():
+async def test_on_created_records_logos_provider_via_fallback_client(mock_nats):
     from genai_service.llm import FallbackLLMClient
     from genai_service.metrics import ai_generations_total
 
@@ -325,7 +325,7 @@ async def test_on_created_records_logos_provider_via_fallback_client():
         type="summary", provider="logos", outcome="success"
     )._value.get()
 
-    handlers = IncidentHandlers(c, llm, PromptBuilder())
+    handlers = IncidentHandlers(c, llm, PromptBuilder(), nats_client=mock_nats)
     await handlers.on_incident_created(str(INCIDENT_ID))
 
     assert (
@@ -336,7 +336,7 @@ async def test_on_created_records_logos_provider_via_fallback_client():
     )
 
 
-async def test_on_created_records_ollama_provider_after_fallback():
+async def test_on_created_records_ollama_provider_after_fallback(mock_nats):
     from genai_service.llm import FallbackLLMClient
     from genai_service.metrics import ai_generations_total
 
@@ -362,7 +362,7 @@ async def test_on_created_records_ollama_provider_after_fallback():
         type="summary", provider="ollama", outcome="success"
     )._value.get()
 
-    handlers = IncidentHandlers(c, llm, PromptBuilder())
+    handlers = IncidentHandlers(c, llm, PromptBuilder(), nats_client=mock_nats)
     await handlers.on_incident_created(str(INCIDENT_ID))
 
     assert (
