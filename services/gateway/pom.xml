@@ -6,7 +6,7 @@
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>3.5.14</version>
+        <version>3.5.15</version>
         <relativePath/>
     </parent>
     <groupId>com.panicattheconsole</groupId>
@@ -15,6 +15,8 @@
     <name>gateway</name>
     <properties>
         <java.version>25</java.version>
+        <jackson-bom.version>2.22.0</jackson-bom.version>
+        <commons-lang3.version>3.18.0</commons-lang3.version>
     </properties>
     <dependencies>
         <dependency>
