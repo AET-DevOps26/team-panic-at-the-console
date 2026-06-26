@@ -20,6 +20,7 @@ FROM python:3.12-slim AS runtime
 
 # Keep the same paths as the build stage: pixi entrypoints embed absolute shebangs
 # under /app/genai-service/.pixi/ and editable installs reference ../generated/.
+WORKDIR /app/genai-service
 
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
