@@ -13,13 +13,14 @@ COPY genai-service/pixi.toml genai-service/pixi.lock genai-service/pyproject.tom
 COPY genai-service/README.md ./genai-service/
 COPY genai-service/src ./genai-service/src
 
-RUN cd genai-service && pixi install --frozen -e prod
+WORKDIR /app/genai-service
+RUN pixi install --frozen -e prod
 
 FROM python:3.12-slim AS runtime
 
 # Keep the same paths as the build stage: pixi entrypoints embed absolute shebangs
 # under /app/genai-service/.pixi/ and editable installs reference ../generated/.
-WORKDIR /app/genai-service
+
 
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
