@@ -9,9 +9,9 @@ import static org.assertj.core.api.InstanceOfAssertFactories.MAP;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.resttestclient.TestRestTemplate;
+import org.springframework.boot.resttestclient.autoconfigure.AutoConfigureTestRestTemplate;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpMethod;
@@ -19,7 +19,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
-import org.testcontainers.containers.PostgreSQLContainer;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.testcontainers.postgresql.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
@@ -31,6 +32,7 @@ import io.nats.client.Connection;
  * GET incident, GET events, PATCH AI write-back fields.
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@AutoConfigureTestRestTemplate
 @Testcontainers
 class IncidentsControllerIntegrationTest {
 
@@ -38,7 +40,7 @@ class IncidentsControllerIntegrationTest {
 
         @Container
         @SuppressWarnings("resource")
-        static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:16-alpine")
+        static PostgreSQLContainer postgres = new PostgreSQLContainer("postgres:16-alpine")
                         .withDatabaseName("incidents")
                         .withUsername("postgres")
                         .withPassword("postgres");
@@ -50,7 +52,7 @@ class IncidentsControllerIntegrationTest {
                 registry.add("spring.datasource.password", postgres::getPassword);
         }
 
-        @MockBean
+        @MockitoBean
         Connection natsConnection;
 
         @LocalServerPort
