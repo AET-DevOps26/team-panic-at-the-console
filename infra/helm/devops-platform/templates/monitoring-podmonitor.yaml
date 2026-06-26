@@ -14,4 +14,39 @@ spec:
     - portNumber: {{ (index .Values.services "genai-service").port }}
       path: /metrics
       interval: 15s
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: spring-services
+  labels:
+    release: {{ .Release.Name }}
+spec:
+  selector:
+    matchExpressions:
+      - key: app.kubernetes.io/name
+        operator: In
+        values:
+          - incident-service
+          - event-service
+          - user-service
+  podMetricsEndpoints:
+    - path: /actuator/prometheus
+      interval: 15s
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: gateway
+  labels:
+    app.kubernetes.io/name: gateway
+    release: {{ .Release.Name }}
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: gateway
+  podMetricsEndpoints:
+    - portNumber: 8090
+      path: /actuator/prometheus
+      interval: 15s
 {{- end }}
