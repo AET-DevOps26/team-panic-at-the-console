@@ -8,4 +8,14 @@ metadata:
 data:
   genai-service.json: |
 {{ .Files.Get "files/grafana/genai-service.json" | indent 4 }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: spring-services-grafana-dashboard
+  labels:
+    grafana_dashboard: "1"
+data:
+  spring-services.json: |
+{{ .Files.Get "files/grafana/spring-services.json" | indent 4 }}
 {{- end }}
