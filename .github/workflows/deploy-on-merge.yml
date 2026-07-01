@@ -1,0 +1,39 @@
+name: Deploy on merge to main
+
+# Automatically builds, pushes, and deploys all images when a PR merges into
+# main. This satisfies the CD requirement (deploy on merge to main). The deploy
+# job waits for the full image matrix via `needs: build` — a failed build aborts
+# the deploy.
+
+on:
+  push:
+    branches: [main]
+
+concurrency:
+  group: deploy-main
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build and push images
+    uses: ./.github/workflows/_build-images.yml
+    permissions:
+      contents: read
+      packages: write
+    with:
+      push: true
+      primary_tag: sha-${{ github.sha }}
+      sha_tag: latest
+
+  deploy-k8s:
+    name: Deploy to Kubernetes
+    needs: build
+    permissions:
+      contents: read
+    uses: ./.github/workflows/deploy-k8s.yml
+    with:
+      tag: sha-${{ github.sha }}
+    secrets: inherit
