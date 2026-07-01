@@ -1,5 +1,6 @@
 package com.panicattheconsole.gateway.proxy;
 
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
@@ -9,6 +10,12 @@ import org.springframework.web.client.RestClient;
 @TestConfiguration
 @ConditionalOnProperty(name = "gateway.downstream-clients.enabled", havingValue = "false")
 public class MockDownstreamClientsConfig {
+
+    @Bean
+    @ConditionalOnMissingBean(RestClient.Builder.class)
+    RestClient.Builder restClientBuilder() {
+        return RestClient.builder();
+    }
 
     @Bean
     ClientPair incidentClientPair(RestClient.Builder restClientBuilder) {
