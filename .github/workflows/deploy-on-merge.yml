@@ -35,5 +35,5 @@ jobs:
       contents: read
     uses: ./.github/workflows/deploy-k8s.yml
     with:
-      tag: latest
+      tag: sha-${{ github.sha }}
     secrets: inherit
