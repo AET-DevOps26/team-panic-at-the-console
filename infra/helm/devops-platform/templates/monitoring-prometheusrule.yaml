@@ -2,6 +2,85 @@
 apiVersion: monitoring.coreos.com/v1
 kind: PrometheusRule
 metadata:
+  name: spring-services-alerts
+  labels:
+    release: {{ .Release.Name }}
+spec:
+  groups:
+    - name: spring-services
+      rules:
+        - alert: SpringServiceDown
+          expr: up{job=~"incident-service|event-service|user-service|gateway"} == 0
+          for: 1m
+          labels:
+            severity: critical
+          annotations:
+            summary: "{{`{{ $labels.job }}`}} is down"
+            description: "Prometheus cannot scrape {{`{{ $labels.job }}`}} /actuator/prometheus for 1 minute."
+
+        - alert: HighServerErrorRate
+          expr: |
+            sum by (job) (
+              rate(http_server_requests_seconds_count{
+                job=~"incident-service|event-service|user-service|gateway",
+                outcome="SERVER_ERROR"
+              }[5m])
+            )
+            /
+            sum by (job) (
+              rate(http_server_requests_seconds_count{
+                job=~"incident-service|event-service|user-service|gateway"
+              }[5m])
+            ) > 0.01
+          for: 2m
+          labels:
+            severity: critical
+          annotations:
+            summary: "High 5xx rate on {{`{{ $labels.job }}`}}"
+            description: "{{`{{ $labels.job }}`}} server error rate exceeds 1% over 5 minutes."
+
+        - alert: HighClientErrorRate
+          expr: |
+            sum by (job) (
+              rate(http_server_requests_seconds_count{
+                job=~"incident-service|event-service|user-service|gateway",
+                outcome="CLIENT_ERROR"
+              }[5m])
+            )
+            /
+            sum by (job) (
+              rate(http_server_requests_seconds_count{
+                job=~"incident-service|event-service|user-service|gateway"
+              }[5m])
+            ) > 0.10
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "High 4xx rate on {{`{{ $labels.job }}`}}"
+            description: "{{`{{ $labels.job }}`}} client error rate exceeds 10% over 5 minutes."
+
+        - alert: SlowP95Latency
+          expr: |
+            histogram_quantile(
+              0.95,
+              sum by (le, job) (
+                rate(http_server_requests_seconds_bucket{
+                  job=~"incident-service|event-service|user-service|gateway"
+                }[5m])
+              )
+            ) > 2
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Slow p95 latency on {{`{{ $labels.job }}`}}"
+            description: "{{`{{ $labels.job }}`}} p95 response time exceeds 2s over 5 minutes."
+
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
   name: genai-service-alerts
   labels:
     release: {{ .Release.Name }}

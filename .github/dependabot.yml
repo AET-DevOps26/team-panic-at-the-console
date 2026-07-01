@@ -10,3 +10,29 @@ updates:
           - "*"
     cooldown:
       default-days: 7
+
+  - package-ecosystem: maven
+    directories:
+      - "/services/event-service"
+      - "/services/gateway"
+      - "/services/incident-service"
+      - "/services/user-service"
+    schedule:
+      interval: weekly
+    groups:
+      java-services:
+        patterns:
+          - "*"
+    cooldown:
+      default-days: 7
+
+  - package-ecosystem: npm
+    directory: "/services/frontend"
+    schedule:
+      interval: weekly
+    groups:
+      frontend:
+        patterns:
+          - "*"
+    cooldown:
+      default-days: 7
