@@ -2,35 +2,43 @@
 
 React SPA for the incident management platform. Served by nginx on port **3000**; all `/api/` requests are proxied to `gateway:8080`.
 
-## Stack
+## Commands
 
-- **React 18** + **TypeScript** + **Vite 5**
-- **Tailwind CSS** + **shadcn/ui** (Radix UI primitives, new-york style, zinc base)
-- **TanStack Query v5** for data fetching and cache management
-- **openapi-fetch** for type-safe HTTP calls against the generated schema
-- **react-router-dom v6** for client-side routing
-
-## Pages
-
-| Route            | Page                                                                  |
-| ---------------- | --------------------------------------------------------------------- |
-| `/incidents`     | Incident list with search, status/severity filters, and create dialog |
-| `/incidents/:id` | Incident detail — timeline, comments, AI insights tabs                |
-| `/login`         | Login form (wired to `/api/v1/auth/login`)                            |
-
-## OpenAPI integration
-
-`services/generated/typescript/schema.d.ts` is generated from `api/openapi.yaml` by `api/scripts/gen-all.sh` (import as `@openapi/schema`), never edit it by hand.
-
-To regenerate after changing the spec:
+`node_modules` must exist before any other task will work — run `pixi run install` first, and again whenever `package.json` changes.
 
 ```bash
-pixi run gen-all   # from the repo root
+cd services/frontend
+pixi run install   # npm install (run once, or after deps change)
 ```
 
-## Mock mode
+| Task                    | Command                 | Description                                                              |
+| ----------------------- | ----------------------- | ------------------------------------------------------------------------ |
+| `pixi run dev`          | `vite`                  | Dev server on :3000, hot reload, in-file mock data (`VITE_MOCK=true`)    |
+| `pixi run dev-mock-api` | `vite --mode mock-api`  | Dev server on :3000 against the Prism mock server on :4010               |
+| `pixi run prod`         | `vite build && preview` | Builds `dist/` and serves it on :3000 (no hot reload, `VITE_MOCK=false`) |
 
-`VITE_MOCK=true` short-circuits all API queries to return hardcoded data from `src/api/queries.ts`. No backend required.
+`dev-mock-api` needs the Prism mock server running first, in a separate terminal from the repo root:
+
+```bash
+pixi run mock-api          # repo root: Prism on :4010
+# in a second terminal:
+cd services/frontend
+pixi run dev-mock-api      # dev server on :3000 -> :4010
+```
+
+Also available from the repo root:
+
+```bash
+pixi run gen-all   # regenerate services/generated/typescript/schema.d.ts from api/openapi.yaml
+```
+
+## Mock modes
+
+There are two independent ways to run the frontend without the real backend:
+
+### 1. In-file mock (`VITE_MOCK=true`)
+
+Short-circuits all API queries to return hardcoded data from `src/api/queries.ts`. No backend or network required.
 
 | Context                    | How mock mode is set                                                        |
 | -------------------------- | --------------------------------------------------------------------------- |
@@ -40,16 +48,34 @@ pixi run gen-all   # from the repo root
 
 The flag is baked into the bundle at build time — it cannot be changed at runtime.
 
-## Local dev
+### 2. Prism mock server (`pixi run dev-mock-api`)
+
+Runs the app against the Stoplight Prism mock server (`pixi run mock-api` from the repo root), which serves spec-driven responses from `api/openapi.yaml` on port **4010**. Unlike the in-file mock, this exercises the real `openapi-fetch` + TanStack Query stack over HTTP and stays in sync with the spec.
+
+`VITE_MOCK` is left off in this mode (so queries make real network calls); `.env.mock-api` points `VITE_API_URL` at the Prism server. Prism runs with `--cors`, so the browser can call it cross-origin.
+
+## Pages
+
+| Route            | Page                                                                  |
+| ---------------- | --------------------------------------------------------------------- |
+| `/incidents`     | Incident list with search, status/severity filters, and create dialog |
+| `/incidents/:id` | Incident detail — timeline, comments, AI insights tabs                |
+| `/login`         | Login form (wired to `/api/v1/auth/login`)                            |
+
+## Stack
+
+- **React 18** + **TypeScript** + **Vite 5**
+- **Tailwind CSS** + **shadcn/ui** (Radix UI primitives, new-york style, zinc base)
+- **TanStack Query v5** for data fetching and cache management
+- **openapi-fetch** for type-safe HTTP calls against the generated schema
+- **react-router-dom v6** for client-side routing
+
+## OpenAPI integration
+
+`services/generated/typescript/schema.d.ts` is generated from `api/openapi.yaml` by `api/scripts/gen-all.sh` (import as `@openapi/schema`), never edit it by hand.
+
+To regenerate after changing the spec:
 
 ```bash
-cd services/frontend
-pixi run install   # install node_modules (once)
-pixi run dev       # dev server on :3000, hot reload, mock mode on
-```
-
-To verify the production bundle locally (`VITE_MOCK=false`):
-
-```bash
-pixi run prod   # builds dist/ then serves it on :3000, no hot reload
+pixi run gen-all   # from the repo root
 ```

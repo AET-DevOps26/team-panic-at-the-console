@@ -10,4 +10,5 @@ nodejs = ">=22,<23"
 [tasks]
 install = "npm install"
 dev = "npm run dev"
+dev-mock-api = "npm run dev:mock-api"
 prod = "npm run build && npm run preview"
