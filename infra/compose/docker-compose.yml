@@ -188,8 +188,8 @@ services:
   notification-service:
     image: ghcr.io/aet-devops26/team-panic-at-the-console/notification-service:${IMAGE_TAG:-latest}
     build:
-      context: ./services/notification-service
-      dockerfile: Dockerfile
+      context: ./services
+      dockerfile: notification-service/Dockerfile
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/notifications
       SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-devops}
