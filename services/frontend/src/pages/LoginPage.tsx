@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { LayoutDashboard } from "lucide-react";
+import { useLogin } from "@/api/queries";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -8,31 +9,19 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 
 export default function LoginPage() {
   const navigate = useNavigate();
+  const login = useLogin();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
-    setLoading(true);
     setError(null);
     try {
-      const res = await fetch("/api/v1/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
-        credentials: "include",
-      });
-      if (!res.ok) {
-        const body = (await res.json().catch(() => null)) as { message?: string } | null;
-        throw new Error(body?.message ?? "Invalid email or password");
-      }
+      await login.mutateAsync({ email, password });
       navigate("/incidents", { replace: true });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Login failed");
-    } finally {
-      setLoading(false);
     }
   }
 
@@ -66,8 +55,8 @@ export default function LoginPage() {
 
               {error && <p className="text-sm text-destructive">{error}</p>}
 
-              <Button type="submit" className="w-full" disabled={loading}>
-                {loading ? "Signing in…" : "Sign in"}
+              <Button type="submit" className="w-full" disabled={login.isPending}>
+                {login.isPending ? "Signing in…" : "Sign in"}
               </Button>
             </form>
           </CardContent>
