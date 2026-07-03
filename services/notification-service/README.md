@@ -41,9 +41,11 @@ scope, so the frontend can render an unread badge in one request. When `recipien
 is supplied the result is scoped to that user's personal notifications plus
 broadcasts; when omitted, all notifications are returned.
 
-The domain endpoints are hand-written Spring MVC and are not yet part of
-`api/openapi.yaml`. Follow-up: add the `/notifications` contract to the combined
-spec and a gateway route so the frontend gets typed, gateway-fronted access.
+The endpoints are defined in `api/openapi.yaml` (tag `notifications`) and the
+controller implements the generated `NotificationsApi`, so the spec is the single
+source of truth. Reaching them through the platform gateway still needs a gateway
+proxy route (follow-up, pending the gateway proxy work); until then they are called
+directly or via the generated clients against the mock.
 
 ## Read state
 

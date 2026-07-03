@@ -95,8 +95,14 @@ class NotificationIntegrationTest {
 
         List<?> items = (List<?>) response.getBody().get("items");
         assertThat(items).hasSize(2);
-        assertThat(items).allSatisfy(item ->
-                assertThat(((Map<?, ?>) item).get("recipientId")).isNotEqualTo(USER_B.toString()));
+        // Each item is either the broadcast (null recipient) or A's personal one, never B's.
+        // Also confirms the generated JsonNullable<UUID> serializes to a plain value or null.
+        assertThat(items).allSatisfy(item -> {
+            Object recipientId = ((Map<?, ?>) item).get("recipientId");
+            if (recipientId != null) {
+                assertThat(recipientId).isEqualTo(USER_A.toString());
+            }
+        });
     }
 
     @Test
