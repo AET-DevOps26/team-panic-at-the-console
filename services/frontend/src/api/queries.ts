@@ -13,6 +13,8 @@ export type UpdateStatusRequest = components["schemas"]["UpdateStatusRequest"];
 export type EscalateSeverityRequest = components["schemas"]["EscalateSeverityRequest"];
 export type AssignIncidentRequest = components["schemas"]["AssignIncidentRequest"];
 export type CreateCommentRequest = components["schemas"]["CreateCommentRequest"];
+export type LoginRequest = components["schemas"]["LoginRequest"];
+export type User = components["schemas"]["User"];
 
 const MOCK = import.meta.env.VITE_MOCK === "true";
 
@@ -281,6 +283,24 @@ export function useRegeneratePostmortem(incidentId: string) {
         params: { path: { incidentId } },
       });
       if (error) throw new Error("Regeneration failed");
+      return data;
+    },
+  });
+}
+
+// ── Auth ──────────────────────────────────────────────────────────────────────
+
+export function useLogin() {
+  return useMutation({
+    mutationFn: async (body: LoginRequest): Promise<User | undefined> => {
+      if (MOCK) return undefined;
+      // Frontend and gateway share a host behind the edge/ingress in every real
+      // deployment, so the default (same-origin) credentials mode already sends and
+      // stores the httpOnly `session` cookie. We deliberately do not force `include`:
+      // it would break the cross-origin Prism mock, whose wildcard CORS rejects
+      // credentialed requests.
+      const { data, error } = await apiClient.POST("/auth/login", { body });
+      if (error) throw new Error(error.message ?? "Invalid email or password");
       return data;
     },
   });
