@@ -48,6 +48,14 @@ public class Incident {
   @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
   private JsonNullable<OffsetDateTime> resolvedAt = JsonNullable.<OffsetDateTime>undefined();
 
+  private JsonNullable<String> summary = JsonNullable.<String>undefined();
+
+  private JsonNullable<String> severitySuggestion = JsonNullable.<String>undefined();
+
+  private JsonNullable<String> solutions = JsonNullable.<String>undefined();
+
+  private JsonNullable<String> postmortem = JsonNullable.<String>undefined();
+
   public Incident() {
     super();
   }
@@ -203,6 +211,86 @@ public class Incident {
     this.resolvedAt = resolvedAt;
   }
 
+  public Incident summary(String summary) {
+    this.summary = JsonNullable.of(summary);
+    return this;
+  }
+
+  /**
+   * AI-generated narrative summary. Regenerable on demand.
+   * @return summary
+   */
+
+  @Schema(name = "summary", description = "AI-generated narrative summary. Regenerable on demand.", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
+  @JsonProperty("summary")
+  public JsonNullable<String> getSummary() {
+    return summary;
+  }
+
+  public void setSummary(JsonNullable<String> summary) {
+    this.summary = summary;
+  }
+
+  public Incident severitySuggestion(String severitySuggestion) {
+    this.severitySuggestion = JsonNullable.of(severitySuggestion);
+    return this;
+  }
+
+  /**
+   * AI-suggested severity with reasoning, formatted as \"SEV<n>: <reason>\".
+   * @return severitySuggestion
+   */
+
+  @Schema(name = "severitySuggestion", description = "AI-suggested severity with reasoning, formatted as \"SEV<n>: <reason>\".", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
+  @JsonProperty("severitySuggestion")
+  public JsonNullable<String> getSeveritySuggestion() {
+    return severitySuggestion;
+  }
+
+  public void setSeveritySuggestion(JsonNullable<String> severitySuggestion) {
+    this.severitySuggestion = severitySuggestion;
+  }
+
+  public Incident solutions(String solutions) {
+    this.solutions = JsonNullable.of(solutions);
+    return this;
+  }
+
+  /**
+   * AI-suggested remediation steps, one per line.
+   * @return solutions
+   */
+
+  @Schema(name = "solutions", description = "AI-suggested remediation steps, one per line.", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
+  @JsonProperty("solutions")
+  public JsonNullable<String> getSolutions() {
+    return solutions;
+  }
+
+  public void setSolutions(JsonNullable<String> solutions) {
+    this.solutions = solutions;
+  }
+
+  public Incident postmortem(String postmortem) {
+    this.postmortem = JsonNullable.of(postmortem);
+    return this;
+  }
+
+  /**
+   * AI-drafted postmortem. Only set for resolved incidents.
+   * @return postmortem
+   */
+
+  @Schema(name = "postmortem", description = "AI-drafted postmortem. Only set for resolved incidents.", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
+  @JsonProperty("postmortem")
+  public JsonNullable<String> getPostmortem() {
+    return postmortem;
+  }
+
+  public void setPostmortem(JsonNullable<String> postmortem) {
+    this.postmortem = postmortem;
+  }
+
   @Override
   public boolean equals(Object o) {
     if (this == o) {
@@ -218,7 +306,11 @@ public class Incident {
         Objects.equals(this.status, incident.status) &&
         Objects.equals(this.severity, incident.severity) &&
         Objects.equals(this.createdAt, incident.createdAt) &&
-        equalsNullable(this.resolvedAt, incident.resolvedAt);
+        equalsNullable(this.resolvedAt, incident.resolvedAt) &&
+        equalsNullable(this.summary, incident.summary) &&
+        equalsNullable(this.severitySuggestion, incident.severitySuggestion) &&
+        equalsNullable(this.solutions, incident.solutions) &&
+        equalsNullable(this.postmortem, incident.postmortem);
   }
 
   private static <T> boolean equalsNullable(JsonNullable<T> a, JsonNullable<T> b) {
@@ -227,7 +319,7 @@ public class Incident {
 
   @Override
   public int hashCode() {
-    return Objects.hash(id, title, hashCodeNullable(description), status, severity, createdAt, hashCodeNullable(resolvedAt));
+    return Objects.hash(id, title, hashCodeNullable(description), status, severity, createdAt, hashCodeNullable(resolvedAt), hashCodeNullable(summary), hashCodeNullable(severitySuggestion), hashCodeNullable(solutions), hashCodeNullable(postmortem));
   }
 
   private static <T> int hashCodeNullable(JsonNullable<T> a) {
@@ -248,6 +340,10 @@ public class Incident {
     sb.append("    severity: ").append(toIndentedString(severity)).append("\n");
     sb.append("    createdAt: ").append(toIndentedString(createdAt)).append("\n");
     sb.append("    resolvedAt: ").append(toIndentedString(resolvedAt)).append("\n");
+    sb.append("    summary: ").append(toIndentedString(summary)).append("\n");
+    sb.append("    severitySuggestion: ").append(toIndentedString(severitySuggestion)).append("\n");
+    sb.append("    solutions: ").append(toIndentedString(solutions)).append("\n");
+    sb.append("    postmortem: ").append(toIndentedString(postmortem)).append("\n");
     sb.append("}");
     return sb.toString();
   }

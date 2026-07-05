@@ -26,7 +26,16 @@ final class IncidentMapper {
                 OffsetDateTime.ofInstant(incident.getCreatedAt(), ZoneOffset.UTC));
 
         if (incident.getSummary() != null) {
-            api.setDescription(JsonNullable.of(incident.getSummary()));
+            api.setSummary(JsonNullable.of(incident.getSummary()));
+        }
+        if (incident.getSeveritySuggestion() != null) {
+            api.setSeveritySuggestion(JsonNullable.of(incident.getSeveritySuggestion()));
+        }
+        if (incident.getSolutions() != null) {
+            api.setSolutions(JsonNullable.of(incident.getSolutions()));
+        }
+        if (incident.getPostmortem() != null) {
+            api.setPostmortem(JsonNullable.of(incident.getPostmortem()));
         }
         if (incident.getResolvedAt() != null) {
             api.setResolvedAt(JsonNullable.of(

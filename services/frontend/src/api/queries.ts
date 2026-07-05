@@ -29,6 +29,9 @@ const MOCK_INCIDENTS: Incident[] = [
     severity: "SEV1",
     createdAt: new Date(Date.now() - 3 * 3600_000).toISOString(),
     resolvedAt: null,
+    summary: "Checkout API error rate spiked to 5% after deploy v2.4.1; payment-service latency is the suspected driver.",
+    severitySuggestion: "SEV1: Checkout is revenue-critical and error rate exceeds the 5% SLO.",
+    solutions: "Roll back deploy v2.4.1\nScale payment-service replicas\nEnable checkout circuit breaker",
   },
   {
     id: "018e2c5f-1234-7abc-8def-000000000002",
@@ -83,7 +86,7 @@ export function useHealth() {
 
 // ── Incidents ─────────────────────────────────────────────────────────────────
 
-export function useIncidents(params?: { status?: IncidentStatus; severity?: Severity }) {
+export function useIncidents(params?: { status?: IncidentStatus; severity?: Severity }, refetchInterval?: number) {
   return useQuery({
     queryKey: ["incidents", params],
     queryFn: async () => {
@@ -94,10 +97,11 @@ export function useIncidents(params?: { status?: IncidentStatus; severity?: Seve
       if (error || !data) throw new Error("Failed to fetch incidents");
       return data.items;
     },
+    refetchInterval,
   });
 }
 
-export function useIncident(id: string) {
+export function useIncident(id: string, refetchInterval?: number) {
   return useQuery({
     queryKey: ["incidents", id],
     queryFn: async () => {
@@ -109,6 +113,7 @@ export function useIncident(id: string) {
       return data;
     },
     enabled: Boolean(id),
+    refetchInterval,
   });
 }
 

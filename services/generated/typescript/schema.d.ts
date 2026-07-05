@@ -439,6 +439,14 @@ export interface components {
             createdAt: string;
             /** Format: date-time */
             resolvedAt?: string | null;
+            /** @description AI-generated narrative summary. Regenerable on demand. */
+            summary?: string | null;
+            /** @description AI-suggested severity with reasoning, formatted as "SEV<n>: <reason>". */
+            severitySuggestion?: string | null;
+            /** @description AI-suggested remediation steps, one per line. */
+            solutions?: string | null;
+            /** @description AI-drafted postmortem. Only set for resolved incidents. */
+            postmortem?: string | null;
         };
         /** @description One entry from an incident's append-only Event Log. */
         IncidentEvent: {
