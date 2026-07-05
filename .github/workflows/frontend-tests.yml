@@ -24,21 +24,27 @@ jobs:
 
     steps:
       - name: Checkout branch
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           persist-credentials: false
 
-      - name: Set up Node
-        uses: actions/setup-node@v4
+      - name: Set up pixi
+        uses: prefix-dev/setup-pixi@5185adfbffb4bd703da3010310260805d89ebb11 # v0.9.6
         with:
-          node-version: 22
-          cache: npm
-          cache-dependency-path: services/frontend/package-lock.json
+          manifest-path: services/frontend/pixi.toml
+          frozen: true
+          cache: true
+
+      - name: Cache npm registry
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.npm
+          key: npm-${{ runner.os }}-${{ hashFiles('services/frontend/package-lock.json') }}
+          restore-keys: |
+            npm-${{ runner.os }}-
 
       - name: Install dependencies
-        working-directory: services/frontend
-        run: npm ci
+        run: pixi run --manifest-path services/frontend/pixi.toml install-ci
 
       - name: Run tests
-        working-directory: services/frontend
-        run: npm test
+        run: pixi run --manifest-path services/frontend/pixi.toml test
