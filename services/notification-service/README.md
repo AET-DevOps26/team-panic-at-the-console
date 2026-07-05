@@ -43,9 +43,8 @@ broadcasts; when omitted, all notifications are returned.
 
 The endpoints are defined in `api/openapi.yaml` (tag `notifications`) and the
 controller implements the generated `NotificationsApi`, so the spec is the single
-source of truth. Reaching them through the platform gateway still needs a gateway
-proxy route (follow-up, pending the gateway proxy work); until then they are called
-directly or via the generated clients against the mock.
+source of truth. The gateway proxies them under `/api/v1/notifications*`
+(`NotificationsProxyController` in `services/gateway`).
 
 ## Read state
 

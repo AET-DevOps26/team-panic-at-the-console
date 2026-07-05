@@ -53,7 +53,7 @@ public interface NotificationRepository
      * Mark unread notifications as read. When {@code recipientId} is null every unread
      * notification is marked; otherwise only the recipient's personal ones and broadcasts.
      */
-    @Modifying
+    @Modifying(clearAutomatically = true)
     @Query("""
             UPDATE Notification n SET n.read = true
             WHERE n.read = false

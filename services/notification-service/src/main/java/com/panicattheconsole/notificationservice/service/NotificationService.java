@@ -10,13 +10,12 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.panicattheconsole.notificationservice.domain.Notification;
 import com.panicattheconsole.notificationservice.domain.NotificationType;
 import com.panicattheconsole.notificationservice.messaging.IncidentEvent;
 import com.panicattheconsole.notificationservice.repository.NotificationRepository;
-
-import jakarta.transaction.Transactional;
 
 @Service
 public class NotificationService {
@@ -92,8 +91,11 @@ public class NotificationService {
                 event.timestamp());
     }
 
+    @Transactional(readOnly = true)
     public Page<Notification> list(UUID recipientId, boolean unreadOnly, int page, int size) {
-        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
+        // Secondary id key keeps pagination stable when notifications share a createdAt.
+        Pageable pageable = PageRequest.of(page, size,
+                Sort.by(Sort.Order.desc("createdAt"), Sort.Order.desc("id")));
 
         if (recipientId != null) {
             return unreadOnly
@@ -105,6 +107,7 @@ public class NotificationService {
                 : repository.findAll(pageable);
     }
 
+    @Transactional(readOnly = true)
     public long unreadCount(UUID recipientId) {
         return recipientId != null
                 ? repository.countVisibleToUnread(recipientId)

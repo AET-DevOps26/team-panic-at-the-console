@@ -94,6 +94,8 @@ services:
       dockerfile: gateway/Dockerfile
     environment:
       GATEWAY_INCIDENT_SERVICE_URL: http://incident-service:8081
+      GATEWAY_USER_SERVICE_URL: http://user-service:8084
+      GATEWAY_NOTIFICATION_SERVICE_URL: http://notification-service:8085
       NATS_URL: ${NATS_URL:-nats://nats:4222}
     healthcheck:
       <<: *healthcheck-spring

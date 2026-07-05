@@ -15,6 +15,9 @@ public class GatewayProperties {
     @NotBlank
     private String userServiceUrl;
 
+    @NotBlank
+    private String notificationServiceUrl;
+
     public String getIncidentServiceUrl() {
         return incidentServiceUrl;
     }
@@ -29,5 +32,13 @@ public class GatewayProperties {
 
     public void setUserServiceUrl(String userServiceUrl) {
         this.userServiceUrl = userServiceUrl;
+    }
+
+    public String getNotificationServiceUrl() {
+        return notificationServiceUrl;
+    }
+
+    public void setNotificationServiceUrl(String notificationServiceUrl) {
+        this.notificationServiceUrl = notificationServiceUrl;
     }
 }

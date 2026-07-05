@@ -84,6 +84,8 @@ services:
         value: "http://incident-service:8081"
       - name: GATEWAY_USER_SERVICE_URL
         value: "http://user-service:8084"
+      - name: GATEWAY_NOTIFICATION_SERVICE_URL
+        value: "http://notification-service:8085"
 
   incident-service:
     enabled: true

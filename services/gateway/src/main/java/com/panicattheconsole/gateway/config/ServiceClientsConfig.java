@@ -18,4 +18,9 @@ class ServiceClientsConfig {
     RestClient userServiceClient(GatewayProperties properties) {
         return RestClient.builder().baseUrl(properties.getUserServiceUrl()).build();
     }
+
+    @Bean
+    RestClient notificationServiceClient(GatewayProperties properties) {
+        return RestClient.builder().baseUrl(properties.getNotificationServiceUrl()).build();
+    }
 }
