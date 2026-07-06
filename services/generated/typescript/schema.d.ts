@@ -333,6 +333,57 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/notifications": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List notifications, newest first */
+        get: operations["listNotifications"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/notifications/{notificationId}/read": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Mark a single notification as read */
+        post: operations["markNotificationRead"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/notifications/read-all": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Mark all visible notifications as read */
+        post: operations["markAllNotificationsRead"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -581,6 +632,43 @@ export interface components {
              *     ] */
             actionItems: string[];
         };
+        /**
+         * @description Category of a notification, derived from the incident event that produced it.
+         * @enum {string}
+         */
+        NotificationType: "INCIDENT_CREATED" | "SEVERITY_ESCALATED" | "INCIDENT_RESOLVED" | "COMMENT_ADDED" | "INCIDENT_ASSIGNED";
+        /** @description An in-app notification about an incident event. */
+        Notification: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            incidentId: string;
+            type: components["schemas"]["NotificationType"];
+            /**
+             * Format: uuid
+             * @description Target user for a personal notification; null for a broadcast visible to everyone.
+             */
+            recipientId?: string | null;
+            /** @example You were assigned to an incident. */
+            message: string;
+            read: boolean;
+            /** Format: date-time */
+            createdAt: string;
+        };
+        NotificationListResponse: {
+            items: components["schemas"]["Notification"][];
+            /** @example 3 */
+            total: number;
+            /** @example 0 */
+            page: number;
+            /** @example 50 */
+            size: number;
+            /**
+             * @description Number of unread notifications in the same scope as this query.
+             * @example 2
+             */
+            unreadCount: number;
+        };
     };
     responses: {
         /** @description Regeneration task accepted for async processing */
@@ -616,6 +704,8 @@ export interface components {
         SizeParam: number;
         /** @description UUID of the target incident. */
         IncidentIdParam: string;
+        /** @description UUID of the target notification. */
+        NotificationIdParam: string;
     };
     requestBodies: never;
     headers: never;
@@ -1256,6 +1346,84 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
+            };
+        };
+    };
+    listNotifications: {
+        parameters: {
+            query?: {
+                /** @description Scope to a user: returns their personal notifications plus broadcasts. Omit to return all notifications.
+                 *      */
+                recipientId?: string;
+                /** @description Return only unread notifications. */
+                unreadOnly?: boolean;
+                page?: components["parameters"]["PageParam"];
+                size?: components["parameters"]["SizeParam"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Page of notifications */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotificationListResponse"];
+                };
+            };
+        };
+    };
+    markNotificationRead: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description UUID of the target notification. */
+                notificationId: components["parameters"]["NotificationIdParam"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Notification marked as read */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Notification not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    markAllNotificationsRead: {
+        parameters: {
+            query?: {
+                /** @description Scope to a user: marks their personal notifications plus broadcasts. Omit to mark all notifications.
+                 *      */
+                recipientId?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Notifications marked as read */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };

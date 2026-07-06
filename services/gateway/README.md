@@ -6,11 +6,14 @@ OpenAPI exploration uses the standalone **swagger-ui** service (`api/openapi.yam
 
 ## Implemented routes
 
-| Route                                 | Action                                        |
-| ------------------------------------- | --------------------------------------------- |
-| `GET /api/v1/health`                  | Gateway liveness (local)                      |
-| `POST /api/v1/incidents/{id}/genai/*` | Proxy to `incident-service` regen endpoints   |
-| `GET/POST/PATCH /api/v1/incidents*`   | Proxy to `incident-service` incident REST API |
+| Route                                 | Action                                                |
+| ------------------------------------- | ----------------------------------------------------- |
+| `GET /api/v1/health`                  | Gateway liveness (local)                              |
+| `POST /api/v1/incidents/{id}/genai/*` | Proxy to `incident-service` regen endpoints           |
+| `GET/POST/PATCH /api/v1/incidents*`   | Proxy to `incident-service` incident REST API         |
+| `POST /api/v1/auth/*`                 | Proxy to `user-service` (forwards session cookie)     |
+| `GET /api/v1/users*`                  | Proxy to `user-service` (forwards session cookie)     |
+| `GET/POST /api/v1/notifications*`     | Proxy to `notification-service` notification REST API |
 
 GenAI compute runs via NATS (`genai-service`); Ollama reachability is checked on that service (`/api/v1/genai/ollama/health`), not exposed on the gateway.
 
@@ -20,9 +23,11 @@ Ingress (and local compose `edge` on port 8080) sends traffic with prefix `/api`
 
 Downstream base URLs are required (`@NotBlank` on `GatewayProperties`). Local defaults live in `application.properties`; compose and Helm set `GATEWAY_*` env vars for deployed environments.
 
-| Property / env                                                  | Local default (`application.properties`) |
-| --------------------------------------------------------------- | ---------------------------------------- |
-| `gateway.incident-service-url` / `GATEWAY_INCIDENT_SERVICE_URL` | `http://localhost:8081`                  |
+| Property / env                                                          | Local default (`application.properties`) |
+| ----------------------------------------------------------------------- | ---------------------------------------- |
+| `gateway.incident-service-url` / `GATEWAY_INCIDENT_SERVICE_URL`         | `http://localhost:8081`                  |
+| `gateway.user-service-url` / `GATEWAY_USER_SERVICE_URL`                 | `http://localhost:8084`                  |
+| `gateway.notification-service-url` / `GATEWAY_NOTIFICATION_SERVICE_URL` | `http://localhost:8085`                  |
 
 ## Local development
 
@@ -37,7 +42,7 @@ With compose (`pixi run compose-up`), use the `edge` proxy on port **8080** (`/a
 
 ## Not yet implemented
 
-- JWT cookie validation and `X-User-Id` / `X-User-Role` injection
+- JWT cookie validation and `X-User-Id` / `X-User-Role` injection (notifications identity scoping depends on this)
 - NATS → SSE fan-out to browsers
-- Routes for user-service and event-service
+- Routes for event-service
 - Genai write-back `PATCH .../genai/*/result` (cluster-internal; gateway returns 403)
