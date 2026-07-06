@@ -15,6 +15,8 @@ pixi run install   # npm install (run once, or after deps change)
 | ----------------------- | ----------------------- | ------------------------------------------------------------------------ |
 | `pixi run dev`          | `vite`                  | Dev server on :3000, hot reload, in-file mock data (`VITE_MOCK=true`)    |
 | `pixi run dev-mock-api` | `vite --mode mock-api`  | Dev server on :3000 against the Prism mock server on :4010               |
+| `pixi run build`        | `tsc -b && vite build`  | Type-checks and builds `dist/`                                           |
+| `pixi run test`         | `vitest run`            | Runs the unit test suite (used by the `frontend-tests` CI workflow)      |
 | `pixi run prod`         | `vite build && preview` | Builds `dist/` and serves it on :3000 (no hot reload, `VITE_MOCK=false`) |
 
 `dev-mock-api` needs the Prism mock server running first, in a separate terminal from the repo root:
