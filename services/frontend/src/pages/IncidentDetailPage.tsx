@@ -38,10 +38,11 @@ type AiField = "summary" | "severitySuggestion" | "solutions" | "postmortem";
 // explicit Regenerate clicks (a field counts as generating until its value
 // changes or REGEN_WATCH_MS passes), and backend auto-generation (creation
 // fills summary/severity/solutions, resolution fills the postmortem), which is
-// inferred from a still-null field close to its trigger timestamp. While
-// anything is generating, the incident is polled so results appear without a
-// manual refresh. Lives at page level (not in the AI tab) because Radix
-// unmounts inactive tab content, which would drop the state and the polling.
+// inferred from a still-null field close to its trigger timestamp. Results
+// arrive via the SSE stream (useIncidentStream in AppShell); the interval
+// re-render only makes the time-window checks expire when no result ever
+// arrives. Lives at page level (not in the AI tab) because Radix unmounts
+// inactive tab content, which would drop the regen state.
 function useGenaiProgress(incidentId: string, incident: Incident | undefined) {
   const mutations = {
     summary: useRegenerateSummary(incidentId),
@@ -69,7 +70,6 @@ function useGenaiProgress(incidentId: string, incident: Incident | undefined) {
   };
   const anyGenerating = Object.values(generating).some(Boolean);
 
-  useIncident(incidentId, anyGenerating ? 3_000 : undefined);
   useIntervalRerender(anyGenerating);
 
   const regenerate = (field: AiField) => {
