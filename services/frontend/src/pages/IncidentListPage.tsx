@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Plus, Search, RefreshCw } from "lucide-react";
+import { Plus, Search, RefreshCw, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -12,6 +12,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Label } from "@/components/ui/label";
 import { useIncidents, useCreateIncident, type Incident, type IncidentStatus, type Severity } from "@/api/queries";
 import { formatRelativeTime } from "@/lib/utils";
+import { isAutoGenerating, useIntervalRerender } from "@/lib/genai";
 
 
 function CreateIncidentDialog() {
@@ -95,6 +96,13 @@ export default function IncidentListPage() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<IncidentStatus | "all">("all");
   const [severityFilter, setSeverityFilter] = useState<Severity | "all">("all");
+
+  // Freshly created incidents get their AI summary asynchronously; the SSE
+  // stream (useIncidentStream in AppShell) refetches the list when it lands.
+  // While a row still waits, tick so the "generating" window check expires
+  // even if no result ever arrives.
+  const summaryGenerating = (incidents ?? []).some((inc) => isAutoGenerating(inc.createdAt, inc.summary));
+  useIntervalRerender(summaryGenerating);
 
   const rows = (incidents ?? []).filter((inc) => {
     const matchesSearch = inc.title.toLowerCase().includes(search.toLowerCase());
@@ -182,7 +190,14 @@ export default function IncidentListPage() {
                       <Link to={`/incidents/${incident.id}`} className="font-medium" onClick={(e) => e.stopPropagation()}>
                         {incident.title}
                       </Link>
-                      {incident.description && <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{incident.description}</p>}
+                      {incident.summary ? (
+                        <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{incident.summary}</p>
+                      ) : isAutoGenerating(incident.createdAt, incident.summary) ? (
+                        <p className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1.5">
+                          <Loader2 className="h-3 w-3 animate-spin shrink-0" />
+                          <span className="italic">Generating AI summary…</span>
+                        </p>
+                      ) : null}
                     </TableCell>
                     <TableCell>
                       <SeverityBadge severity={incident.severity} />

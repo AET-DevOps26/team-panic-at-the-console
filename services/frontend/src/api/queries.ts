@@ -30,6 +30,9 @@ const MOCK_INCIDENTS: Incident[] = [
     severity: "SEV1",
     createdAt: new Date(Date.now() - 3 * 3600_000).toISOString(),
     resolvedAt: null,
+    summary: "Checkout API error rate spiked to 5% after deploy v2.4.1; payment-service latency is the suspected driver.",
+    severitySuggestion: "SEV1: Checkout is revenue-critical and error rate exceeds the 5% SLO.",
+    solutions: "Roll back deploy v2.4.1\nScale payment-service replicas\nEnable checkout circuit breaker",
   },
   {
     id: "018e2c5f-1234-7abc-8def-000000000002",

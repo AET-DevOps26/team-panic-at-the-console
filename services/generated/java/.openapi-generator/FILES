@@ -3,6 +3,7 @@ src/main/java/org/openapitools/api/AuthApi.java
 src/main/java/org/openapitools/api/GenaiApi.java
 src/main/java/org/openapitools/api/HealthApi.java
 src/main/java/org/openapitools/api/IncidentsApi.java
+src/main/java/org/openapitools/api/NotificationsApi.java
 src/main/java/org/openapitools/api/UsersApi.java
 src/main/java/org/openapitools/model/AssignIncidentRequest.java
 src/main/java/org/openapitools/model/Comment.java
@@ -17,6 +18,9 @@ src/main/java/org/openapitools/model/IncidentEvent.java
 src/main/java/org/openapitools/model/IncidentListResponse.java
 src/main/java/org/openapitools/model/IncidentStatus.java
 src/main/java/org/openapitools/model/LoginRequest.java
+src/main/java/org/openapitools/model/Notification.java
+src/main/java/org/openapitools/model/NotificationListResponse.java
+src/main/java/org/openapitools/model/NotificationType.java
 src/main/java/org/openapitools/model/PostmortemResponse.java
 src/main/java/org/openapitools/model/RegenAccepted.java
 src/main/java/org/openapitools/model/RegisterRequest.java

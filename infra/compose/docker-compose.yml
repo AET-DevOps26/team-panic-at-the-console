@@ -94,6 +94,8 @@ services:
       dockerfile: gateway/Dockerfile
     environment:
       GATEWAY_INCIDENT_SERVICE_URL: http://incident-service:8081
+      GATEWAY_USER_SERVICE_URL: http://user-service:8084
+      GATEWAY_NOTIFICATION_SERVICE_URL: http://notification-service:8085
       NATS_URL: ${NATS_URL:-nats://nats:4222}
     healthcheck:
       <<: *healthcheck-spring
@@ -188,8 +190,8 @@ services:
   notification-service:
     image: ghcr.io/aet-devops26/team-panic-at-the-console/notification-service:${IMAGE_TAG:-latest}
     build:
-      context: ./services/notification-service
-      dockerfile: Dockerfile
+      context: ./services
+      dockerfile: notification-service/Dockerfile
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/notifications
       SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-devops}

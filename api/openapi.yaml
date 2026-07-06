@@ -24,6 +24,8 @@ tags:
     description: |
       User profiles and directory (user-service). Runtime auth uses the `session` cookie or gateway-injected
       `X-User-Id` / `X-User-Role`; OpenAPI marks operations `security: []` for codegen only.
+  - name: notifications
+    description: In-app notifications for incident events (notification-service).
 
 servers:
   - url: http://localhost:4010
@@ -543,6 +545,73 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  /notifications:
+    get:
+      operationId: listNotifications
+      summary: List notifications, newest first
+      tags: [notifications]
+      security: []
+      parameters:
+        - name: recipientId
+          in: query
+          required: false
+          description: >
+            Scope to a user: returns their personal notifications plus broadcasts.
+            Omit to return all notifications.
+          schema:
+            type: string
+            format: uuid
+        - name: unreadOnly
+          in: query
+          required: false
+          description: Return only unread notifications.
+          schema:
+            type: boolean
+            default: false
+        - $ref: "#/components/parameters/PageParam"
+        - $ref: "#/components/parameters/SizeParam"
+      responses:
+        "200":
+          description: Page of notifications
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotificationListResponse"
+
+  /notifications/{notificationId}/read:
+    post:
+      operationId: markNotificationRead
+      summary: Mark a single notification as read
+      tags: [notifications]
+      security: []
+      parameters:
+        - $ref: "#/components/parameters/NotificationIdParam"
+      responses:
+        "204":
+          description: Notification marked as read
+        "404":
+          description: Notification not found
+
+  /notifications/read-all:
+    post:
+      operationId: markAllNotificationsRead
+      summary: Mark all visible notifications as read
+      tags: [notifications]
+      security: []
+      parameters:
+        - name: recipientId
+          in: query
+          required: false
+          description: >
+            Scope to a user: marks their personal notifications plus broadcasts.
+            Omit to mark all notifications.
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "204":
+          description: Notifications marked as read
+
 components:
   parameters:
     UserListLimitParam:
@@ -594,6 +663,16 @@ components:
         type: string
         format: uuid
         example: 018e2c5f-1234-7abc-8def-000000000001
+
+    NotificationIdParam:
+      name: notificationId
+      in: path
+      required: true
+      description: UUID of the target notification.
+      schema:
+        type: string
+        format: uuid
+        example: 018e2c5f-1234-7abc-8def-0000000000c1
 
   responses:
     RegenAccepted:
@@ -761,6 +840,18 @@ components:
         resolvedAt:
           type: [string, "null"]
           format: date-time
+        summary:
+          type: [string, "null"]
+          description: AI-generated narrative summary. Regenerable on demand.
+        severitySuggestion:
+          type: [string, "null"]
+          description: 'AI-suggested severity with reasoning, formatted as "SEV<n>: <reason>".'
+        solutions:
+          type: [string, "null"]
+          description: AI-suggested remediation steps, one per line.
+        postmortem:
+          type: [string, "null"]
+          description: AI-drafted postmortem. Only set for resolved incidents.
 
     IncidentEvent:
       type: object
@@ -1011,3 +1102,63 @@ components:
           example:
             - Add pool-size validation to deploy checklist
             - Alert on checkout latency SLO burn
+
+    NotificationType:
+      type: string
+      description: Category of a notification, derived from the incident event that produced it.
+      enum: [INCIDENT_CREATED, SEVERITY_ESCALATED, INCIDENT_RESOLVED, COMMENT_ADDED, INCIDENT_ASSIGNED]
+
+    Notification:
+      type: object
+      description: An in-app notification about an incident event.
+      required: [id, incidentId, type, message, read, createdAt]
+      additionalProperties: false
+      properties:
+        id:
+          type: string
+          format: uuid
+        incidentId:
+          type: string
+          format: uuid
+        type:
+          $ref: "#/components/schemas/NotificationType"
+        recipientId:
+          type: [string, "null"]
+          format: uuid
+          description: Target user for a personal notification; null for a broadcast visible to everyone.
+        message:
+          type: string
+          example: You were assigned to an incident.
+        read:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+
+    NotificationListResponse:
+      type: object
+      required: [items, total, page, size, unreadCount]
+      additionalProperties: false
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/Notification"
+        total:
+          type: integer
+          minimum: 0
+          example: 3
+        page:
+          type: integer
+          minimum: 0
+          example: 0
+        size:
+          type: integer
+          minimum: 1
+          maximum: 100
+          example: 50
+        unreadCount:
+          type: integer
+          minimum: 0
+          description: Number of unread notifications in the same scope as this query.
+          example: 2
