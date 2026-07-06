@@ -128,6 +128,21 @@ class IncidentsControllerIntegrationTest {
         }
 
         @Test
+        void createIncident_persistsProvidedDescription() {
+                ResponseEntity<Map> response = rest.postForEntity(
+                                incidentUrl("/incidents"),
+                                Map.of(
+                                                "title", "New issue",
+                                                "severity", "SEV3",
+                                                "description", "Orders table partially indexed"),
+                                Map.class);
+
+                assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+                assertThat(response.getBody())
+                                .containsEntry("description", "Orders table partially indexed");
+        }
+
+        @Test
         void listIncidents_filtersByStatusAndSeverity() {
                 ResponseEntity<Map> response = rest.getForEntity(
                                 incidentUrl("/incidents?status=open&severity=SEV2"),
@@ -150,6 +165,28 @@ class IncidentsControllerIntegrationTest {
 
                 assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
                 assertThat(response.getBody()).containsEntry("status", "investigating");
+        }
+
+        @Test
+        void updateIncidentDescription_setsAndClearsDescription() {
+                ResponseEntity<Map> setResponse = rest.exchange(
+                                incidentUrl("/incidents/" + INCIDENT_ID + "/description"),
+                                HttpMethod.PATCH,
+                                new HttpEntity<>(Map.of("description", "Rollback of v2.4.1 in progress")),
+                                Map.class);
+
+                assertThat(setResponse.getStatusCode()).isEqualTo(HttpStatus.OK);
+                assertThat(setResponse.getBody())
+                                .containsEntry("description", "Rollback of v2.4.1 in progress");
+
+                ResponseEntity<Map> clearResponse = rest.exchange(
+                                incidentUrl("/incidents/" + INCIDENT_ID + "/description"),
+                                HttpMethod.PATCH,
+                                new HttpEntity<>(Map.of("description", "")),
+                                Map.class);
+
+                assertThat(clearResponse.getStatusCode()).isEqualTo(HttpStatus.OK);
+                assertThat(incidentService.getIncident(INCIDENT_ID).getDescription()).isNull();
         }
 
         @Test

@@ -21,6 +21,7 @@ from .severity import Severity
 from .severity_response import SeverityResponse
 from .solutions_response import SolutionsResponse
 from .summary_response import SummaryResponse
+from .update_description_request import UpdateDescriptionRequest
 from .update_status_request import UpdateStatusRequest
 from .user import User
 from .user_list_response import UserListResponse
@@ -48,6 +49,7 @@ __all__ = (
     "SeverityResponse",
     "SolutionsResponse",
     "SummaryResponse",
+    "UpdateDescriptionRequest",
     "UpdateStatusRequest",
     "User",
     "UserListResponse",

@@ -56,6 +56,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/incidents/{incidentId}/description": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Edit the incident description
+         * @description Set or clear the human-written incident description.
+         */
+        patch: operations["updateIncidentDescription"];
+        trace?: never;
+    };
     "/incidents/{incidentId}/status": {
         parameters: {
             query?: never;
@@ -494,7 +514,14 @@ export interface components {
         CreateIncidentRequest: {
             /** @example Database migration rollback needed */
             title: string;
+            /** @example Migration 2026_07_01 left the orders table partially indexed. */
+            description?: string;
             severity: components["schemas"]["Severity"];
+        };
+        /** @description Request to set or clear the incident description. An empty string clears it. */
+        UpdateDescriptionRequest: {
+            /** @example Checkout error rate crossed 5% after deploy v2.4.1. */
+            description: string;
         };
         /** @description Request to update incident status. */
         UpdateStatusRequest: {
@@ -762,6 +789,50 @@ export interface operations {
                 };
                 content?: never;
             };
+        };
+    };
+    updateIncidentDescription: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description UUID of the target incident. */
+                incidentId: components["parameters"]["IncidentIdParam"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateDescriptionRequest"];
+            };
+        };
+        responses: {
+            /** @description Description updated */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Incident"];
+                };
+            };
+            /** @description Invalid request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not authenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            404: components["responses"]["IncidentNotFound"];
         };
     };
     updateIncidentStatus: {

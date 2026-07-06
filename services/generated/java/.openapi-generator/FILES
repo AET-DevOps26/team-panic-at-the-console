@@ -24,6 +24,7 @@ src/main/java/org/openapitools/model/Severity.java
 src/main/java/org/openapitools/model/SeverityResponse.java
 src/main/java/org/openapitools/model/SolutionsResponse.java
 src/main/java/org/openapitools/model/SummaryResponse.java
+src/main/java/org/openapitools/model/UpdateDescriptionRequest.java
 src/main/java/org/openapitools/model/UpdateStatusRequest.java
 src/main/java/org/openapitools/model/User.java
 src/main/java/org/openapitools/model/UserListResponse.java

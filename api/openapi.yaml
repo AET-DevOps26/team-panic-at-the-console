@@ -132,6 +132,39 @@ paths:
         "404":
           description: Incident not found
 
+  /incidents/{incidentId}/description:
+    patch:
+      operationId: updateIncidentDescription
+      summary: Edit the incident description
+      description: Set or clear the human-written incident description.
+      tags: [incidents]
+      security: []
+      parameters:
+        - $ref: "#/components/parameters/IncidentIdParam"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateDescriptionRequest"
+      responses:
+        "200":
+          description: Description updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Incident"
+        "400":
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Not authenticated
+        "404":
+          $ref: "#/components/responses/IncidentNotFound"
+
   /incidents/{incidentId}/status:
     patch:
       operationId: updateIncidentStatus
@@ -815,8 +848,23 @@ components:
           minLength: 1
           maxLength: 500
           example: Database migration rollback needed
+        description:
+          type: string
+          maxLength: 4000
+          example: Migration 2026_07_01 left the orders table partially indexed.
         severity:
           $ref: "#/components/schemas/Severity"
+
+    UpdateDescriptionRequest:
+      type: object
+      description: Request to set or clear the incident description. An empty string clears it.
+      required: [description]
+      additionalProperties: false
+      properties:
+        description:
+          type: string
+          maxLength: 4000
+          example: Checkout error rate crossed 5% after deploy v2.4.1.
 
     UpdateStatusRequest:
       type: object

@@ -13,6 +13,7 @@ import org.openapitools.model.CreateIncidentRequest;
 import org.openapitools.model.EscalateSeverityRequest;
 import org.openapitools.model.IncidentEvent;
 import org.openapitools.model.IncidentListResponse;
+import org.openapitools.model.UpdateDescriptionRequest;
 import org.openapitools.model.UpdateStatusRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -36,7 +37,7 @@ class IncidentsController implements IncidentsApi {
         UUID incidentId = UUID.randomUUID();
         Severity severity = Severity.valueOf(createIncidentRequest.getSeverity().getValue());
         Incident incident = incidentService.createIncident(incidentId, severity, createIncidentRequest.getTitle(),
-                null);
+                createIncidentRequest.getDescription(), null);
         return ResponseEntity.status(HttpStatus.CREATED).body(IncidentMapper.toApi(incident));
     }
 
@@ -71,6 +72,13 @@ class IncidentsController implements IncidentsApi {
     @Override
     public ResponseEntity<List<IncidentEvent>> listIncidentEvents(UUID incidentId) {
         return ResponseEntity.ok(incidentService.listIncidentEvents(incidentId));
+    }
+
+    @Override
+    public ResponseEntity<org.openapitools.model.Incident> updateIncidentDescription(UUID incidentId,
+            UpdateDescriptionRequest updateDescriptionRequest) {
+        Incident incident = incidentService.updateDescription(incidentId, updateDescriptionRequest.getDescription());
+        return ResponseEntity.ok(IncidentMapper.toApi(incident));
     }
 
     @Override
