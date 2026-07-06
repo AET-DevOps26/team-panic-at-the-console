@@ -37,6 +37,8 @@ jobs:
           - service: frontend
             build_context: ./services
             build_dockerfile: ./services/frontend/Dockerfile
+            # Shown as "build <sha>" in the UI sidebar footer.
+            build_args: VITE_COMMIT_SHA=${{ github.sha }}
           - service: gateway
             build_context: ./services
             build_dockerfile: ./services/gateway/Dockerfile
@@ -82,6 +84,7 @@ jobs:
         with:
           context: ${{ matrix.build_context || format('./services/{0}', matrix.service) }}
           file: ${{ matrix.build_dockerfile || format('./services/{0}/Dockerfile', matrix.service) }}
+          build-args: ${{ matrix.build_args || '' }}
           push: ${{ inputs.push }}
           tags: |
             ghcr.io/${{ steps.repo.outputs.lower }}/${{ matrix.service }}:${{ inputs.primary_tag }}

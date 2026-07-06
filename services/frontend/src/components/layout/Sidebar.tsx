@@ -1,5 +1,6 @@
-import { NavLink } from "react-router-dom";
-import { AlertTriangle, Settings, Webhook, LayoutDashboard, LogOut } from "lucide-react";
+import { Link, NavLink } from "react-router-dom";
+import { AlertTriangle, ExternalLink, Settings, Webhook, LayoutDashboard, LogOut } from "lucide-react";
+import { appConfig } from "@/lib/appConfig";
 import { cn } from "@/lib/utils";
 import { Separator } from "@/components/ui/separator";
 
@@ -14,7 +15,7 @@ export default function Sidebar() {
   return (
     <aside className="flex h-full w-60 flex-col bg-slate-900 text-slate-100">
       {/* Brand */}
-      <div className="flex items-center gap-2.5 px-5 py-4 border-b border-slate-700">
+      <Link to="/" className="flex items-center gap-2.5 px-5 py-4 border-b border-slate-700 transition-colors hover:bg-slate-800">
         <div className="flex h-8 w-8 items-center justify-center rounded-md bg-red-600">
           <LayoutDashboard className="h-4 w-4 text-white" />
         </div>
@@ -22,7 +23,7 @@ export default function Sidebar() {
           <p className="text-sm font-semibold leading-tight">Incident Platform</p>
           <p className="text-xs text-slate-400 leading-tight">Operations</p>
         </div>
-      </div>
+      </Link>
 
       {/* Navigation */}
       <nav className="flex-1 px-3 py-4 space-y-1">
@@ -58,6 +59,41 @@ export default function Sidebar() {
           <LogOut className="h-4 w-4" />
           Sign out
         </button>
+      </div>
+
+      {/* Deployment info */}
+      <div className="px-6 pb-3 space-y-1 text-xs text-slate-500">
+        {(appConfig.prometheusUrl || appConfig.grafanaUrl) && (
+          <div className="flex items-center gap-3">
+            {appConfig.prometheusUrl && (
+              <a href={appConfig.prometheusUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 transition-colors hover:text-slate-300">
+                Prometheus
+                <ExternalLink className="h-3 w-3" />
+              </a>
+            )}
+            {appConfig.grafanaUrl && (
+              <a href={appConfig.grafanaUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 transition-colors hover:text-slate-300">
+                Grafana
+                <ExternalLink className="h-3 w-3" />
+              </a>
+            )}
+          </div>
+        )}
+        {appConfig.commitUrl ? (
+          <a
+            href={appConfig.commitUrl}
+            target="_blank"
+            rel="noreferrer"
+            className="font-mono transition-colors hover:text-slate-300"
+            title={`View commit ${appConfig.commitSha} on GitHub`}
+          >
+            build {appConfig.commitSha.slice(0, 7)}
+          </a>
+        ) : (
+          <p className="font-mono" title={`Deployed from commit ${appConfig.commitSha}`}>
+            build {appConfig.commitSha.slice(0, 7)}
+          </p>
+        )}
       </div>
     </aside>
   );

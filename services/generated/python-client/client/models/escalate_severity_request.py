@@ -12,7 +12,7 @@ T = TypeVar("T", bound="EscalateSeverityRequest")
 
 @_attrs_define
 class EscalateSeverityRequest:
-    """Request to escalate severity (only higher severities allowed).
+    """Request to set incident severity (any level, higher or lower).
 
     Attributes:
         severity (Severity): Incident severity. SEV1 is highest impact.

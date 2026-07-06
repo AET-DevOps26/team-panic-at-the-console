@@ -18,10 +18,10 @@ import java.util.*;
 import jakarta.annotation.Generated;
 
 /**
- * Request to escalate severity (only higher severities allowed).
+ * Request to set incident severity (any level, higher or lower).
  */
 
-@Schema(name = "EscalateSeverityRequest", description = "Request to escalate severity (only higher severities allowed).")
+@Schema(name = "EscalateSeverityRequest", description = "Request to set incident severity (any level, higher or lower).")
 @Generated(value = "org.openapitools.codegen.languages.SpringCodegen", comments = "Generator version: 7.14.0")
 public class EscalateSeverityRequest {
 

@@ -70,6 +70,13 @@ services:
     port: 3000
     image:
       repository: frontend
+    # Sidebar footer links to the monitoring stack. Unset values hide the links.
+    # Set to the shared cluster Prometheus/Grafana URLs for this deploy, e.g.:
+    # env:
+    #   - name: GRAFANA_URL
+    #     value: https://<shared-grafana-host>
+    #   - name: PROMETHEUS_URL
+    #     value: https://<shared-prometheus-host>
 
   gateway:
     enabled: true

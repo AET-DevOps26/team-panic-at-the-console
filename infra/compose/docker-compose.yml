@@ -83,6 +83,14 @@ services:
     build:
       context: ./services
       dockerfile: frontend/Dockerfile
+      args:
+        # CI builds pass the real commit; local source builds show "dev".
+        VITE_COMMIT_SHA: ${GIT_SHA:-dev}
+    environment:
+      # Sidebar footer links. ":port" resolves against the host the browser
+      # used to reach the frontend, so it works for localhost and a VM alike.
+      GRAFANA_URL: ${GRAFANA_URL:-:3030}
+      PROMETHEUS_URL: ${PROMETHEUS_URL:-:9090}
     ports:
       - "3000:3000"
     restart: unless-stopped

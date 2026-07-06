@@ -91,7 +91,8 @@ export interface paths {
         head?: never;
         /**
          * Transition incident status
-         * @description Allowed transitions: open → investigating, investigating → resolved.
+         * @description Any transition between distinct statuses is allowed (including reopening
+         *     a resolved incident, which clears resolvedAt).
          *     Requires RESPONDER or COMMANDER role.
          *
          */
@@ -112,8 +113,8 @@ export interface paths {
         options?: never;
         head?: never;
         /**
-         * Manually escalate incident severity
-         * @description Requires COMMANDER role.
+         * Manually set incident severity
+         * @description Sets the severity to any level (raise or lower). Requires COMMANDER role.
          */
         patch: operations["escalateIncidentSeverity"];
         trace?: never;
@@ -512,12 +513,32 @@ export interface components {
             resolvedAt?: string | null;
             /** @description AI-generated narrative summary. Regenerable on demand. */
             summary?: string | null;
+            /**
+             * Format: date-time
+             * @description When the AI summary was last generated.
+             */
+            summaryGeneratedAt?: string | null;
             /** @description AI-suggested severity with reasoning, formatted as "SEV<n>: <reason>". */
             severitySuggestion?: string | null;
+            /**
+             * Format: date-time
+             * @description When the AI severity suggestion was last generated.
+             */
+            severitySuggestionGeneratedAt?: string | null;
             /** @description AI-suggested remediation steps, one per line. */
             solutions?: string | null;
+            /**
+             * Format: date-time
+             * @description When the AI solution suggestions were last generated.
+             */
+            solutionsGeneratedAt?: string | null;
             /** @description AI-drafted postmortem. Only set for resolved incidents. */
             postmortem?: string | null;
+            /**
+             * Format: date-time
+             * @description When the AI postmortem was last generated.
+             */
+            postmortemGeneratedAt?: string | null;
         };
         /** @description One entry from an incident's append-only Event Log. */
         IncidentEvent: {
@@ -586,7 +607,7 @@ export interface components {
         UpdateStatusRequest: {
             status: components["schemas"]["IncidentStatus"];
         };
-        /** @description Request to escalate severity (only higher severities allowed). */
+        /** @description Request to set incident severity (any level, higher or lower). */
         EscalateSeverityRequest: {
             severity: components["schemas"]["Severity"];
         };
@@ -1000,7 +1021,7 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Severity escalated */
+            /** @description Severity updated */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -1009,7 +1030,7 @@ export interface operations {
                     "application/json": components["schemas"]["Incident"];
                 };
             };
-            /** @description Invalid severity or downgrade attempted */
+            /** @description Invalid severity */
             400: {
                 headers: {
                     [name: string]: unknown;

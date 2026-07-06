@@ -155,7 +155,7 @@ public interface IncidentsApi {
         getRequest().ifPresent(request -> {
             for (MediaType mediaType: MediaType.parseMediaTypes(request.getHeader("Accept"))) {
                 if (mediaType.isCompatibleWith(MediaType.valueOf("application/json"))) {
-                    String exampleString = "{ \"severity\" : \"SEV1\", \"summary\" : \"summary\", \"createdAt\" : \"2000-01-23T04:56:07.000+00:00\", \"resolvedAt\" : \"2000-01-23T04:56:07.000+00:00\", \"postmortem\" : \"postmortem\", \"solutions\" : \"solutions\", \"description\" : \"description\", \"severitySuggestion\" : \"severitySuggestion\", \"id\" : \"046b6c7f-0b8a-43b9-b35d-6489e6daee91\", \"title\" : \"Checkout 5xx spike\", \"status\" : \"open\" }";
+                    String exampleString = "{ \"severity\" : \"SEV1\", \"summary\" : \"summary\", \"resolvedAt\" : \"2000-01-23T04:56:07.000+00:00\", \"solutions\" : \"solutions\", \"description\" : \"description\", \"severitySuggestion\" : \"severitySuggestion\", \"solutionsGeneratedAt\" : \"2000-01-23T04:56:07.000+00:00\", \"postmortemGeneratedAt\" : \"2000-01-23T04:56:07.000+00:00\", \"title\" : \"Checkout 5xx spike\", \"summaryGeneratedAt\" : \"2000-01-23T04:56:07.000+00:00\", \"severitySuggestionGeneratedAt\" : \"2000-01-23T04:56:07.000+00:00\", \"createdAt\" : \"2000-01-23T04:56:07.000+00:00\", \"postmortem\" : \"postmortem\", \"id\" : \"046b6c7f-0b8a-43b9-b35d-6489e6daee91\", \"status\" : \"open\" }";
                     ApiUtil.setExampleResponse(request, "application/json", exampleString);
                     break;
                 }
@@ -206,7 +206,7 @@ public interface IncidentsApi {
         getRequest().ifPresent(request -> {
             for (MediaType mediaType: MediaType.parseMediaTypes(request.getHeader("Accept"))) {
                 if (mediaType.isCompatibleWith(MediaType.valueOf("application/json"))) {
-                    String exampleString = "{ \"severity\" : \"SEV1\", \"summary\" : \"summary\", \"createdAt\" : \"2000-01-23T04:56:07.000+00:00\", \"resolvedAt\" : \"2000-01-23T04:56:07.000+00:00\", \"postmortem\" : \"postmortem\", \"solutions\" : \"solutions\", \"description\" : \"description\", \"severitySuggestion\" : \"severitySuggestion\", \"id\" : \"046b6c7f-0b8a-43b9-b35d-6489e6daee91\", \"title\" : \"Checkout 5xx spike\", \"status\" : \"open\" }";
+                    String exampleString = "{ \"severity\" : \"SEV1\", \"summary\" : \"summary\", \"resolvedAt\" : \"2000-01-23T04:56:07.000+00:00\", \"solutions\" : \"solutions\", \"description\" : \"description\", \"severitySuggestion\" : \"severitySuggestion\", \"solutionsGeneratedAt\" : \"2000-01-23T04:56:07.000+00:00\", \"postmortemGeneratedAt\" : \"2000-01-23T04:56:07.000+00:00\", \"title\" : \"Checkout 5xx spike\", \"summaryGeneratedAt\" : \"2000-01-23T04:56:07.000+00:00\", \"severitySuggestionGeneratedAt\" : \"2000-01-23T04:56:07.000+00:00\", \"createdAt\" : \"2000-01-23T04:56:07.000+00:00\", \"postmortem\" : \"postmortem\", \"id\" : \"046b6c7f-0b8a-43b9-b35d-6489e6daee91\", \"status\" : \"open\" }";
                     ApiUtil.setExampleResponse(request, "application/json", exampleString);
                     break;
                 }
@@ -223,27 +223,27 @@ public interface IncidentsApi {
 
 
     /**
-     * PATCH /incidents/{incidentId}/severity : Manually escalate incident severity
-     * Requires COMMANDER role.
+     * PATCH /incidents/{incidentId}/severity : Manually set incident severity
+     * Sets the severity to any level (raise or lower). Requires COMMANDER role.
      *
      * @param incidentId UUID of the target incident. (required)
      * @param escalateSeverityRequest  (required)
-     * @return Severity escalated (status code 200)
-     *         or Invalid severity or downgrade attempted (status code 400)
+     * @return Severity updated (status code 200)
+     *         or Invalid severity (status code 400)
      *         or Not authenticated (status code 401)
      *         or Insufficient permissions (status code 403)
      *         or No incident exists with the given ID (status code 404)
      */
     @Operation(
         operationId = "escalateIncidentSeverity",
-        summary = "Manually escalate incident severity",
-        description = "Requires COMMANDER role.",
+        summary = "Manually set incident severity",
+        description = "Sets the severity to any level (raise or lower). Requires COMMANDER role.",
         tags = { "incidents" },
         responses = {
-            @ApiResponse(responseCode = "200", description = "Severity escalated", content = {
+            @ApiResponse(responseCode = "200", description = "Severity updated", content = {
                 @Content(mediaType = "application/json", schema = @Schema(implementation = Incident.class))
             }),
-            @ApiResponse(responseCode = "400", description = "Invalid severity or downgrade attempted", content = {
+            @ApiResponse(responseCode = "400", description = "Invalid severity", content = {
                 @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))
             }),
             @ApiResponse(responseCode = "401", description = "Not authenticated"),
@@ -265,7 +265,7 @@ public interface IncidentsApi {
         getRequest().ifPresent(request -> {
             for (MediaType mediaType: MediaType.parseMediaTypes(request.getHeader("Accept"))) {
                 if (mediaType.isCompatibleWith(MediaType.valueOf("application/json"))) {
-                    String exampleString = "{ \"severity\" : \"SEV1\", \"summary\" : \"summary\", \"createdAt\" : \"2000-01-23T04:56:07.000+00:00\", \"resolvedAt\" : \"2000-01-23T04:56:07.000+00:00\", \"postmortem\" : \"postmortem\", \"solutions\" : \"solutions\", \"description\" : \"description\", \"severitySuggestion\" : \"severitySuggestion\", \"id\" : \"046b6c7f-0b8a-43b9-b35d-6489e6daee91\", \"title\" : \"Checkout 5xx spike\", \"status\" : \"open\" }";
+                    String exampleString = "{ \"severity\" : \"SEV1\", \"summary\" : \"summary\", \"resolvedAt\" : \"2000-01-23T04:56:07.000+00:00\", \"solutions\" : \"solutions\", \"description\" : \"description\", \"severitySuggestion\" : \"severitySuggestion\", \"solutionsGeneratedAt\" : \"2000-01-23T04:56:07.000+00:00\", \"postmortemGeneratedAt\" : \"2000-01-23T04:56:07.000+00:00\", \"title\" : \"Checkout 5xx spike\", \"summaryGeneratedAt\" : \"2000-01-23T04:56:07.000+00:00\", \"severitySuggestionGeneratedAt\" : \"2000-01-23T04:56:07.000+00:00\", \"createdAt\" : \"2000-01-23T04:56:07.000+00:00\", \"postmortem\" : \"postmortem\", \"id\" : \"046b6c7f-0b8a-43b9-b35d-6489e6daee91\", \"status\" : \"open\" }";
                     ApiUtil.setExampleResponse(request, "application/json", exampleString);
                     break;
                 }
@@ -311,7 +311,7 @@ public interface IncidentsApi {
         getRequest().ifPresent(request -> {
             for (MediaType mediaType: MediaType.parseMediaTypes(request.getHeader("Accept"))) {
                 if (mediaType.isCompatibleWith(MediaType.valueOf("application/json"))) {
-                    String exampleString = "{ \"severity\" : \"SEV1\", \"summary\" : \"summary\", \"createdAt\" : \"2000-01-23T04:56:07.000+00:00\", \"resolvedAt\" : \"2000-01-23T04:56:07.000+00:00\", \"postmortem\" : \"postmortem\", \"solutions\" : \"solutions\", \"description\" : \"description\", \"severitySuggestion\" : \"severitySuggestion\", \"id\" : \"046b6c7f-0b8a-43b9-b35d-6489e6daee91\", \"title\" : \"Checkout 5xx spike\", \"status\" : \"open\" }";
+                    String exampleString = "{ \"severity\" : \"SEV1\", \"summary\" : \"summary\", \"resolvedAt\" : \"2000-01-23T04:56:07.000+00:00\", \"solutions\" : \"solutions\", \"description\" : \"description\", \"severitySuggestion\" : \"severitySuggestion\", \"solutionsGeneratedAt\" : \"2000-01-23T04:56:07.000+00:00\", \"postmortemGeneratedAt\" : \"2000-01-23T04:56:07.000+00:00\", \"title\" : \"Checkout 5xx spike\", \"summaryGeneratedAt\" : \"2000-01-23T04:56:07.000+00:00\", \"severitySuggestionGeneratedAt\" : \"2000-01-23T04:56:07.000+00:00\", \"createdAt\" : \"2000-01-23T04:56:07.000+00:00\", \"postmortem\" : \"postmortem\", \"id\" : \"046b6c7f-0b8a-43b9-b35d-6489e6daee91\", \"status\" : \"open\" }";
                     ApiUtil.setExampleResponse(request, "application/json", exampleString);
                     break;
                 }
@@ -446,7 +446,7 @@ public interface IncidentsApi {
         getRequest().ifPresent(request -> {
             for (MediaType mediaType: MediaType.parseMediaTypes(request.getHeader("Accept"))) {
                 if (mediaType.isCompatibleWith(MediaType.valueOf("application/json"))) {
-                    String exampleString = "{ \"total\" : 5, \"size\" : 50, \"page\" : 0, \"items\" : [ { \"severity\" : \"SEV1\", \"summary\" : \"summary\", \"createdAt\" : \"2000-01-23T04:56:07.000+00:00\", \"resolvedAt\" : \"2000-01-23T04:56:07.000+00:00\", \"postmortem\" : \"postmortem\", \"solutions\" : \"solutions\", \"description\" : \"description\", \"severitySuggestion\" : \"severitySuggestion\", \"id\" : \"046b6c7f-0b8a-43b9-b35d-6489e6daee91\", \"title\" : \"Checkout 5xx spike\", \"status\" : \"open\" }, { \"severity\" : \"SEV1\", \"summary\" : \"summary\", \"createdAt\" : \"2000-01-23T04:56:07.000+00:00\", \"resolvedAt\" : \"2000-01-23T04:56:07.000+00:00\", \"postmortem\" : \"postmortem\", \"solutions\" : \"solutions\", \"description\" : \"description\", \"severitySuggestion\" : \"severitySuggestion\", \"id\" : \"046b6c7f-0b8a-43b9-b35d-6489e6daee91\", \"title\" : \"Checkout 5xx spike\", \"status\" : \"open\" } ] }";
+                    String exampleString = "{ \"total\" : 5, \"size\" : 50, \"page\" : 0, \"items\" : [ { \"severity\" : \"SEV1\", \"summary\" : \"summary\", \"resolvedAt\" : \"2000-01-23T04:56:07.000+00:00\", \"solutions\" : \"solutions\", \"description\" : \"description\", \"severitySuggestion\" : \"severitySuggestion\", \"solutionsGeneratedAt\" : \"2000-01-23T04:56:07.000+00:00\", \"postmortemGeneratedAt\" : \"2000-01-23T04:56:07.000+00:00\", \"title\" : \"Checkout 5xx spike\", \"summaryGeneratedAt\" : \"2000-01-23T04:56:07.000+00:00\", \"severitySuggestionGeneratedAt\" : \"2000-01-23T04:56:07.000+00:00\", \"createdAt\" : \"2000-01-23T04:56:07.000+00:00\", \"postmortem\" : \"postmortem\", \"id\" : \"046b6c7f-0b8a-43b9-b35d-6489e6daee91\", \"status\" : \"open\" }, { \"severity\" : \"SEV1\", \"summary\" : \"summary\", \"resolvedAt\" : \"2000-01-23T04:56:07.000+00:00\", \"solutions\" : \"solutions\", \"description\" : \"description\", \"severitySuggestion\" : \"severitySuggestion\", \"solutionsGeneratedAt\" : \"2000-01-23T04:56:07.000+00:00\", \"postmortemGeneratedAt\" : \"2000-01-23T04:56:07.000+00:00\", \"title\" : \"Checkout 5xx spike\", \"summaryGeneratedAt\" : \"2000-01-23T04:56:07.000+00:00\", \"severitySuggestionGeneratedAt\" : \"2000-01-23T04:56:07.000+00:00\", \"createdAt\" : \"2000-01-23T04:56:07.000+00:00\", \"postmortem\" : \"postmortem\", \"id\" : \"046b6c7f-0b8a-43b9-b35d-6489e6daee91\", \"status\" : \"open\" } ] }";
                     ApiUtil.setExampleResponse(request, "application/json", exampleString);
                     break;
                 }
@@ -498,7 +498,7 @@ public interface IncidentsApi {
         getRequest().ifPresent(request -> {
             for (MediaType mediaType: MediaType.parseMediaTypes(request.getHeader("Accept"))) {
                 if (mediaType.isCompatibleWith(MediaType.valueOf("application/json"))) {
-                    String exampleString = "{ \"severity\" : \"SEV1\", \"summary\" : \"summary\", \"createdAt\" : \"2000-01-23T04:56:07.000+00:00\", \"resolvedAt\" : \"2000-01-23T04:56:07.000+00:00\", \"postmortem\" : \"postmortem\", \"solutions\" : \"solutions\", \"description\" : \"description\", \"severitySuggestion\" : \"severitySuggestion\", \"id\" : \"046b6c7f-0b8a-43b9-b35d-6489e6daee91\", \"title\" : \"Checkout 5xx spike\", \"status\" : \"open\" }";
+                    String exampleString = "{ \"severity\" : \"SEV1\", \"summary\" : \"summary\", \"resolvedAt\" : \"2000-01-23T04:56:07.000+00:00\", \"solutions\" : \"solutions\", \"description\" : \"description\", \"severitySuggestion\" : \"severitySuggestion\", \"solutionsGeneratedAt\" : \"2000-01-23T04:56:07.000+00:00\", \"postmortemGeneratedAt\" : \"2000-01-23T04:56:07.000+00:00\", \"title\" : \"Checkout 5xx spike\", \"summaryGeneratedAt\" : \"2000-01-23T04:56:07.000+00:00\", \"severitySuggestionGeneratedAt\" : \"2000-01-23T04:56:07.000+00:00\", \"createdAt\" : \"2000-01-23T04:56:07.000+00:00\", \"postmortem\" : \"postmortem\", \"id\" : \"046b6c7f-0b8a-43b9-b35d-6489e6daee91\", \"status\" : \"open\" }";
                     ApiUtil.setExampleResponse(request, "application/json", exampleString);
                     break;
                 }
@@ -516,7 +516,7 @@ public interface IncidentsApi {
 
     /**
      * PATCH /incidents/{incidentId}/status : Transition incident status
-     * Allowed transitions: open → investigating, investigating → resolved. Requires RESPONDER or COMMANDER role.
+     * Any transition between distinct statuses is allowed (including reopening a resolved incident, which clears resolvedAt). Requires RESPONDER or COMMANDER role.
      *
      * @param incidentId UUID of the target incident. (required)
      * @param updateStatusRequest  (required)
@@ -529,7 +529,7 @@ public interface IncidentsApi {
     @Operation(
         operationId = "updateIncidentStatus",
         summary = "Transition incident status",
-        description = "Allowed transitions: open → investigating, investigating → resolved. Requires RESPONDER or COMMANDER role. ",
+        description = "Any transition between distinct statuses is allowed (including reopening a resolved incident, which clears resolvedAt). Requires RESPONDER or COMMANDER role. ",
         tags = { "incidents" },
         responses = {
             @ApiResponse(responseCode = "200", description = "Status updated", content = {
@@ -557,7 +557,7 @@ public interface IncidentsApi {
         getRequest().ifPresent(request -> {
             for (MediaType mediaType: MediaType.parseMediaTypes(request.getHeader("Accept"))) {
                 if (mediaType.isCompatibleWith(MediaType.valueOf("application/json"))) {
-                    String exampleString = "{ \"severity\" : \"SEV1\", \"summary\" : \"summary\", \"createdAt\" : \"2000-01-23T04:56:07.000+00:00\", \"resolvedAt\" : \"2000-01-23T04:56:07.000+00:00\", \"postmortem\" : \"postmortem\", \"solutions\" : \"solutions\", \"description\" : \"description\", \"severitySuggestion\" : \"severitySuggestion\", \"id\" : \"046b6c7f-0b8a-43b9-b35d-6489e6daee91\", \"title\" : \"Checkout 5xx spike\", \"status\" : \"open\" }";
+                    String exampleString = "{ \"severity\" : \"SEV1\", \"summary\" : \"summary\", \"resolvedAt\" : \"2000-01-23T04:56:07.000+00:00\", \"solutions\" : \"solutions\", \"description\" : \"description\", \"severitySuggestion\" : \"severitySuggestion\", \"solutionsGeneratedAt\" : \"2000-01-23T04:56:07.000+00:00\", \"postmortemGeneratedAt\" : \"2000-01-23T04:56:07.000+00:00\", \"title\" : \"Checkout 5xx spike\", \"summaryGeneratedAt\" : \"2000-01-23T04:56:07.000+00:00\", \"severitySuggestionGeneratedAt\" : \"2000-01-23T04:56:07.000+00:00\", \"createdAt\" : \"2000-01-23T04:56:07.000+00:00\", \"postmortem\" : \"postmortem\", \"id\" : \"046b6c7f-0b8a-43b9-b35d-6489e6daee91\", \"status\" : \"open\" }";
                     ApiUtil.setExampleResponse(request, "application/json", exampleString);
                     break;
                 }

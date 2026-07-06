@@ -1,19 +1,22 @@
 import { useParams, Link } from "react-router-dom";
 import { useState } from "react";
-import { ArrowLeft, RefreshCw, Clock, Loader2, MessageSquare, Zap } from "lucide-react";
+import { ArrowLeft, RefreshCw, Clock, Loader2, MessageSquare, AlertTriangle, Zap } from "lucide-react";
 import { EditableDescription } from "@/components/incident/EditableDescription";
+import { Markdown } from "@/components/Markdown";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { SeverityBadge, StatusBadge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import type React from "react";
-import { useIncident, useIncidentEvents, useComments, useAddComment, useRegeneratePostmortem, useRegenerateSeverity, useRegenerateSolutions, useRegenerateSummary, type Incident, type IncidentEvent, type Comment } from "@/api/queries";
+import NotFoundPage from "@/pages/NotFoundPage";
+import { isNotFound, useIncident, useIncidentEvents, useComments, useAddComment, useRegeneratePostmortem, useRegenerateSeverity, useRegenerateSolutions, useRegenerateSummary, useSetIncidentSeverity, useUpdateIncidentStatus, type Incident, type IncidentEvent, type IncidentStatus, type Severity, type Comment } from "@/api/queries";
 import { cn, formatDateTime, formatRelativeTime } from "@/lib/utils";
-import { isAutoGenerating, useIntervalRerender, REGEN_WATCH_MS } from "@/lib/genai";
+import { isAutoGenerating, solutionsToMarkdown, useIntervalRerender, REGEN_WATCH_MS } from "@/lib/genai";
 
 
 function TimelineItem({ event }: { event: IncidentEvent }) {
@@ -81,15 +84,22 @@ function useGenaiProgress(incidentId: string, incident: Incident | undefined) {
   return { generating, anyGenerating, regenerate };
 }
 
-function AiPanel({ title, onRegenerate, generating, children }: { title: string; onRegenerate: () => void; generating: boolean; children: React.ReactNode }) {
+function AiPanel({ title, onRegenerate, generating, generatedAt, children }: { title: string; onRegenerate: () => void; generating: boolean; generatedAt?: string | null; children: React.ReactNode }) {
   return (
     <div className="rounded-lg border p-4 space-y-2">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-2">
         <p className="text-sm font-medium">{title}</p>
-        <Button variant="ghost" size="sm" onClick={onRegenerate} disabled={generating}>
-          {generating ? <Loader2 className="h-3 w-3 animate-spin" /> : <RefreshCw className="h-3 w-3" />}
-          <span className="ml-1 text-xs">{generating ? "Generating…" : "Regenerate"}</span>
-        </Button>
+        <div className="flex items-center gap-2">
+          {generatedAt && (
+            <span className="text-xs text-muted-foreground/70" title={formatDateTime(generatedAt)}>
+              Updated {formatRelativeTime(generatedAt)}
+            </span>
+          )}
+          <Button variant="ghost" size="sm" onClick={onRegenerate} disabled={generating}>
+            {generating ? <Loader2 className="h-3 w-3 animate-spin" /> : <RefreshCw className="h-3 w-3" />}
+            <span className="ml-1 text-xs">{generating ? "Generating…" : "Regenerate"}</span>
+          </Button>
+        </div>
       </div>
       {children}
     </div>
@@ -106,13 +116,13 @@ function GeneratingIndicator({ label }: { label: string }) {
 }
 
 function AiSection({ incident, generating, onRegenerate }: { incident: Incident; generating: Record<AiField, boolean>; onRegenerate: (field: AiField) => void }) {
-  const solutionItems = incident.solutions?.split("\n").filter(Boolean) ?? [];
+  const solutionsMarkdown = incident.solutions ? solutionsToMarkdown(incident.solutions) : "";
 
   return (
     <div className="space-y-4">
-      <AiPanel title="Summary" onRegenerate={() => onRegenerate("summary")} generating={generating.summary}>
+      <AiPanel title="Summary" onRegenerate={() => onRegenerate("summary")} generating={generating.summary} generatedAt={incident.summaryGeneratedAt}>
         {incident.summary ? (
-          <p className={cn("text-sm whitespace-pre-line", generating.summary && "opacity-50")}>{incident.summary}</p>
+          <Markdown className={cn(generating.summary && "opacity-50")}>{incident.summary}</Markdown>
         ) : generating.summary ? (
           <GeneratingIndicator label="Generating summary…" />
         ) : (
@@ -120,9 +130,9 @@ function AiSection({ incident, generating, onRegenerate }: { incident: Incident;
         )}
       </AiPanel>
 
-      <AiPanel title="Severity suggestion" onRegenerate={() => onRegenerate("severitySuggestion")} generating={generating.severitySuggestion}>
+      <AiPanel title="Severity suggestion" onRegenerate={() => onRegenerate("severitySuggestion")} generating={generating.severitySuggestion} generatedAt={incident.severitySuggestionGeneratedAt}>
         {incident.severitySuggestion ? (
-          <p className={cn("text-sm whitespace-pre-line", generating.severitySuggestion && "opacity-50")}>{incident.severitySuggestion}</p>
+          <Markdown className={cn(generating.severitySuggestion && "opacity-50")}>{incident.severitySuggestion}</Markdown>
         ) : generating.severitySuggestion ? (
           <GeneratingIndicator label="Generating suggestion…" />
         ) : (
@@ -130,13 +140,9 @@ function AiSection({ incident, generating, onRegenerate }: { incident: Incident;
         )}
       </AiPanel>
 
-      <AiPanel title="Solution suggestions" onRegenerate={() => onRegenerate("solutions")} generating={generating.solutions}>
-        {solutionItems.length > 0 ? (
-          <ul className={cn("list-disc pl-5 space-y-1", generating.solutions && "opacity-50")}>
-            {solutionItems.map((item, i) => (
-              <li key={i} className="text-sm">{item}</li>
-            ))}
-          </ul>
+      <AiPanel title="Solution suggestions" onRegenerate={() => onRegenerate("solutions")} generating={generating.solutions} generatedAt={incident.solutionsGeneratedAt}>
+        {solutionsMarkdown ? (
+          <Markdown className={cn(generating.solutions && "opacity-50")}>{solutionsMarkdown}</Markdown>
         ) : generating.solutions ? (
           <GeneratingIndicator label="Generating suggestions…" />
         ) : (
@@ -145,9 +151,9 @@ function AiSection({ incident, generating, onRegenerate }: { incident: Incident;
       </AiPanel>
 
       {incident.status === "resolved" && (
-        <AiPanel title="Postmortem draft" onRegenerate={() => onRegenerate("postmortem")} generating={generating.postmortem}>
+        <AiPanel title="Postmortem draft" onRegenerate={() => onRegenerate("postmortem")} generating={generating.postmortem} generatedAt={incident.postmortemGeneratedAt}>
           {incident.postmortem ? (
-            <p className={cn("text-sm whitespace-pre-line", generating.postmortem && "opacity-50")}>{incident.postmortem}</p>
+            <Markdown className={cn(generating.postmortem && "opacity-50")}>{incident.postmortem}</Markdown>
           ) : generating.postmortem ? (
             <GeneratingIndicator label="Generating postmortem…" />
           ) : (
@@ -159,16 +165,71 @@ function AiSection({ incident, generating, onRegenerate }: { incident: Incident;
   );
 }
 
+const STATUS_OPTIONS: { value: IncidentStatus; label: string }[] = [
+  { value: "open", label: "Open" },
+  { value: "investigating", label: "Investigating" },
+  { value: "resolved", label: "Resolved" },
+];
+
+const SEVERITY_OPTIONS: Severity[] = ["SEV1", "SEV2", "SEV3", "SEV4"];
+
+function ActionsCard({ incident }: { incident: Incident }) {
+  const updateStatus = useUpdateIncidentStatus(incident.id);
+  const setSeverity = useSetIncidentSeverity(incident.id);
+
+  return (
+    <Card>
+      <CardHeader className="pb-3">
+        <CardTitle className="text-base">Actions</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        <div className="space-y-1.5">
+          <Label htmlFor="incident-status">Status</Label>
+          <Select value={incident.status} onValueChange={(value) => value !== incident.status && updateStatus.mutate({ status: value as IncidentStatus })} disabled={updateStatus.isPending}>
+            <SelectTrigger id="incident-status" className="h-9">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {STATUS_OPTIONS.map(({ value, label }) => (
+                <SelectItem key={value} value={value}>
+                  {label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {updateStatus.isError && <p className="text-xs text-red-600">Failed to update status. Please try again.</p>}
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="incident-severity">Severity</Label>
+          <Select value={incident.severity} onValueChange={(value) => value !== incident.severity && setSeverity.mutate({ severity: value as Severity })} disabled={setSeverity.isPending}>
+            <SelectTrigger id="incident-severity" className="h-9">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {SEVERITY_OPTIONS.map((sev) => (
+                <SelectItem key={sev} value={sev}>
+                  {sev}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {setSeverity.isError && <p className="text-xs text-red-600">Failed to update severity. Please try again.</p>}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 export default function IncidentDetailPage() {
   const { id } = useParams<{ id: string }>();
-  const { data: incident, isLoading } = useIncident(id ?? "");
+  const { data: incident, isLoading, isError, error, refetch } = useIncident(id ?? "");
   const { data: events, isLoading: eventsLoading } = useIncidentEvents(id ?? "");
   const { data: comments, isLoading: commentsLoading } = useComments(id ?? "");
   const addComment = useAddComment(id ?? "");
   const [commentText, setCommentText] = useState("");
   const genai = useGenaiProgress(id ?? "", incident);
 
-  if (isLoading || !incident) {
+  if (isLoading) {
     return (
       <div className="p-6 space-y-4">
         <Skeleton className="h-8 w-64" />
@@ -182,6 +243,22 @@ export default function IncidentDetailPage() {
             <Skeleton className="h-32 w-full" />
           </div>
         </div>
+      </div>
+    );
+  }
+
+  if (isError || !incident) {
+    if (isNotFound(error)) {
+      return <NotFoundPage className="min-h-full" title="Incident not found" description="No incident with this ID exists. It may have been deleted." />;
+    }
+    return (
+      <div className="flex min-h-full flex-col items-center justify-center gap-4 p-6 text-center">
+        <AlertTriangle className="h-10 w-10 text-muted-foreground/40" />
+        <h1 className="text-xl font-semibold">Failed to load incident</h1>
+        <p className="text-sm text-muted-foreground">Something went wrong while fetching this incident. Check your connection and try again.</p>
+        <Button variant="outline" onClick={() => void refetch()}>
+          Try again
+        </Button>
       </div>
     );
   }
@@ -351,19 +428,7 @@ export default function IncidentDetailPage() {
               </CardContent>
             </Card>
 
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-base">Actions</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                <Button variant="outline" size="sm" className="w-full justify-start">
-                  Update status
-                </Button>
-                <Button variant="outline" size="sm" className="w-full justify-start">
-                  Escalate severity
-                </Button>
-              </CardContent>
-            </Card>
+            <ActionsCard incident={incident} />
           </div>
         </div>
       </div>

@@ -83,14 +83,14 @@ def sync_detailed(
     client: AuthenticatedClient | Client,
     body: EscalateSeverityRequest,
 ) -> Response[Any | ErrorResponse | Incident]:
-    """Manually escalate incident severity
+    """Manually set incident severity
 
-     Requires COMMANDER role.
+     Sets the severity to any level (raise or lower). Requires COMMANDER role.
 
     Args:
         incident_id (UUID):  Example: 018e2c5f-1234-7abc-8def-000000000001.
-        body (EscalateSeverityRequest): Request to escalate severity (only higher severities
-            allowed).
+        body (EscalateSeverityRequest): Request to set incident severity (any level, higher or
+            lower).
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -118,14 +118,14 @@ def sync(
     client: AuthenticatedClient | Client,
     body: EscalateSeverityRequest,
 ) -> Any | ErrorResponse | Incident | None:
-    """Manually escalate incident severity
+    """Manually set incident severity
 
-     Requires COMMANDER role.
+     Sets the severity to any level (raise or lower). Requires COMMANDER role.
 
     Args:
         incident_id (UUID):  Example: 018e2c5f-1234-7abc-8def-000000000001.
-        body (EscalateSeverityRequest): Request to escalate severity (only higher severities
-            allowed).
+        body (EscalateSeverityRequest): Request to set incident severity (any level, higher or
+            lower).
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -148,14 +148,14 @@ async def asyncio_detailed(
     client: AuthenticatedClient | Client,
     body: EscalateSeverityRequest,
 ) -> Response[Any | ErrorResponse | Incident]:
-    """Manually escalate incident severity
+    """Manually set incident severity
 
-     Requires COMMANDER role.
+     Sets the severity to any level (raise or lower). Requires COMMANDER role.
 
     Args:
         incident_id (UUID):  Example: 018e2c5f-1234-7abc-8def-000000000001.
-        body (EscalateSeverityRequest): Request to escalate severity (only higher severities
-            allowed).
+        body (EscalateSeverityRequest): Request to set incident severity (any level, higher or
+            lower).
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -181,14 +181,14 @@ async def asyncio(
     client: AuthenticatedClient | Client,
     body: EscalateSeverityRequest,
 ) -> Any | ErrorResponse | Incident | None:
-    """Manually escalate incident severity
+    """Manually set incident severity
 
-     Requires COMMANDER role.
+     Sets the severity to any level (raise or lower). Requires COMMANDER role.
 
     Args:
         incident_id (UUID):  Example: 018e2c5f-1234-7abc-8def-000000000001.
-        body (EscalateSeverityRequest): Request to escalate severity (only higher severities
-            allowed).
+        body (EscalateSeverityRequest): Request to set incident severity (any level, higher or
+            lower).
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.

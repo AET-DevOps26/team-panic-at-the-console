@@ -151,20 +151,34 @@ class IncidentServiceTest {
     }
 
     @Test
-    void updateIncidentStatus_rejectsResolvedToInvestigating() {
+    void updateIncidentStatus_reopensResolvedIncidentAndClearsResolvedAt() {
         incident.setStatus(IncidentStatus.RESOLVED);
+        incident.setResolvedAt(java.time.Instant.now());
         when(incidentRepository.findById(incidentId)).thenReturn(Optional.of(incident));
+        when(incidentRepository.save(incident)).thenReturn(incident);
 
-        assertThatThrownBy(() -> incidentService.updateIncidentStatus(incidentId, IncidentStatus.INVESTIGATING))
-                .isInstanceOf(IllegalStateException.class)
-                .hasMessageContaining("Invalid status transition");
+        incidentService.updateIncidentStatus(incidentId, IncidentStatus.INVESTIGATING);
 
-        verify(applicationEventPublisher, never()).publishEvent(any());
+        assertThat(incident.getStatus()).isEqualTo(IncidentStatus.INVESTIGATING);
+        assertThat(incident.getResolvedAt()).isNull();
+        verify(applicationEventPublisher).publishEvent(any(IncidentNatsEvent.class));
     }
 
     @Test
-    void updateIncidentStatus_rejectsInvestigatingToOpen() {
+    void updateIncidentStatus_allowsInvestigatingToOpen() {
         incident.setStatus(IncidentStatus.INVESTIGATING);
+        when(incidentRepository.findById(incidentId)).thenReturn(Optional.of(incident));
+        when(incidentRepository.save(incident)).thenReturn(incident);
+
+        incidentService.updateIncidentStatus(incidentId, IncidentStatus.OPEN);
+
+        assertThat(incident.getStatus()).isEqualTo(IncidentStatus.OPEN);
+        verify(applicationEventPublisher).publishEvent(any(IncidentNatsEvent.class));
+    }
+
+    @Test
+    void updateIncidentStatus_rejectsSameStatusTransition() {
+        incident.setStatus(IncidentStatus.OPEN);
         when(incidentRepository.findById(incidentId)).thenReturn(Optional.of(incident));
 
         assertThatThrownBy(() -> incidentService.updateIncidentStatus(incidentId, IncidentStatus.OPEN))
