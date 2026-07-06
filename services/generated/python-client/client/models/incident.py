@@ -27,6 +27,10 @@ class Incident:
         created_at (datetime.datetime):
         description (None | str | Unset):
         resolved_at (datetime.datetime | None | Unset):
+        summary (None | str | Unset): AI-generated narrative summary. Regenerable on demand.
+        severity_suggestion (None | str | Unset): AI-suggested severity with reasoning, formatted as "SEV<n>: <reason>".
+        solutions (None | str | Unset): AI-suggested remediation steps, one per line.
+        postmortem (None | str | Unset): AI-drafted postmortem. Only set for resolved incidents.
     """
 
     id: UUID
@@ -36,6 +40,10 @@ class Incident:
     created_at: datetime.datetime
     description: None | str | Unset = UNSET
     resolved_at: datetime.datetime | None | Unset = UNSET
+    summary: None | str | Unset = UNSET
+    severity_suggestion: None | str | Unset = UNSET
+    solutions: None | str | Unset = UNSET
+    postmortem: None | str | Unset = UNSET
 
     def to_dict(self) -> dict[str, Any]:
         id = str(self.id)
@@ -62,6 +70,30 @@ class Incident:
         else:
             resolved_at = self.resolved_at
 
+        summary: None | str | Unset
+        if isinstance(self.summary, Unset):
+            summary = UNSET
+        else:
+            summary = self.summary
+
+        severity_suggestion: None | str | Unset
+        if isinstance(self.severity_suggestion, Unset):
+            severity_suggestion = UNSET
+        else:
+            severity_suggestion = self.severity_suggestion
+
+        solutions: None | str | Unset
+        if isinstance(self.solutions, Unset):
+            solutions = UNSET
+        else:
+            solutions = self.solutions
+
+        postmortem: None | str | Unset
+        if isinstance(self.postmortem, Unset):
+            postmortem = UNSET
+        else:
+            postmortem = self.postmortem
+
         field_dict: dict[str, Any] = {}
 
         field_dict.update(
@@ -77,6 +109,14 @@ class Incident:
             field_dict["description"] = description
         if resolved_at is not UNSET:
             field_dict["resolvedAt"] = resolved_at
+        if summary is not UNSET:
+            field_dict["summary"] = summary
+        if severity_suggestion is not UNSET:
+            field_dict["severitySuggestion"] = severity_suggestion
+        if solutions is not UNSET:
+            field_dict["solutions"] = solutions
+        if postmortem is not UNSET:
+            field_dict["postmortem"] = postmortem
 
         return field_dict
 
@@ -119,6 +159,42 @@ class Incident:
 
         resolved_at = _parse_resolved_at(d.pop("resolvedAt", UNSET))
 
+        def _parse_summary(data: object) -> None | str | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            return cast(None | str | Unset, data)
+
+        summary = _parse_summary(d.pop("summary", UNSET))
+
+        def _parse_severity_suggestion(data: object) -> None | str | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            return cast(None | str | Unset, data)
+
+        severity_suggestion = _parse_severity_suggestion(d.pop("severitySuggestion", UNSET))
+
+        def _parse_solutions(data: object) -> None | str | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            return cast(None | str | Unset, data)
+
+        solutions = _parse_solutions(d.pop("solutions", UNSET))
+
+        def _parse_postmortem(data: object) -> None | str | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            return cast(None | str | Unset, data)
+
+        postmortem = _parse_postmortem(d.pop("postmortem", UNSET))
+
         incident = cls(
             id=id,
             title=title,
@@ -127,6 +203,10 @@ class Incident:
             created_at=created_at,
             description=description,
             resolved_at=resolved_at,
+            summary=summary,
+            severity_suggestion=severity_suggestion,
+            solutions=solutions,
+            postmortem=postmortem,
         )
 
         return incident

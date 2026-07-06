@@ -9,8 +9,10 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import type React from "react";
 import { useIncident, useIncidentEvents, useComments, useAddComment, useRegeneratePostmortem, useRegenerateSeverity, useRegenerateSolutions, useRegenerateSummary, type Incident, type IncidentEvent, type Comment } from "@/api/queries";
-import { formatDateTime, formatRelativeTime } from "@/lib/utils";
+import { cn, formatDateTime, formatRelativeTime } from "@/lib/utils";
+import { isAutoGenerating, useIntervalRerender, REGEN_WATCH_MS } from "@/lib/genai";
 
 
 function TimelineItem({ event }: { event: IncidentEvent }) {
@@ -30,62 +32,127 @@ function TimelineItem({ event }: { event: IncidentEvent }) {
   );
 }
 
-function AiSection({ incidentId, status }: { incidentId: string; status: Incident["status"] }) {
-  const summary = useRegenerateSummary(incidentId);
-  const severity = useRegenerateSeverity(incidentId);
-  const solutions = useRegenerateSolutions(incidentId);
-  const postmortem = useRegeneratePostmortem(incidentId);
+type AiField = "summary" | "severitySuggestion" | "solutions" | "postmortem";
+
+// Tracks which AI fields are currently being generated. Two trigger paths:
+// explicit Regenerate clicks (a field counts as generating until its value
+// changes or REGEN_WATCH_MS passes), and backend auto-generation (creation
+// fills summary/severity/solutions, resolution fills the postmortem), which is
+// inferred from a still-null field close to its trigger timestamp. Results
+// arrive via the SSE stream (useIncidentStream in AppShell); the interval
+// re-render only makes the time-window checks expire when no result ever
+// arrives. Lives at page level (not in the AI tab) because Radix unmounts
+// inactive tab content, which would drop the regen state.
+function useGenaiProgress(incidentId: string, incident: Incident | undefined) {
+  const mutations = {
+    summary: useRegenerateSummary(incidentId),
+    severitySuggestion: useRegenerateSeverity(incidentId),
+    solutions: useRegenerateSolutions(incidentId),
+    postmortem: useRegeneratePostmortem(incidentId),
+  };
+
+  // Per-field value at request time + deadline for explicit regenerations.
+  const [regens, setRegens] = useState<Partial<Record<AiField, { prev: string | null; until: number }>>>({});
+
+  const now = Date.now();
+  const value = (field: AiField) => incident?.[field] ?? null;
+
+  const regenActive = (field: AiField) => {
+    const entry = regens[field];
+    return !!entry && !mutations[field].isError && now < entry.until && value(field) === entry.prev;
+  };
+
+  const generating: Record<AiField, boolean> = {
+    summary: regenActive("summary") || isAutoGenerating(incident?.createdAt, incident?.summary, now),
+    severitySuggestion: regenActive("severitySuggestion") || isAutoGenerating(incident?.createdAt, incident?.severitySuggestion, now),
+    solutions: regenActive("solutions") || isAutoGenerating(incident?.createdAt, incident?.solutions, now),
+    postmortem: regenActive("postmortem") || isAutoGenerating(incident?.resolvedAt, incident?.postmortem, now),
+  };
+  const anyGenerating = Object.values(generating).some(Boolean);
+
+  useIntervalRerender(anyGenerating);
+
+  const regenerate = (field: AiField) => {
+    setRegens((r) => ({ ...r, [field]: { prev: value(field), until: Date.now() + REGEN_WATCH_MS } }));
+    mutations[field].mutate();
+  };
+
+  return { generating, anyGenerating, regenerate };
+}
+
+function AiPanel({ title, onRegenerate, generating, children }: { title: string; onRegenerate: () => void; generating: boolean; children: React.ReactNode }) {
+  return (
+    <div className="rounded-lg border p-4 space-y-2">
+      <div className="flex items-center justify-between">
+        <p className="text-sm font-medium">{title}</p>
+        <Button variant="ghost" size="sm" onClick={onRegenerate} disabled={generating}>
+          {generating ? <Loader2 className="h-3 w-3 animate-spin" /> : <RefreshCw className="h-3 w-3" />}
+          <span className="ml-1 text-xs">{generating ? "Generating…" : "Regenerate"}</span>
+        </Button>
+      </div>
+      {children}
+    </div>
+  );
+}
+
+function GeneratingIndicator({ label }: { label: string }) {
+  return (
+    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+      <Loader2 className="h-3.5 w-3.5 animate-spin shrink-0" />
+      <span className="italic">{label}</span>
+    </div>
+  );
+}
+
+function AiSection({ incident, generating, onRegenerate }: { incident: Incident; generating: Record<AiField, boolean>; onRegenerate: (field: AiField) => void }) {
+  const solutionItems = incident.solutions?.split("\n").filter(Boolean) ?? [];
 
   return (
     <div className="space-y-4">
-      <div className="rounded-lg border p-4 space-y-2">
-        <div className="flex items-center justify-between">
-          <p className="text-sm font-medium">Summary</p>
-          <Button variant="ghost" size="sm" onClick={() => summary.mutate()} disabled={summary.isPending}>
-            {summary.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <RefreshCw className="h-3 w-3" />}
-            <span className="ml-1 text-xs">Regenerate</span>
-          </Button>
-        </div>
-        {summary.isSuccess ? (
-          <p className="text-xs text-muted-foreground">{summary.data?.task} task accepted</p>
+      <AiPanel title="Summary" onRegenerate={() => onRegenerate("summary")} generating={generating.summary}>
+        {incident.summary ? (
+          <p className={cn("text-sm whitespace-pre-line", generating.summary && "opacity-50")}>{incident.summary}</p>
+        ) : generating.summary ? (
+          <GeneratingIndicator label="Generating summary…" />
         ) : (
           <p className="text-sm text-muted-foreground italic">No summary yet. Click Regenerate to trigger AI analysis.</p>
         )}
-      </div>
+      </AiPanel>
 
-      <div className="rounded-lg border p-4 space-y-2">
-        <div className="flex items-center justify-between">
-          <p className="text-sm font-medium">Severity suggestion</p>
-          <Button variant="ghost" size="sm" onClick={() => severity.mutate()} disabled={severity.isPending}>
-            {severity.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <RefreshCw className="h-3 w-3" />}
-            <span className="ml-1 text-xs">Regenerate</span>
-          </Button>
-        </div>
-        <p className="text-sm text-muted-foreground italic">AI-suggested severity will appear here after generation.</p>
-      </div>
+      <AiPanel title="Severity suggestion" onRegenerate={() => onRegenerate("severitySuggestion")} generating={generating.severitySuggestion}>
+        {incident.severitySuggestion ? (
+          <p className={cn("text-sm whitespace-pre-line", generating.severitySuggestion && "opacity-50")}>{incident.severitySuggestion}</p>
+        ) : generating.severitySuggestion ? (
+          <GeneratingIndicator label="Generating suggestion…" />
+        ) : (
+          <p className="text-sm text-muted-foreground italic">AI-suggested severity will appear here after generation.</p>
+        )}
+      </AiPanel>
 
-      <div className="rounded-lg border p-4 space-y-2">
-        <div className="flex items-center justify-between">
-          <p className="text-sm font-medium">Solution suggestions</p>
-          <Button variant="ghost" size="sm" onClick={() => solutions.mutate()} disabled={solutions.isPending}>
-            {solutions.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <RefreshCw className="h-3 w-3" />}
-            <span className="ml-1 text-xs">Regenerate</span>
-          </Button>
-        </div>
-        <p className="text-sm text-muted-foreground italic">Remediation steps will appear here after generation.</p>
-      </div>
+      <AiPanel title="Solution suggestions" onRegenerate={() => onRegenerate("solutions")} generating={generating.solutions}>
+        {solutionItems.length > 0 ? (
+          <ul className={cn("list-disc pl-5 space-y-1", generating.solutions && "opacity-50")}>
+            {solutionItems.map((item, i) => (
+              <li key={i} className="text-sm">{item}</li>
+            ))}
+          </ul>
+        ) : generating.solutions ? (
+          <GeneratingIndicator label="Generating suggestions…" />
+        ) : (
+          <p className="text-sm text-muted-foreground italic">Remediation steps will appear here after generation.</p>
+        )}
+      </AiPanel>
 
-      {status === "resolved" && (
-        <div className="rounded-lg border p-4 space-y-2">
-          <div className="flex items-center justify-between">
-            <p className="text-sm font-medium">Postmortem draft</p>
-            <Button variant="ghost" size="sm" onClick={() => postmortem.mutate()} disabled={postmortem.isPending}>
-              {postmortem.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <RefreshCw className="h-3 w-3" />}
-              <span className="ml-1 text-xs">Regenerate</span>
-            </Button>
-          </div>
-          <p className="text-sm text-muted-foreground italic">Root cause, timeline, and action items will appear after generation.</p>
-        </div>
+      {incident.status === "resolved" && (
+        <AiPanel title="Postmortem draft" onRegenerate={() => onRegenerate("postmortem")} generating={generating.postmortem}>
+          {incident.postmortem ? (
+            <p className={cn("text-sm whitespace-pre-line", generating.postmortem && "opacity-50")}>{incident.postmortem}</p>
+          ) : generating.postmortem ? (
+            <GeneratingIndicator label="Generating postmortem…" />
+          ) : (
+            <p className="text-sm text-muted-foreground italic">Root cause, timeline, and action items will appear after generation.</p>
+          )}
+        </AiPanel>
       )}
     </div>
   );
@@ -98,6 +165,7 @@ export default function IncidentDetailPage() {
   const { data: comments, isLoading: commentsLoading } = useComments(id ?? "");
   const addComment = useAddComment(id ?? "");
   const [commentText, setCommentText] = useState("");
+  const genai = useGenaiProgress(id ?? "", incident);
 
   if (isLoading || !incident) {
     return (
@@ -159,7 +227,7 @@ export default function IncidentDetailPage() {
                   Comments
                 </TabsTrigger>
                 <TabsTrigger value="ai">
-                  <Zap className="h-3.5 w-3.5 mr-1.5" />
+                  {genai.anyGenerating ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Zap className="h-3.5 w-3.5 mr-1.5" />}
                   AI Insights
                 </TabsTrigger>
               </TabsList>
@@ -234,7 +302,7 @@ export default function IncidentDetailPage() {
               </TabsContent>
 
               <TabsContent value="ai" className="mt-4">
-                <AiSection incidentId={incident.id} status={incident.status} />
+                <AiSection incident={incident} generating={genai.generating} onRegenerate={genai.regenerate} />
               </TabsContent>
             </Tabs>
           </div>

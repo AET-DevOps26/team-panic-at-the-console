@@ -807,6 +807,18 @@ components:
         resolvedAt:
           type: [string, "null"]
           format: date-time
+        summary:
+          type: [string, "null"]
+          description: AI-generated narrative summary. Regenerable on demand.
+        severitySuggestion:
+          type: [string, "null"]
+          description: 'AI-suggested severity with reasoning, formatted as "SEV<n>: <reason>".'
+        solutions:
+          type: [string, "null"]
+          description: AI-suggested remediation steps, one per line.
+        postmortem:
+          type: [string, "null"]
+          description: AI-drafted postmortem. Only set for resolved incidents.
 
     IncidentEvent:
       type: object
