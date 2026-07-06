@@ -41,8 +41,6 @@ final class IncidentMapper {
             api.setResolvedAt(JsonNullable.of(
                     OffsetDateTime.ofInstant(incident.getResolvedAt(), ZoneOffset.UTC)));
         }
-        // Last on purpose: a user-written description wins over the summary
-        // fallback above until that fallback is removed.
         if (incident.getDescription() != null) {
             api.setDescription(JsonNullable.of(incident.getDescription()));
         }
