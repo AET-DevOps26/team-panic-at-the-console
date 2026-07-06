@@ -12,6 +12,7 @@ import jakarta.annotation.PreDestroy;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
@@ -47,8 +48,10 @@ public class IncidentStreamBroadcaster {
 
     private Dispatcher dispatcher;
 
-    IncidentStreamBroadcaster(Connection natsConnection) {
-        this.natsConnection = natsConnection;
+    // ObjectProvider: NatsConfiguration returns null when NATS is unreachable
+    // (degraded mode), and a null bean cannot satisfy a required constructor arg.
+    IncidentStreamBroadcaster(ObjectProvider<Connection> natsConnection) {
+        this.natsConnection = natsConnection.getIfAvailable();
     }
 
     @PostConstruct
