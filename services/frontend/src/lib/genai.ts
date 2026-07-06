@@ -8,8 +8,8 @@ import { useEffect, useState } from "react";
 // regular empty state instead of a spinner.
 export const AUTO_GENERATION_WINDOW_MS = 2 * 60_000;
 
-// How long to keep showing progress and polling after an explicit Regenerate
-// click before giving up on the result.
+// How long to keep showing progress after an explicit Regenerate click before
+// giving up on the result.
 export const REGEN_WATCH_MS = 60_000;
 
 export function isAutoGenerating(

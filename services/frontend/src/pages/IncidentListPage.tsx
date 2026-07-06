@@ -83,12 +83,11 @@ export default function IncidentListPage() {
   const [statusFilter, setStatusFilter] = useState<IncidentStatus | "all">("all");
   const [severityFilter, setSeverityFilter] = useState<Severity | "all">("all");
 
-  // Freshly created incidents get their AI summary asynchronously; while any row
-  // is still waiting for one, poll the list (second observer on the same query,
-  // since the interval depends on this render's data) and tick so the window check
-  // expires even if no new data arrives.
+  // Freshly created incidents get their AI summary asynchronously; the SSE
+  // stream (useIncidentStream in AppShell) refetches the list when it lands.
+  // While a row still waits, tick so the "generating" window check expires
+  // even if no result ever arrives.
   const summaryGenerating = (incidents ?? []).some((inc) => isAutoGenerating(inc.createdAt, inc.summary));
-  useIncidents(undefined, summaryGenerating ? 5_000 : undefined);
   useIntervalRerender(summaryGenerating);
 
   const rows = (incidents ?? []).filter((inc) => {

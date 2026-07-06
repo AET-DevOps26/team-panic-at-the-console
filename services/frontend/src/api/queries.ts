@@ -86,7 +86,7 @@ export function useHealth() {
 
 // ── Incidents ─────────────────────────────────────────────────────────────────
 
-export function useIncidents(params?: { status?: IncidentStatus; severity?: Severity }, refetchInterval?: number) {
+export function useIncidents(params?: { status?: IncidentStatus; severity?: Severity }) {
   return useQuery({
     queryKey: ["incidents", params],
     queryFn: async () => {
@@ -97,11 +97,10 @@ export function useIncidents(params?: { status?: IncidentStatus; severity?: Seve
       if (error || !data) throw new Error("Failed to fetch incidents");
       return data.items;
     },
-    refetchInterval,
   });
 }
 
-export function useIncident(id: string, refetchInterval?: number) {
+export function useIncident(id: string) {
   return useQuery({
     queryKey: ["incidents", id],
     queryFn: async () => {
@@ -113,7 +112,6 @@ export function useIncident(id: string, refetchInterval?: number) {
       return data;
     },
     enabled: Boolean(id),
-    refetchInterval,
   });
 }
 
