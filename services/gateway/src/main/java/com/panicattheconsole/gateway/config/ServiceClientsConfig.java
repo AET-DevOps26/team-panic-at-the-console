@@ -15,6 +15,11 @@ class ServiceClientsConfig {
     }
 
     @Bean
+    RestClient eventServiceClient(GatewayProperties properties) {
+        return RestClient.builder().baseUrl(properties.getEventServiceUrl()).build();
+    }
+
+    @Bean
     RestClient userServiceClient(GatewayProperties properties) {
         return RestClient.builder().baseUrl(properties.getUserServiceUrl()).build();
     }

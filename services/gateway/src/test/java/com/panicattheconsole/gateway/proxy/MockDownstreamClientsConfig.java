@@ -35,6 +35,23 @@ public class MockDownstreamClientsConfig {
     }
 
     @Bean
+    ClientPair eventClientPair(RestClient.Builder restClientBuilder) {
+        RestClient.Builder builder = restClientBuilder.clone().baseUrl("http://localhost:8082");
+        MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
+        return new ClientPair(builder.build(), server);
+    }
+
+    @Bean
+    RestClient eventServiceClient(ClientPair eventClientPair) {
+        return eventClientPair.client();
+    }
+
+    @Bean
+    MockRestServiceServer eventServer(ClientPair eventClientPair) {
+        return eventClientPair.server();
+    }
+
+    @Bean
     ClientPair userClientPair(RestClient.Builder restClientBuilder) {
         RestClient.Builder builder = restClientBuilder.clone().baseUrl("http://localhost:8084");
         MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();

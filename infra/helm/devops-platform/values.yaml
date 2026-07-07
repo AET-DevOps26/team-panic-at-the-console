@@ -89,6 +89,8 @@ services:
     env:
       - name: GATEWAY_INCIDENT_SERVICE_URL
         value: "http://incident-service:8081"
+      - name: GATEWAY_EVENT_SERVICE_URL
+        value: "http://event-service:8082"
       - name: GATEWAY_USER_SERVICE_URL
         value: "http://user-service:8084"
       - name: GATEWAY_NOTIFICATION_SERVICE_URL

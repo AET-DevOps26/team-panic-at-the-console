@@ -128,7 +128,21 @@ class IncidentServiceTest {
         incidentService.updateIncidentStatus(incidentId, IncidentStatus.INVESTIGATING);
 
         assertThat(incident.getStatus()).isEqualTo(IncidentStatus.INVESTIGATING);
-        verify(applicationEventPublisher).publishEvent(any(IncidentNatsEvent.class));
+
+        ArgumentCaptor<IncidentNatsEvent> eventCaptor = ArgumentCaptor.forClass(IncidentNatsEvent.class);
+        verify(applicationEventPublisher, times(2)).publishEvent(eventCaptor.capture());
+        List<String> subjects = eventCaptor.getAllValues().stream()
+                .map(IncidentNatsEvent::getSubject)
+                .toList();
+        assertThat(subjects).containsExactlyInAnyOrder("incident.updated", "incident.status.changed");
+
+        IncidentNatsEvent statusEvent = eventCaptor.getAllValues().stream()
+                .filter(e -> e.getSubject().equals("incident.status.changed"))
+                .findFirst()
+                .orElseThrow();
+        assertThat(statusEvent.getPayload())
+                .containsEntry("oldStatus", "open")
+                .containsEntry("newStatus", "investigating");
     }
 
     @Test
@@ -142,12 +156,13 @@ class IncidentServiceTest {
         assertThat(incident.getStatus()).isEqualTo(IncidentStatus.RESOLVED);
 
         ArgumentCaptor<IncidentNatsEvent> eventCaptor = ArgumentCaptor.forClass(IncidentNatsEvent.class);
-        verify(applicationEventPublisher, times(2)).publishEvent(eventCaptor.capture());
+        verify(applicationEventPublisher, times(3)).publishEvent(eventCaptor.capture());
         List<String> subjects = eventCaptor.getAllValues().stream()
                 .map(IncidentNatsEvent::getSubject)
                 .toList();
 
-        assertThat(subjects).containsExactlyInAnyOrder("incident.updated", "incident.resolved");
+        assertThat(subjects).containsExactlyInAnyOrder(
+                "incident.updated", "incident.status.changed", "incident.resolved");
     }
 
     @Test
@@ -161,7 +176,16 @@ class IncidentServiceTest {
 
         assertThat(incident.getStatus()).isEqualTo(IncidentStatus.INVESTIGATING);
         assertThat(incident.getResolvedAt()).isNull();
-        verify(applicationEventPublisher).publishEvent(any(IncidentNatsEvent.class));
+
+        ArgumentCaptor<IncidentNatsEvent> eventCaptor = ArgumentCaptor.forClass(IncidentNatsEvent.class);
+        verify(applicationEventPublisher, times(2)).publishEvent(eventCaptor.capture());
+        IncidentNatsEvent statusEvent = eventCaptor.getAllValues().stream()
+                .filter(e -> e.getSubject().equals("incident.status.changed"))
+                .findFirst()
+                .orElseThrow();
+        assertThat(statusEvent.getPayload())
+                .containsEntry("oldStatus", "resolved")
+                .containsEntry("newStatus", "investigating");
     }
 
     @Test
@@ -173,7 +197,7 @@ class IncidentServiceTest {
         incidentService.updateIncidentStatus(incidentId, IncidentStatus.OPEN);
 
         assertThat(incident.getStatus()).isEqualTo(IncidentStatus.OPEN);
-        verify(applicationEventPublisher).publishEvent(any(IncidentNatsEvent.class));
+        verify(applicationEventPublisher, times(2)).publishEvent(any(IncidentNatsEvent.class));
     }
 
     @Test
@@ -186,6 +210,53 @@ class IncidentServiceTest {
                 .hasMessageContaining("Invalid status transition");
 
         verify(applicationEventPublisher, never()).publishEvent(any());
+    }
+
+    @Test
+    void createIncident_publishesCreatedEventWithTitleAndSeverity() {
+        when(incidentRepository.save(any(Incident.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        incidentService.createIncident(incidentId, Severity.SEV2, "Test incident", null);
+
+        ArgumentCaptor<IncidentNatsEvent> captor = ArgumentCaptor.forClass(IncidentNatsEvent.class);
+        verify(applicationEventPublisher).publishEvent(captor.capture());
+        assertThat(captor.getValue().getSubject()).isEqualTo("incident.created");
+        assertThat(captor.getValue().getPayload())
+                .containsEntry("title", "Test incident")
+                .containsEntry("severity", "SEV2");
+    }
+
+    @Test
+    void escalateSeverity_publishesOldAndNewSeverity() {
+        when(incidentRepository.findById(incidentId)).thenReturn(Optional.of(incident));
+        when(incidentRepository.save(incident)).thenReturn(incident);
+
+        incidentService.escalateSeverity(incidentId, Severity.SEV1);
+
+        ArgumentCaptor<IncidentNatsEvent> captor = ArgumentCaptor.forClass(IncidentNatsEvent.class);
+        verify(applicationEventPublisher).publishEvent(captor.capture());
+        assertThat(captor.getValue().getSubject()).isEqualTo("incident.severity.escalated");
+        assertThat(captor.getValue().getPayload())
+                .containsEntry("oldSeverity", "SEV2")
+                .containsEntry("newSeverity", "SEV1");
+    }
+
+    @Test
+    void addComment_publishesCommentContent() {
+        UUID commentId = UUID.randomUUID();
+        when(incidentRepository.findById(incidentId)).thenReturn(Optional.of(incident));
+        when(commentRepository.save(any(Comment.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        incidentService.addComment(incidentId, commentId, UUID.randomUUID(), "Rolled back v2.4.1");
+
+        ArgumentCaptor<IncidentNatsEvent> captor = ArgumentCaptor.forClass(IncidentNatsEvent.class);
+        verify(applicationEventPublisher).publishEvent(captor.capture());
+        assertThat(captor.getValue().getSubject()).isEqualTo("incident.comment.added");
+        assertThat(captor.getValue().getPayload())
+                .containsEntry("commentId", commentId.toString())
+                .containsEntry("content", "Rolled back v2.4.1");
     }
 
     @Test

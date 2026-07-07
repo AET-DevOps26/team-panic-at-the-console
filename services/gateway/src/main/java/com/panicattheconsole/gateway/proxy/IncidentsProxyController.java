@@ -25,7 +25,8 @@ import org.springframework.web.client.RestClient;
 import org.springframework.web.util.UriComponentsBuilder;
 
 /**
- * Proxies public incident REST routes to incident-service.
+ * Proxies public incident REST routes to incident-service, except the timeline
+ * read, which event-service serves from its append-only Event Log.
  */
 @RestController
 class IncidentsProxyController implements IncidentsApi {
@@ -34,9 +35,13 @@ class IncidentsProxyController implements IncidentsApi {
             new ParameterizedTypeReference<>() {};
 
     private final RestClient incidentServiceClient;
+    private final RestClient eventServiceClient;
 
-    IncidentsProxyController(@Qualifier("incidentServiceClient") RestClient incidentServiceClient) {
+    IncidentsProxyController(
+            @Qualifier("incidentServiceClient") RestClient incidentServiceClient,
+            @Qualifier("eventServiceClient") RestClient eventServiceClient) {
         this.incidentServiceClient = incidentServiceClient;
+        this.eventServiceClient = eventServiceClient;
     }
 
     @Override
@@ -64,7 +69,7 @@ class IncidentsProxyController implements IncidentsApi {
     @Override
     public ResponseEntity<List<IncidentEvent>> listIncidentEvents(UUID incidentId) {
         return DownstreamProxy.get(
-                incidentServiceClient,
+                eventServiceClient,
                 "/incidents/{incidentId}/events",
                 INCIDENT_EVENTS,
                 incidentId);
