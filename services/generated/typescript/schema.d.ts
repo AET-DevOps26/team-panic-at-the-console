@@ -548,6 +548,11 @@ export interface components {
             type: string;
             /** @example status: open -> investigating */
             description: string;
+            /**
+             * @description New value after the change: the new status for status_changed entries and the new severity for severity_changed entries. Lets clients color-code timeline entries without parsing the description. Absent for other entry types and for events stored before this field existed.
+             * @example investigating
+             */
+            newValue?: string;
         };
         /**
          * @description Latest AI-generated narrative summary for an incident (returned by GET in a later release; used now as the structured LLM output contract).

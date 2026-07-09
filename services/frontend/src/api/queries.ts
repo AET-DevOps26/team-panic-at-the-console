@@ -43,7 +43,7 @@ const MOCK_INCIDENTS: Incident[] = [
     title: "Checkout service 5xx spike",
     description: "High error rate on checkout API after deploy v2.4.1. Payment service latency rose to 12% and checkout error rate crossed 5%.",
     status: "investigating",
-    severity: "SEV1",
+    severity: "SEV2",
     createdAt: new Date(Date.now() - 3 * 3600_000).toISOString(),
     resolvedAt: null,
     summary: "Checkout API error rate spiked to **5%** after deploy `v2.4.1`; payment-service latency is the suspected driver.",
@@ -84,7 +84,7 @@ const MOCK_INCIDENTS: Incident[] = [
 
 const MOCK_EVENTS: IncidentEvent[] = [
   { timestamp: new Date(Date.now() - 3 * 3600_000).toISOString(), type: "incident_created", description: "Incident created manually" },
-  { timestamp: new Date(Date.now() - 2.5 * 3600_000).toISOString(), type: "status_changed", description: "status: open → investigating" },
+  { timestamp: new Date(Date.now() - 2.5 * 3600_000).toISOString(), type: "status_changed", description: "status: open → investigating", newValue: "investigating" },
   { timestamp: new Date(Date.now() - 2 * 3600_000).toISOString(), type: "assigned", description: "Assigned to alice@example.com" },
   { timestamp: new Date(Date.now() - 1 * 3600_000).toISOString(), type: "comment_added", description: "Possible root cause: connection pool misconfiguration in v2.4.1" },
 ];
@@ -100,7 +100,8 @@ export function useHealth() {
       return data;
     },
     retry: false,
-    refetchInterval: 60_000,
+    // Recheck quickly while the gateway is down so recovery shows promptly.
+    refetchInterval: (query) => (query.state.status === "error" ? 15_000 : 30_000),
   });
 }
 
