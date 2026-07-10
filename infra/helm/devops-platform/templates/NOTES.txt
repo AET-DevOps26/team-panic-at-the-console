@@ -19,10 +19,12 @@ Swagger UI (OpenAPI):
 {{ end }}
 {{ if .Values.monitoring.enabled }}
 
-Observability (shared cluster prometheus-operator):
-  This release ships a PodMonitor, PrometheusRule, and a Grafana dashboard ConfigMap.
-  The cluster's Prometheus scrapes the PodMonitor; view metrics + the GenAI dashboard
-  in the cluster's shared Grafana.
+Observability:
+  Grafana:
+    http(s)://<ingress-address>{{ .Values.ingress.paths.grafana }}
+  Prometheus is cluster-internal at:
+    http://prometheus:9090
+  Grafana credentials use monitoring.grafana.adminUser/adminPassword.
 {{ end }}
 
 NATS (cluster-internal):

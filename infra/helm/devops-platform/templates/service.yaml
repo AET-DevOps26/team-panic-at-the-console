@@ -11,8 +11,15 @@ spec:
     app.kubernetes.io/name: {{ $name }}
   ports:
     - protocol: TCP
+      name: http
       port: {{ $svc.port }}
       targetPort: {{ $svc.port }}
+    {{- with $svc.metricsPort }}
+    - protocol: TCP
+      name: metrics
+      port: {{ . }}
+      targetPort: {{ . }}
+    {{- end }}
 ---
 {{- end }}
 {{- end }}

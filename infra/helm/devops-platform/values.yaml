@@ -2,6 +2,7 @@ global:
   image:
     registry: ghcr.io/aet-devops26/team-panic-at-the-console
     tag: latest
+    pullPolicy: Always
   namespace: default
   # Shared Ollama model tag: genai-service, init pull, and readiness probe.
   ollamaModel: &ollamaModel qwen2.5:3b
@@ -55,14 +56,45 @@ ingress:
     frontend: /
     api: /api
     swagger: /swagger
+    grafana: /grafana
 
-# Observability uses the shared cluster prometheus-operator (see templates/monitoring-*.yaml).
-# We only ship namespaced CRs (PodMonitor, PrometheusRule) and a Grafana dashboard
-# ConfigMap; the cluster operator scrapes them and the shared Grafana renders them.
-# We do not self-host kube-prometheus-stack: the deploy user is namespace-scoped and
-# cannot create the cluster-scoped resources (ClusterRoles, CRDs) it requires.
+# Observability mirrors team-password123's namespace-local setup: plain
+# Prometheus + Grafana resources, no kube-prometheus-stack, no CRDs, no
+# cluster-scoped RBAC. Grafana is exposed under /grafana.
 monitoring:
   enabled: true
+  operatorCrds:
+    # Optional compatibility mode for clusters that already run prometheus-operator.
+    # Keep false for Azure or any namespace-scoped deploy user.
+    enabled: false
+  prometheus:
+    image: prom/prometheus:v2.55.1
+    scrapeInterval: 15s
+    retention: 7d
+    persistence:
+      enabled: false
+      storageClass: ""
+      size: 2Gi
+    resources:
+      requests:
+        cpu: 50m
+        memory: 256Mi
+      limits:
+        cpu: 300m
+        memory: 512Mi
+  grafana:
+    image: grafana/grafana:11.4.0
+    adminUser: admin
+    # Override in encrypted deploy values. Kept as a dev default so chart
+    # rendering stays local-friendly.
+    adminPassword: admin
+    resources:
+      requests:
+        cpu: 50m
+        memory: 128Mi
+      limits:
+        cpu: 250m
+        memory: 256Mi
 
 services:
   frontend:
@@ -70,18 +102,17 @@ services:
     port: 3000
     image:
       repository: frontend
-    # Sidebar footer links to the monitoring stack. Unset values hide the links.
-    # Set to the shared cluster Prometheus/Grafana URLs for this deploy, e.g.:
-    # env:
-    #   - name: GRAFANA_URL
-    #     value: https://<shared-grafana-host>
-    #   - name: PROMETHEUS_URL
-    #     value: https://<shared-prometheus-host>
+    # Sidebar footer link to the namespace-local Grafana. Prometheus stays
+    # cluster-internal and is reached through Grafana.
+    env:
+      - name: GRAFANA_URL
+        value: /grafana
 
   gateway:
     enabled: true
     inheritGlobalEnv: true
     port: 8080
+    metricsPort: 8090
     probes: true
     healthPath: /api/v1/health
     image:
