@@ -63,7 +63,7 @@ An enumeration of what the `PromptBuilder` is asked to produce: `SUMMARY`, `SEVE
 
 **Data aggregation**: None needed. `incident-service` owns all incident data including AI results. Frontend makes a single REST call to get a complete incident view.
 
-**NATS event shape**: Events are thin by default — `{incidentId, timestamp}` only. Exceptions carry one additional identifier where a REST callback would be ambiguous: `incident.comment.added` adds `commentId`, `incident.assigned` adds `userId`, `incident.severity.escalated` adds `newSeverity`, `incident.regen.requested` adds `task` (which AI field to regenerate), rule-engine events add the minimal fields needed to act (`sourceId`, `severity`, `requestedSeverity`). Full schemas in `api/specs/nats/*.schema.json`.
+**NATS event shape**: Events are thin by default — `{incidentId, timestamp}` only. Exceptions carry the minimal extra fields a subscriber needs to act without a REST callback: `incident.created` adds `title` and `severity` (timeline rendering), `incident.status.changed` adds `oldStatus` and `newStatus` (the generic `incident.updated` cannot distinguish status changes from other updates), `incident.severity.escalated` adds `oldSeverity` and `newSeverity`, `incident.comment.added` adds `commentId` and `content` (comments are immutable, so the copy never goes stale), `incident.assigned` adds `userId`, `incident.regen.requested` adds `task` (which AI field to regenerate), rule-engine events add the minimal fields needed to act (`sourceId`, `severity`, `requestedSeverity`). Full schemas in `api/specs/nats/*.schema.json`.
 
 **`incident.create.requested` and incident title/description**: The schema carries only `{sourceId, severity, timestamp}`. `sourceId` references the External Event in webhook-service. `incident-service` must either: (a) call `GET /external-events/{sourceId}` on webhook-service to build a title (requires exposing that endpoint + `WEBHOOK_SERVICE_URL` env), or (b) auto-generate a title from the sourceId (e.g. `"Auto-created from external event {sourceId}"`). The genai-service will generate a Summary on `incident.created` regardless. Decision needed before implementing `incident-service`'s NATS consumer.
 
@@ -80,6 +80,7 @@ An enumeration of what the `PromptBuilder` is asked to produce: `SUMMARY`, `SEVE
 | ------------------ | --------------------------- | ------------------------------------------------------------------------------ |
 | `incident-service` | `incident.created`          | event-service, genai-service, notification-service, gateway (SSE)              |
 | `incident-service` | `incident.updated`          | event-service, gateway (SSE)                                                   |
+| `incident-service` | `incident.status.changed`   | event-service, gateway (SSE)                                                   |
 | `incident-service` | `incident.severity.escalated` | event-service, notification-service, gateway (SSE)                          |
 | `incident-service` | `incident.resolved`         | event-service, genai-service (postmortem), notification-service, gateway (SSE) |
 | `incident-service` | `incident.comment.added`    | event-service, notification-service                                            |

@@ -1,11 +1,14 @@
 {
   "$schema": "https://json-schema.org/draft-07/schema",
   "$id": "https://github.com/aet-devops26/team-panic-at-the-console/api/specs/nats/incident.created.schema.json",
+  "description": "Carries title and severity so event-service can render the creation entry in the timeline without a REST callback.",
   "type": "object",
-  "required": ["incidentId", "timestamp"],
+  "required": ["incidentId", "severity", "timestamp"],
   "additionalProperties": false,
   "properties": {
     "incidentId": { "type": "string", "format": "uuid" },
+    "title": { "type": "string" },
+    "severity": { "type": "string", "enum": ["SEV1", "SEV2", "SEV3", "SEV4"] },
     "timestamp": { "type": "string", "format": "date-time" }
   }
 }

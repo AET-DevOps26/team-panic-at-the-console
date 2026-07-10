@@ -21,7 +21,11 @@ import { isAutoGenerating, solutionsToMarkdown, useIntervalRerender, REGEN_WATCH
 
 function TimelineItem({ event }: { event: IncidentEvent }) {
   const iconClass = "h-2 w-2 rounded-full mt-1.5 shrink-0";
-  const dotColor = event.type === "incident_created" ? "bg-blue-500" : event.type === "status_changed" ? "bg-yellow-500" : "bg-slate-400";
+  const dotColor =
+    event.type === "incident_created" ? "bg-blue-500"
+    : event.type === "status_changed" ? "bg-yellow-500"
+    : event.type === "severity_changed" ? "bg-orange-500"
+    : "bg-slate-400";
   return (
     <div className="flex gap-3">
       <div className="flex flex-col items-center">

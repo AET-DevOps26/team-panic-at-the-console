@@ -38,9 +38,35 @@ class IncidentsProxyControllerTest {
     @Autowired
     MockRestServiceServer incidentServer;
 
+    @Autowired
+    MockRestServiceServer eventServer;
+
     @BeforeEach
     void resetServers() {
         incidentServer.reset();
+        eventServer.reset();
+    }
+
+    @Test
+    void listIncidentEvents_proxiesEventService() throws Exception {
+        eventServer
+                .expect(requestTo("http://localhost:8082/incidents/" + INCIDENT_ID + "/events"))
+                .andExpect(method(HttpMethod.GET))
+                .andRespond(
+                        withStatus(HttpStatus.OK)
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .body(
+                                        """
+                                        [{"timestamp":"2026-07-07T10:15:30Z",
+                                          "type":"status_changed",
+                                          "description":"status: open → investigating"}]
+                                        """));
+
+        mvc.perform(get("/incidents/" + INCIDENT_ID + "/events"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].type").value("status_changed"));
+
+        eventServer.verify();
     }
 
     @Test
