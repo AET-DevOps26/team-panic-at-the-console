@@ -10,6 +10,7 @@ export type IncidentEvent = components["schemas"]["IncidentEvent"];
 export type Comment = components["schemas"]["Comment"];
 export type CreateIncidentRequest = components["schemas"]["CreateIncidentRequest"];
 export type UpdateStatusRequest = components["schemas"]["UpdateStatusRequest"];
+export type UpdateDescriptionRequest = components["schemas"]["UpdateDescriptionRequest"];
 export type EscalateSeverityRequest = components["schemas"]["EscalateSeverityRequest"];
 export type AssignIncidentRequest = components["schemas"]["AssignIncidentRequest"];
 export type CreateCommentRequest = components["schemas"]["CreateCommentRequest"];
@@ -181,6 +182,24 @@ export function useAssignIncident(id: string) {
         body,
       });
       if (error) throw new Error("Failed to assign incident");
+      return data;
+    },
+    onSuccess: (updated) => {
+      if (updated) invalidateIncident(queryClient, id, updated);
+    },
+  });
+}
+
+export function useUpdateIncidentDescription(id: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (body: UpdateDescriptionRequest) => {
+      if (MOCK) return {} as Incident;
+      const { data, error } = await apiClient.PATCH("/incidents/{incidentId}/description", {
+        params: { path: { incidentId: id } },
+        body,
+      });
+      if (error) throw new Error("Failed to update incident description");
       return data;
     },
     onSuccess: (updated) => {

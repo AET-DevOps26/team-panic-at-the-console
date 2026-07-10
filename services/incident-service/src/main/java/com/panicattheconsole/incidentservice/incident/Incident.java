@@ -66,6 +66,12 @@ public class Incident {
     private String title;
 
     /**
+     * Human-written description of the incident. Editable at any time.
+     */
+    @Column(columnDefinition = "TEXT")
+    private String description;
+
+    /**
      * AI-generated summary of incident state. Regenerable on demand.
      */
     @Column(columnDefinition = "TEXT")
@@ -182,6 +188,15 @@ public class Incident {
 
     public void setTitle(String title) {
         this.title = title;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
+        this.updatedAt = Instant.now();
     }
 
     public String getSummary() {

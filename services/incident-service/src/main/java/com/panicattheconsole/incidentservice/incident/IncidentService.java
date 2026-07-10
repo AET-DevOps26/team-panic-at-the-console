@@ -53,9 +53,15 @@ public class IncidentService {
     }
 
     public Incident createIncident(UUID incidentId, Severity severity, String title, UUID sourceId) {
+        return createIncident(incidentId, severity, title, null, sourceId);
+    }
+
+    public Incident createIncident(UUID incidentId, Severity severity, String title, String description,
+            UUID sourceId) {
         log.info("Creating incident [id={}, severity={}, title={}]", incidentId, severity, title);
 
         Incident incident = new Incident(incidentId, IncidentStatus.OPEN, severity, title);
+        incident.setDescription(description == null || description.isBlank() ? null : description);
         incident.setSourceId(sourceId);
 
         Incident saved = incidentRepository.save(incident);
@@ -118,6 +124,19 @@ public class IncidentService {
         publishAfterCommit("incident.severity.escalated", event);
 
         log.info("Escalated severity [id={}, old={}, new={}]", incidentId, oldSeverity, newSeverity);
+        return saved;
+    }
+
+    /**
+     * Update the human-written description.
+     * Blank input clears the description. Publishes incident.updated event.
+     */
+    public Incident updateDescription(UUID incidentId, String description) {
+        Incident incident = getIncident(incidentId);
+        incident.setDescription(description == null || description.isBlank() ? null : description);
+        Incident saved = incidentRepository.save(incident);
+        publishAfterCommit("incident.updated", createBaseEvent(incidentId));
+        log.info("Updated incident description [id={}]", incidentId);
         return saved;
     }
 

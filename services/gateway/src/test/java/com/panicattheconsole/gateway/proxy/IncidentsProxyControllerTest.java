@@ -20,6 +20,7 @@ import static org.springframework.test.web.client.match.MockRestRequestMatchers.
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withStatus;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -84,6 +85,36 @@ class IncidentsProxyControllerTest {
         mvc.perform(get("/incidents/{id}", INCIDENT_ID))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.title").value("Checkout spike"));
+
+        incidentServer.verify();
+    }
+
+    @Test
+    void updateIncidentDescription_proxiesIncidentService() throws Exception {
+        incidentServer
+                .expect(requestTo("http://localhost:8081/incidents/" + INCIDENT_ID + "/description"))
+                .andExpect(method(HttpMethod.PATCH))
+                .andRespond(
+                        withStatus(HttpStatus.OK)
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .body(
+                                        """
+                                        {
+                                          "id":"018e2c5f-1234-7abc-8def-000000000001",
+                                          "title":"Checkout spike",
+                                          "description":"Rollback in progress",
+                                          "status":"open",
+                                          "severity":"SEV2",
+                                          "createdAt":"2026-05-08T10:00:00Z"
+                                        }
+                                        """));
+
+        mvc.perform(
+                        patch("/incidents/{id}/description", INCIDENT_ID)
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("{\"description\":\"Rollback in progress\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.description").value("Rollback in progress"));
 
         incidentServer.verify();
     }

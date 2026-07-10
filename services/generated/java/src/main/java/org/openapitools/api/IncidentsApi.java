@@ -18,6 +18,7 @@ import org.openapitools.model.IncidentListResponse;
 import org.openapitools.model.IncidentStatus;
 import org.openapitools.model.Severity;
 import java.util.UUID;
+import org.openapitools.model.UpdateDescriptionRequest;
 import org.openapitools.model.UpdateStatusRequest;
 import io.swagger.v3.oas.annotations.ExternalDocumentation;
 import io.swagger.v3.oas.annotations.Operation;
@@ -446,6 +447,63 @@ public interface IncidentsApi {
             for (MediaType mediaType: MediaType.parseMediaTypes(request.getHeader("Accept"))) {
                 if (mediaType.isCompatibleWith(MediaType.valueOf("application/json"))) {
                     String exampleString = "{ \"total\" : 5, \"size\" : 50, \"page\" : 0, \"items\" : [ { \"severity\" : \"SEV1\", \"summary\" : \"summary\", \"createdAt\" : \"2000-01-23T04:56:07.000+00:00\", \"resolvedAt\" : \"2000-01-23T04:56:07.000+00:00\", \"postmortem\" : \"postmortem\", \"solutions\" : \"solutions\", \"description\" : \"description\", \"severitySuggestion\" : \"severitySuggestion\", \"id\" : \"046b6c7f-0b8a-43b9-b35d-6489e6daee91\", \"title\" : \"Checkout 5xx spike\", \"status\" : \"open\" }, { \"severity\" : \"SEV1\", \"summary\" : \"summary\", \"createdAt\" : \"2000-01-23T04:56:07.000+00:00\", \"resolvedAt\" : \"2000-01-23T04:56:07.000+00:00\", \"postmortem\" : \"postmortem\", \"solutions\" : \"solutions\", \"description\" : \"description\", \"severitySuggestion\" : \"severitySuggestion\", \"id\" : \"046b6c7f-0b8a-43b9-b35d-6489e6daee91\", \"title\" : \"Checkout 5xx spike\", \"status\" : \"open\" } ] }";
+                    ApiUtil.setExampleResponse(request, "application/json", exampleString);
+                    break;
+                }
+            }
+        });
+        return new ResponseEntity<>(HttpStatus.NOT_IMPLEMENTED);
+
+    }
+
+
+    /**
+     * PATCH /incidents/{incidentId}/description : Edit the incident description
+     * Set or clear the human-written incident description.
+     *
+     * @param incidentId UUID of the target incident. (required)
+     * @param updateDescriptionRequest  (required)
+     * @return Description updated (status code 200)
+     *         or Invalid request (status code 400)
+     *         or Not authenticated (status code 401)
+     *         or No incident exists with the given ID (status code 404)
+     */
+    @Operation(
+        operationId = "updateIncidentDescription",
+        summary = "Edit the incident description",
+        description = "Set or clear the human-written incident description.",
+        tags = { "incidents" },
+        responses = {
+            @ApiResponse(responseCode = "200", description = "Description updated", content = {
+                @Content(mediaType = "application/json", schema = @Schema(implementation = Incident.class))
+            }),
+            @ApiResponse(responseCode = "400", description = "Invalid request", content = {
+                @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))
+            }),
+            @ApiResponse(responseCode = "401", description = "Not authenticated"),
+            @ApiResponse(responseCode = "404", description = "No incident exists with the given ID")
+        }
+    )
+    @RequestMapping(
+        method = RequestMethod.PATCH,
+        value = "/incidents/{incidentId}/description",
+        produces = { "application/json" },
+        consumes = { "application/json" }
+    )
+
+    default ResponseEntity<Incident> updateIncidentDescription(
+        @Parameter(name = "incidentId", description = "UUID of the target incident.", required = true, in = ParameterIn.PATH) @PathVariable("incidentId") UUID incidentId,
+        @Parameter(name = "UpdateDescriptionRequest", description = "", required = true) @Valid @RequestBody UpdateDescriptionRequest updateDescriptionRequest
+    ) {
+        getRequest().ifPresent(request -> {
+            for (MediaType mediaType: MediaType.parseMediaTypes(request.getHeader("Accept"))) {
+                if (mediaType.isCompatibleWith(MediaType.valueOf("application/json"))) {
+                    String exampleString = "{ \"severity\" : \"SEV1\", \"summary\" : \"summary\", \"createdAt\" : \"2000-01-23T04:56:07.000+00:00\", \"resolvedAt\" : \"2000-01-23T04:56:07.000+00:00\", \"postmortem\" : \"postmortem\", \"solutions\" : \"solutions\", \"description\" : \"description\", \"severitySuggestion\" : \"severitySuggestion\", \"id\" : \"046b6c7f-0b8a-43b9-b35d-6489e6daee91\", \"title\" : \"Checkout 5xx spike\", \"status\" : \"open\" }";
+                    ApiUtil.setExampleResponse(request, "application/json", exampleString);
+                    break;
+                }
+                if (mediaType.isCompatibleWith(MediaType.valueOf("application/json"))) {
+                    String exampleString = "{ \"message\" : \"Invalid email or password\" }";
                     ApiUtil.setExampleResponse(request, "application/json", exampleString);
                     break;
                 }

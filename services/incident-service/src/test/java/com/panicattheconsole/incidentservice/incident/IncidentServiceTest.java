@@ -223,6 +223,28 @@ class IncidentServiceTest {
     }
 
     @Test
+    void updateDescription_setsDescriptionAndPublishesEvent() {
+        when(incidentRepository.findById(incidentId)).thenReturn(Optional.of(incident));
+        when(incidentRepository.save(incident)).thenReturn(incident);
+
+        Incident saved = incidentService.updateDescription(incidentId, "Checkout errors after deploy");
+
+        assertThat(saved.getDescription()).isEqualTo("Checkout errors after deploy");
+        verify(applicationEventPublisher).publishEvent(any(IncidentNatsEvent.class));
+    }
+
+    @Test
+    void updateDescription_blankInputClearsDescription() {
+        incident.setDescription("old description");
+        when(incidentRepository.findById(incidentId)).thenReturn(Optional.of(incident));
+        when(incidentRepository.save(incident)).thenReturn(incident);
+
+        Incident saved = incidentService.updateDescription(incidentId, "   ");
+
+        assertThat(saved.getDescription()).isNull();
+    }
+
+    @Test
     void updateAssignedUsers_replacesExistingUsers() {
         when(incidentRepository.findById(incidentId)).thenReturn(Optional.of(incident));
         when(incidentRepository.save(incident)).thenReturn(incident);

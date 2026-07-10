@@ -41,6 +41,9 @@ final class IncidentMapper {
             api.setResolvedAt(JsonNullable.of(
                     OffsetDateTime.ofInstant(incident.getResolvedAt(), ZoneOffset.UTC)));
         }
+        if (incident.getDescription() != null) {
+            api.setDescription(JsonNullable.of(incident.getDescription()));
+        }
         return api;
     }
 

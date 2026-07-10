@@ -15,6 +15,7 @@ import org.openapitools.model.IncidentEvent;
 import org.openapitools.model.IncidentListResponse;
 import org.openapitools.model.IncidentStatus;
 import org.openapitools.model.Severity;
+import org.openapitools.model.UpdateDescriptionRequest;
 import org.openapitools.model.UpdateStatusRequest;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.core.ParameterizedTypeReference;
@@ -97,6 +98,17 @@ class IncidentsProxyController implements IncidentsApi {
                 incidentServiceClient,
                 "/incidents/{incidentId}/assign",
                 assignIncidentRequest,
+                Incident.class,
+                incidentId);
+    }
+
+    @Override
+    public ResponseEntity<Incident> updateIncidentDescription(
+            UUID incidentId, UpdateDescriptionRequest updateDescriptionRequest) {
+        return DownstreamProxy.patch(
+                incidentServiceClient,
+                "/incidents/{incidentId}/description",
+                updateDescriptionRequest,
                 Incident.class,
                 incidentId);
     }

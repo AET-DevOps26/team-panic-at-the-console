@@ -1,6 +1,7 @@
 import { useParams, Link } from "react-router-dom";
 import { useState } from "react";
 import { ArrowLeft, RefreshCw, Clock, Loader2, MessageSquare, Zap } from "lucide-react";
+import { EditableDescription } from "@/components/incident/EditableDescription";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { SeverityBadge, StatusBadge } from "@/components/ui/badge";
@@ -200,15 +201,13 @@ export default function IncidentDetailPage() {
           <span className="text-foreground font-medium truncate max-w-xs">{incident.title}</span>
         </div>
         <div className="flex items-start justify-between gap-4">
-          <div className="min-w-0">
-            <h1 className="text-xl font-semibold">{incident.title}</h1>
-            {incident.description && <p className="mt-1 text-sm text-muted-foreground">{incident.description}</p>}
-          </div>
+          <h1 className="text-xl font-semibold min-w-0">{incident.title}</h1>
           <div className="flex items-center gap-2 shrink-0">
             <SeverityBadge severity={incident.severity} />
             <StatusBadge status={incident.status} />
           </div>
         </div>
+        <EditableDescription incident={incident} />
       </header>
 
       {/* Body: 2-column layout */}

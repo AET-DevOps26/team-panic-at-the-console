@@ -27,6 +27,8 @@ public class CreateIncidentRequest {
 
   private String title;
 
+  private @Nullable String description;
+
   private Severity severity;
 
   public CreateIncidentRequest() {
@@ -61,6 +63,26 @@ public class CreateIncidentRequest {
     this.title = title;
   }
 
+  public CreateIncidentRequest description(@Nullable String description) {
+    this.description = description;
+    return this;
+  }
+
+  /**
+   * Get description
+   * @return description
+   */
+  @Size(max = 4000)
+  @Schema(name = "description", example = "Migration 2026_07_01 left the orders table partially indexed.", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
+  @JsonProperty("description")
+  public @Nullable String getDescription() {
+    return description;
+  }
+
+  public void setDescription(@Nullable String description) {
+    this.description = description;
+  }
+
   public CreateIncidentRequest severity(Severity severity) {
     this.severity = severity;
     return this;
@@ -91,12 +113,13 @@ public class CreateIncidentRequest {
     }
     CreateIncidentRequest createIncidentRequest = (CreateIncidentRequest) o;
     return Objects.equals(this.title, createIncidentRequest.title) &&
+        Objects.equals(this.description, createIncidentRequest.description) &&
         Objects.equals(this.severity, createIncidentRequest.severity);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(title, severity);
+    return Objects.hash(title, description, severity);
   }
 
   @Override
@@ -104,6 +127,7 @@ public class CreateIncidentRequest {
     StringBuilder sb = new StringBuilder();
     sb.append("class CreateIncidentRequest {\n");
     sb.append("    title: ").append(toIndentedString(title)).append("\n");
+    sb.append("    description: ").append(toIndentedString(description)).append("\n");
     sb.append("    severity: ").append(toIndentedString(severity)).append("\n");
     sb.append("}");
     return sb.toString();

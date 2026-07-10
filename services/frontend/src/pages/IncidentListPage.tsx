@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { Plus, Search, RefreshCw, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { SeverityBadge, StatusBadge } from "@/components/ui/badge";
@@ -17,14 +18,16 @@ import { isAutoGenerating, useIntervalRerender } from "@/lib/genai";
 function CreateIncidentDialog() {
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
   const [severity, setSeverity] = useState<Severity>("SEV3");
   const createIncident = useCreateIncident();
 
   async function handleCreate() {
     try {
-      await createIncident.mutateAsync({ title, severity });
+      await createIncident.mutateAsync({ title, severity, description: description.trim() || undefined });
       setOpen(false);
       setTitle("");
+      setDescription("");
     } catch {
       // error exposed via createIncident.isError / createIncident.error
     }
@@ -47,6 +50,17 @@ function CreateIncidentDialog() {
           <div className="space-y-2">
             <Label htmlFor="title">Title *</Label>
             <Input id="title" placeholder="Brief description of the issue" value={title} onChange={(e) => setTitle(e.target.value)} />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="description">Description</Label>
+            <Textarea
+              id="description"
+              placeholder="What is happening, since when, and what is affected?"
+              rows={3}
+              maxLength={4000}
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+            />
           </div>
           <div className="space-y-2">
             <Label>Initial severity</Label>
