@@ -13,12 +13,12 @@ spec:
     - protocol: TCP
       name: http
       port: {{ $svc.port }}
-      targetPort: {{ $svc.port }}
+      targetPort: http
     {{- with $svc.metricsPort }}
     - protocol: TCP
       name: metrics
       port: {{ . }}
-      targetPort: {{ . }}
+      targetPort: metrics
     {{- end }}
 ---
 {{- end }}

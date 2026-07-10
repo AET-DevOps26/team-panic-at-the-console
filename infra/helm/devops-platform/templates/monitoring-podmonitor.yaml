@@ -46,7 +46,7 @@ spec:
     matchLabels:
       app.kubernetes.io/name: gateway
   podMetricsEndpoints:
-    - portNumber: 8090
+    - portName: metrics
       path: /actuator/prometheus
       interval: 15s
 {{- end }}
