@@ -172,7 +172,8 @@ paths:
       operationId: updateIncidentStatus
       summary: Transition incident status
       description: |
-        Allowed transitions: open → investigating, investigating → resolved.
+        Any transition between distinct statuses is allowed (including reopening
+        a resolved incident, which clears resolvedAt).
         Requires RESPONDER or COMMANDER role.
       tags: [incidents]
       security: []
@@ -207,8 +208,8 @@ paths:
   /incidents/{incidentId}/severity:
     patch:
       operationId: escalateIncidentSeverity
-      summary: Manually escalate incident severity
-      description: Requires COMMANDER role.
+      summary: Manually set incident severity
+      description: Sets the severity to any level (raise or lower). Requires COMMANDER role.
       tags: [incidents]
       security: []
       parameters:
@@ -221,13 +222,13 @@ paths:
               $ref: "#/components/schemas/EscalateSeverityRequest"
       responses:
         "200":
-          description: Severity escalated
+          description: Severity updated
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Incident"
         "400":
-          description: Invalid severity or downgrade attempted
+          description: Invalid severity
           content:
             application/json:
               schema:
@@ -843,15 +844,31 @@ components:
         summary:
           type: [string, "null"]
           description: AI-generated narrative summary. Regenerable on demand.
+        summaryGeneratedAt:
+          type: [string, "null"]
+          format: date-time
+          description: When the AI summary was last generated.
         severitySuggestion:
           type: [string, "null"]
           description: 'AI-suggested severity with reasoning, formatted as "SEV<n>: <reason>".'
+        severitySuggestionGeneratedAt:
+          type: [string, "null"]
+          format: date-time
+          description: When the AI severity suggestion was last generated.
         solutions:
           type: [string, "null"]
           description: AI-suggested remediation steps, one per line.
+        solutionsGeneratedAt:
+          type: [string, "null"]
+          format: date-time
+          description: When the AI solution suggestions were last generated.
         postmortem:
           type: [string, "null"]
           description: AI-drafted postmortem. Only set for resolved incidents.
+        postmortemGeneratedAt:
+          type: [string, "null"]
+          format: date-time
+          description: When the AI postmortem was last generated.
 
     IncidentEvent:
       type: object
@@ -968,7 +985,7 @@ components:
 
     EscalateSeverityRequest:
       type: object
-      description: Request to escalate severity (only higher severities allowed).
+      description: Request to set incident severity (any level, higher or lower).
       required: [severity]
       additionalProperties: false
       properties:

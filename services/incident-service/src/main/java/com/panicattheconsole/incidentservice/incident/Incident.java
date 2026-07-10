@@ -77,11 +77,17 @@ public class Incident {
     @Column(columnDefinition = "TEXT")
     private String summary;
 
+    @Column(name = "summary_generated_at")
+    private Instant summaryGeneratedAt;
+
     /**
      * AI-generated severity suggestion. Regenerable on demand.
      */
     @Column(columnDefinition = "TEXT")
     private String severitySuggestion;
+
+    @Column(name = "severity_suggestion_generated_at")
+    private Instant severitySuggestionGeneratedAt;
 
     /**
      * AI-generated solution suggestions. Regenerable on demand.
@@ -89,11 +95,17 @@ public class Incident {
     @Column(columnDefinition = "TEXT")
     private String solutions;
 
+    @Column(name = "solutions_generated_at")
+    private Instant solutionsGeneratedAt;
+
     /**
      * AI-generated postmortem. Only for resolved incidents. Regenerable on demand.
      */
     @Column(columnDefinition = "TEXT")
     private String postmortem;
+
+    @Column(name = "postmortem_generated_at")
+    private Instant postmortemGeneratedAt;
 
     /**
      * Assigned responder IDs.
@@ -205,7 +217,13 @@ public class Incident {
 
     public void setSummary(String summary) {
         this.summary = summary;
-        this.updatedAt = Instant.now();
+        Instant now = Instant.now();
+        this.summaryGeneratedAt = summary != null ? now : null;
+        this.updatedAt = now;
+    }
+
+    public Instant getSummaryGeneratedAt() {
+        return summaryGeneratedAt;
     }
 
     public String getSeveritySuggestion() {
@@ -214,7 +232,13 @@ public class Incident {
 
     public void setSeveritySuggestion(String severitySuggestion) {
         this.severitySuggestion = severitySuggestion;
-        this.updatedAt = Instant.now();
+        Instant now = Instant.now();
+        this.severitySuggestionGeneratedAt = severitySuggestion != null ? now : null;
+        this.updatedAt = now;
+    }
+
+    public Instant getSeveritySuggestionGeneratedAt() {
+        return severitySuggestionGeneratedAt;
     }
 
     public String getSolutions() {
@@ -223,7 +247,13 @@ public class Incident {
 
     public void setSolutions(String solutions) {
         this.solutions = solutions;
-        this.updatedAt = Instant.now();
+        Instant now = Instant.now();
+        this.solutionsGeneratedAt = solutions != null ? now : null;
+        this.updatedAt = now;
+    }
+
+    public Instant getSolutionsGeneratedAt() {
+        return solutionsGeneratedAt;
     }
 
     public String getPostmortem() {
@@ -232,7 +262,13 @@ public class Incident {
 
     public void setPostmortem(String postmortem) {
         this.postmortem = postmortem;
-        this.updatedAt = Instant.now();
+        Instant now = Instant.now();
+        this.postmortemGeneratedAt = postmortem != null ? now : null;
+        this.updatedAt = now;
+    }
+
+    public Instant getPostmortemGeneratedAt() {
+        return postmortemGeneratedAt;
     }
 
     public Set<UUID> getAssignedUsers() {

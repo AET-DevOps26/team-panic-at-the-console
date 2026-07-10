@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { AUTO_GENERATION_WINDOW_MS, isAutoGenerating } from "./genai";
+import { AUTO_GENERATION_WINDOW_MS, isAutoGenerating, solutionsToMarkdown } from "./genai";
 
 describe("isAutoGenerating", () => {
   const now = Date.parse("2026-06-26T12:00:00Z");
@@ -31,5 +31,23 @@ describe("isAutoGenerating", () => {
 
   it("is false for an unparsable timestamp", () => {
     expect(isAutoGenerating("not-a-date", null, now)).toBe(false);
+  });
+});
+
+describe("solutionsToMarkdown", () => {
+  it("turns bare lines into list items", () => {
+    expect(solutionsToMarkdown("Roll back deploy\nScale replicas")).toBe("- Roll back deploy\n- Scale replicas");
+  });
+
+  it("keeps existing markdown list markers", () => {
+    expect(solutionsToMarkdown("- Roll back deploy\n* Scale replicas\n1. Enable breaker")).toBe("- Roll back deploy\n* Scale replicas\n1. Enable breaker");
+  });
+
+  it("drops empty lines and trims whitespace", () => {
+    expect(solutionsToMarkdown("  Roll back deploy  \n\n\nScale replicas\n")).toBe("- Roll back deploy\n- Scale replicas");
+  });
+
+  it("does not treat a leading dash without a space as a marker", () => {
+    expect(solutionsToMarkdown("-verbose flag fix")).toBe("- -verbose flag fix");
   });
 });

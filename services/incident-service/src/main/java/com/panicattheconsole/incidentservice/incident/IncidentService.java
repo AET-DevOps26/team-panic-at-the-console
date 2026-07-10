@@ -99,6 +99,9 @@ public class IncidentService {
 
         if (newStatus == IncidentStatus.RESOLVED) {
             incident.setResolvedAt(java.time.Instant.now());
+        } else if (oldStatus == IncidentStatus.RESOLVED) {
+            // Reopened: the incident is no longer resolved.
+            incident.setResolvedAt(null);
         }
 
         Incident saved = incidentRepository.save(incident);

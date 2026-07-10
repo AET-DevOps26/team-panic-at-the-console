@@ -50,11 +50,23 @@ public class Incident {
 
   private JsonNullable<String> summary = JsonNullable.<String>undefined();
 
+  @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
+  private JsonNullable<OffsetDateTime> summaryGeneratedAt = JsonNullable.<OffsetDateTime>undefined();
+
   private JsonNullable<String> severitySuggestion = JsonNullable.<String>undefined();
+
+  @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
+  private JsonNullable<OffsetDateTime> severitySuggestionGeneratedAt = JsonNullable.<OffsetDateTime>undefined();
 
   private JsonNullable<String> solutions = JsonNullable.<String>undefined();
 
+  @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
+  private JsonNullable<OffsetDateTime> solutionsGeneratedAt = JsonNullable.<OffsetDateTime>undefined();
+
   private JsonNullable<String> postmortem = JsonNullable.<String>undefined();
+
+  @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
+  private JsonNullable<OffsetDateTime> postmortemGeneratedAt = JsonNullable.<OffsetDateTime>undefined();
 
   public Incident() {
     super();
@@ -231,6 +243,26 @@ public class Incident {
     this.summary = summary;
   }
 
+  public Incident summaryGeneratedAt(OffsetDateTime summaryGeneratedAt) {
+    this.summaryGeneratedAt = JsonNullable.of(summaryGeneratedAt);
+    return this;
+  }
+
+  /**
+   * When the AI summary was last generated.
+   * @return summaryGeneratedAt
+   */
+  @Valid
+  @Schema(name = "summaryGeneratedAt", description = "When the AI summary was last generated.", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
+  @JsonProperty("summaryGeneratedAt")
+  public JsonNullable<OffsetDateTime> getSummaryGeneratedAt() {
+    return summaryGeneratedAt;
+  }
+
+  public void setSummaryGeneratedAt(JsonNullable<OffsetDateTime> summaryGeneratedAt) {
+    this.summaryGeneratedAt = summaryGeneratedAt;
+  }
+
   public Incident severitySuggestion(String severitySuggestion) {
     this.severitySuggestion = JsonNullable.of(severitySuggestion);
     return this;
@@ -249,6 +281,26 @@ public class Incident {
 
   public void setSeveritySuggestion(JsonNullable<String> severitySuggestion) {
     this.severitySuggestion = severitySuggestion;
+  }
+
+  public Incident severitySuggestionGeneratedAt(OffsetDateTime severitySuggestionGeneratedAt) {
+    this.severitySuggestionGeneratedAt = JsonNullable.of(severitySuggestionGeneratedAt);
+    return this;
+  }
+
+  /**
+   * When the AI severity suggestion was last generated.
+   * @return severitySuggestionGeneratedAt
+   */
+  @Valid
+  @Schema(name = "severitySuggestionGeneratedAt", description = "When the AI severity suggestion was last generated.", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
+  @JsonProperty("severitySuggestionGeneratedAt")
+  public JsonNullable<OffsetDateTime> getSeveritySuggestionGeneratedAt() {
+    return severitySuggestionGeneratedAt;
+  }
+
+  public void setSeveritySuggestionGeneratedAt(JsonNullable<OffsetDateTime> severitySuggestionGeneratedAt) {
+    this.severitySuggestionGeneratedAt = severitySuggestionGeneratedAt;
   }
 
   public Incident solutions(String solutions) {
@@ -271,6 +323,26 @@ public class Incident {
     this.solutions = solutions;
   }
 
+  public Incident solutionsGeneratedAt(OffsetDateTime solutionsGeneratedAt) {
+    this.solutionsGeneratedAt = JsonNullable.of(solutionsGeneratedAt);
+    return this;
+  }
+
+  /**
+   * When the AI solution suggestions were last generated.
+   * @return solutionsGeneratedAt
+   */
+  @Valid
+  @Schema(name = "solutionsGeneratedAt", description = "When the AI solution suggestions were last generated.", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
+  @JsonProperty("solutionsGeneratedAt")
+  public JsonNullable<OffsetDateTime> getSolutionsGeneratedAt() {
+    return solutionsGeneratedAt;
+  }
+
+  public void setSolutionsGeneratedAt(JsonNullable<OffsetDateTime> solutionsGeneratedAt) {
+    this.solutionsGeneratedAt = solutionsGeneratedAt;
+  }
+
   public Incident postmortem(String postmortem) {
     this.postmortem = JsonNullable.of(postmortem);
     return this;
@@ -291,6 +363,26 @@ public class Incident {
     this.postmortem = postmortem;
   }
 
+  public Incident postmortemGeneratedAt(OffsetDateTime postmortemGeneratedAt) {
+    this.postmortemGeneratedAt = JsonNullable.of(postmortemGeneratedAt);
+    return this;
+  }
+
+  /**
+   * When the AI postmortem was last generated.
+   * @return postmortemGeneratedAt
+   */
+  @Valid
+  @Schema(name = "postmortemGeneratedAt", description = "When the AI postmortem was last generated.", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
+  @JsonProperty("postmortemGeneratedAt")
+  public JsonNullable<OffsetDateTime> getPostmortemGeneratedAt() {
+    return postmortemGeneratedAt;
+  }
+
+  public void setPostmortemGeneratedAt(JsonNullable<OffsetDateTime> postmortemGeneratedAt) {
+    this.postmortemGeneratedAt = postmortemGeneratedAt;
+  }
+
   @Override
   public boolean equals(Object o) {
     if (this == o) {
@@ -308,9 +400,13 @@ public class Incident {
         Objects.equals(this.createdAt, incident.createdAt) &&
         equalsNullable(this.resolvedAt, incident.resolvedAt) &&
         equalsNullable(this.summary, incident.summary) &&
+        equalsNullable(this.summaryGeneratedAt, incident.summaryGeneratedAt) &&
         equalsNullable(this.severitySuggestion, incident.severitySuggestion) &&
+        equalsNullable(this.severitySuggestionGeneratedAt, incident.severitySuggestionGeneratedAt) &&
         equalsNullable(this.solutions, incident.solutions) &&
-        equalsNullable(this.postmortem, incident.postmortem);
+        equalsNullable(this.solutionsGeneratedAt, incident.solutionsGeneratedAt) &&
+        equalsNullable(this.postmortem, incident.postmortem) &&
+        equalsNullable(this.postmortemGeneratedAt, incident.postmortemGeneratedAt);
   }
 
   private static <T> boolean equalsNullable(JsonNullable<T> a, JsonNullable<T> b) {
@@ -319,7 +415,7 @@ public class Incident {
 
   @Override
   public int hashCode() {
-    return Objects.hash(id, title, hashCodeNullable(description), status, severity, createdAt, hashCodeNullable(resolvedAt), hashCodeNullable(summary), hashCodeNullable(severitySuggestion), hashCodeNullable(solutions), hashCodeNullable(postmortem));
+    return Objects.hash(id, title, hashCodeNullable(description), status, severity, createdAt, hashCodeNullable(resolvedAt), hashCodeNullable(summary), hashCodeNullable(summaryGeneratedAt), hashCodeNullable(severitySuggestion), hashCodeNullable(severitySuggestionGeneratedAt), hashCodeNullable(solutions), hashCodeNullable(solutionsGeneratedAt), hashCodeNullable(postmortem), hashCodeNullable(postmortemGeneratedAt));
   }
 
   private static <T> int hashCodeNullable(JsonNullable<T> a) {
@@ -341,9 +437,13 @@ public class Incident {
     sb.append("    createdAt: ").append(toIndentedString(createdAt)).append("\n");
     sb.append("    resolvedAt: ").append(toIndentedString(resolvedAt)).append("\n");
     sb.append("    summary: ").append(toIndentedString(summary)).append("\n");
+    sb.append("    summaryGeneratedAt: ").append(toIndentedString(summaryGeneratedAt)).append("\n");
     sb.append("    severitySuggestion: ").append(toIndentedString(severitySuggestion)).append("\n");
+    sb.append("    severitySuggestionGeneratedAt: ").append(toIndentedString(severitySuggestionGeneratedAt)).append("\n");
     sb.append("    solutions: ").append(toIndentedString(solutions)).append("\n");
+    sb.append("    solutionsGeneratedAt: ").append(toIndentedString(solutionsGeneratedAt)).append("\n");
     sb.append("    postmortem: ").append(toIndentedString(postmortem)).append("\n");
+    sb.append("    postmortemGeneratedAt: ").append(toIndentedString(postmortemGeneratedAt)).append("\n");
     sb.append("}");
     return sb.toString();
   }

@@ -22,6 +22,18 @@ export function isAutoGenerating(
   return Math.abs(now - Date.parse(triggeredAt)) < AUTO_GENERATION_WINDOW_MS;
 }
 
+// Solution suggestions arrive as plain lines (one step per line). Some LLM
+// output already uses markdown list markers; keep those, and turn bare lines
+// into list items so everything renders as one bulleted list.
+export function solutionsToMarkdown(solutions: string): string {
+  return solutions
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0)
+    .map((line) => (/^(?:[-*+]|\d+[.)])\s/.test(line) ? line : `- ${line}`))
+    .join("\n");
+}
+
 // Re-renders the component periodically while `active`, so the time-window checks
 // above expire even when no new query data arrives (refetches that return unchanged
 // data don't cause a re-render on their own).

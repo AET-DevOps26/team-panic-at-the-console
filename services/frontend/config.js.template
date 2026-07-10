@@ -1,0 +1,7 @@
+// Rendered to /usr/share/nginx/html/config.js at container start by the stock
+// nginx entrypoint (envsubst). Values are absolute URLs or ":port" (resolved
+// against the host serving the page); empty hides the link.
+window.__APP_CONFIG__ = {
+  grafanaUrl: "${GRAFANA_URL}",
+  prometheusUrl: "${PROMETHEUS_URL}",
+};

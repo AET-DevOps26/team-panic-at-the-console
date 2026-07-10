@@ -28,14 +28,30 @@ final class IncidentMapper {
         if (incident.getSummary() != null) {
             api.setSummary(JsonNullable.of(incident.getSummary()));
         }
+        if (incident.getSummaryGeneratedAt() != null) {
+            api.setSummaryGeneratedAt(JsonNullable.of(
+                    OffsetDateTime.ofInstant(incident.getSummaryGeneratedAt(), ZoneOffset.UTC)));
+        }
         if (incident.getSeveritySuggestion() != null) {
             api.setSeveritySuggestion(JsonNullable.of(incident.getSeveritySuggestion()));
+        }
+        if (incident.getSeveritySuggestionGeneratedAt() != null) {
+            api.setSeveritySuggestionGeneratedAt(JsonNullable.of(
+                    OffsetDateTime.ofInstant(incident.getSeveritySuggestionGeneratedAt(), ZoneOffset.UTC)));
         }
         if (incident.getSolutions() != null) {
             api.setSolutions(JsonNullable.of(incident.getSolutions()));
         }
+        if (incident.getSolutionsGeneratedAt() != null) {
+            api.setSolutionsGeneratedAt(JsonNullable.of(
+                    OffsetDateTime.ofInstant(incident.getSolutionsGeneratedAt(), ZoneOffset.UTC)));
+        }
         if (incident.getPostmortem() != null) {
             api.setPostmortem(JsonNullable.of(incident.getPostmortem()));
+        }
+        if (incident.getPostmortemGeneratedAt() != null) {
+            api.setPostmortemGeneratedAt(JsonNullable.of(
+                    OffsetDateTime.ofInstant(incident.getPostmortemGeneratedAt(), ZoneOffset.UTC)));
         }
         if (incident.getResolvedAt() != null) {
             api.setResolvedAt(JsonNullable.of(

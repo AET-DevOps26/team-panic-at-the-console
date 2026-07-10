@@ -19,6 +19,22 @@ export type User = components["schemas"]["User"];
 
 const MOCK = import.meta.env.VITE_MOCK === "true";
 
+/** Error thrown by query functions, carrying the HTTP status when known. */
+export class ApiError extends Error {
+  readonly status?: number;
+
+  constructor(message: string, status?: number) {
+    super(message);
+    this.name = "ApiError";
+    this.status = status;
+  }
+}
+
+/** True when the error means the resource cannot exist (bad id or not found). */
+export function isNotFound(error: unknown): boolean {
+  return error instanceof ApiError && (error.status === 400 || error.status === 404);
+}
+
 // ── Mock data ─────────────────────────────────────────────────────────────────
 
 const MOCK_INCIDENTS: Incident[] = [
@@ -30,9 +46,12 @@ const MOCK_INCIDENTS: Incident[] = [
     severity: "SEV1",
     createdAt: new Date(Date.now() - 3 * 3600_000).toISOString(),
     resolvedAt: null,
-    summary: "Checkout API error rate spiked to 5% after deploy v2.4.1; payment-service latency is the suspected driver.",
+    summary: "Checkout API error rate spiked to **5%** after deploy `v2.4.1`; payment-service latency is the suspected driver.",
+    summaryGeneratedAt: new Date(Date.now() - 2.5 * 3600_000).toISOString(),
     severitySuggestion: "SEV1: Checkout is revenue-critical and error rate exceeds the 5% SLO.",
+    severitySuggestionGeneratedAt: new Date(Date.now() - 2.5 * 3600_000).toISOString(),
     solutions: "Roll back deploy v2.4.1\nScale payment-service replicas\nEnable checkout circuit breaker",
+    solutionsGeneratedAt: new Date(Date.now() - 45 * 60_000).toISOString(),
   },
   {
     id: "018e2c5f-1234-7abc-8def-000000000002",
@@ -105,14 +124,20 @@ export function useIncident(id: string) {
   return useQuery({
     queryKey: ["incidents", id],
     queryFn: async () => {
-      if (MOCK) return MOCK_INCIDENTS.find((i) => i.id === id) ?? undefined;
-      const { data, error } = await apiClient.GET("/incidents/{incidentId}", {
+      if (MOCK) {
+        const found = MOCK_INCIDENTS.find((i) => i.id === id);
+        if (!found) throw new ApiError("Incident not found", 404);
+        return found;
+      }
+      const { data, error, response } = await apiClient.GET("/incidents/{incidentId}", {
         params: { path: { incidentId: id } },
       });
-      if (error) throw new Error("Failed to fetch incident");
+      if (error || !data) throw new ApiError("Failed to fetch incident", response.status);
       return data;
     },
     enabled: Boolean(id),
+    // A missing or malformed id will not start existing on retry.
+    retry: (failureCount, error) => !isNotFound(error) && failureCount < 3,
   });
 }
 
@@ -154,7 +179,7 @@ export function useUpdateIncidentStatus(id: string) {
   });
 }
 
-export function useEscalateIncidentSeverity(id: string) {
+export function useSetIncidentSeverity(id: string) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (body: EscalateSeverityRequest) => {
@@ -163,7 +188,7 @@ export function useEscalateIncidentSeverity(id: string) {
         params: { path: { incidentId: id } },
         body,
       });
-      if (error) throw new Error("Failed to escalate incident severity");
+      if (error) throw new Error("Failed to update incident severity");
       return data;
     },
     onSuccess: (updated) => {

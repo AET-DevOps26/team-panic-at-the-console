@@ -2,7 +2,8 @@ package com.panicattheconsole.incidentservice.incident;
 
 /**
  * Incident lifecycle states.
- * Transitions: OPEN → INVESTIGATING → RESOLVED
+ * Any transition between distinct states is allowed, including reopening a
+ * resolved incident.
  */
 public enum IncidentStatus {
     OPEN,
@@ -22,11 +23,6 @@ public enum IncidentStatus {
     }
 
     public boolean canTransitionTo(IncidentStatus target) {
-
-        return switch (this) {
-            case OPEN -> target == INVESTIGATING;
-            case INVESTIGATING -> target == RESOLVED;
-            case RESOLVED -> false;
-        };
+        return target != null && target != this;
     }
 }

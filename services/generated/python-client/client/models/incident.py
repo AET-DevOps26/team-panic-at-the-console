@@ -28,9 +28,14 @@ class Incident:
         description (None | str | Unset):
         resolved_at (datetime.datetime | None | Unset):
         summary (None | str | Unset): AI-generated narrative summary. Regenerable on demand.
+        summary_generated_at (datetime.datetime | None | Unset): When the AI summary was last generated.
         severity_suggestion (None | str | Unset): AI-suggested severity with reasoning, formatted as "SEV<n>: <reason>".
+        severity_suggestion_generated_at (datetime.datetime | None | Unset): When the AI severity suggestion was last
+            generated.
         solutions (None | str | Unset): AI-suggested remediation steps, one per line.
+        solutions_generated_at (datetime.datetime | None | Unset): When the AI solution suggestions were last generated.
         postmortem (None | str | Unset): AI-drafted postmortem. Only set for resolved incidents.
+        postmortem_generated_at (datetime.datetime | None | Unset): When the AI postmortem was last generated.
     """
 
     id: UUID
@@ -41,9 +46,13 @@ class Incident:
     description: None | str | Unset = UNSET
     resolved_at: datetime.datetime | None | Unset = UNSET
     summary: None | str | Unset = UNSET
+    summary_generated_at: datetime.datetime | None | Unset = UNSET
     severity_suggestion: None | str | Unset = UNSET
+    severity_suggestion_generated_at: datetime.datetime | None | Unset = UNSET
     solutions: None | str | Unset = UNSET
+    solutions_generated_at: datetime.datetime | None | Unset = UNSET
     postmortem: None | str | Unset = UNSET
+    postmortem_generated_at: datetime.datetime | None | Unset = UNSET
 
     def to_dict(self) -> dict[str, Any]:
         id = str(self.id)
@@ -76,11 +85,27 @@ class Incident:
         else:
             summary = self.summary
 
+        summary_generated_at: None | str | Unset
+        if isinstance(self.summary_generated_at, Unset):
+            summary_generated_at = UNSET
+        elif isinstance(self.summary_generated_at, datetime.datetime):
+            summary_generated_at = self.summary_generated_at.isoformat()
+        else:
+            summary_generated_at = self.summary_generated_at
+
         severity_suggestion: None | str | Unset
         if isinstance(self.severity_suggestion, Unset):
             severity_suggestion = UNSET
         else:
             severity_suggestion = self.severity_suggestion
+
+        severity_suggestion_generated_at: None | str | Unset
+        if isinstance(self.severity_suggestion_generated_at, Unset):
+            severity_suggestion_generated_at = UNSET
+        elif isinstance(self.severity_suggestion_generated_at, datetime.datetime):
+            severity_suggestion_generated_at = self.severity_suggestion_generated_at.isoformat()
+        else:
+            severity_suggestion_generated_at = self.severity_suggestion_generated_at
 
         solutions: None | str | Unset
         if isinstance(self.solutions, Unset):
@@ -88,11 +113,27 @@ class Incident:
         else:
             solutions = self.solutions
 
+        solutions_generated_at: None | str | Unset
+        if isinstance(self.solutions_generated_at, Unset):
+            solutions_generated_at = UNSET
+        elif isinstance(self.solutions_generated_at, datetime.datetime):
+            solutions_generated_at = self.solutions_generated_at.isoformat()
+        else:
+            solutions_generated_at = self.solutions_generated_at
+
         postmortem: None | str | Unset
         if isinstance(self.postmortem, Unset):
             postmortem = UNSET
         else:
             postmortem = self.postmortem
+
+        postmortem_generated_at: None | str | Unset
+        if isinstance(self.postmortem_generated_at, Unset):
+            postmortem_generated_at = UNSET
+        elif isinstance(self.postmortem_generated_at, datetime.datetime):
+            postmortem_generated_at = self.postmortem_generated_at.isoformat()
+        else:
+            postmortem_generated_at = self.postmortem_generated_at
 
         field_dict: dict[str, Any] = {}
 
@@ -111,12 +152,20 @@ class Incident:
             field_dict["resolvedAt"] = resolved_at
         if summary is not UNSET:
             field_dict["summary"] = summary
+        if summary_generated_at is not UNSET:
+            field_dict["summaryGeneratedAt"] = summary_generated_at
         if severity_suggestion is not UNSET:
             field_dict["severitySuggestion"] = severity_suggestion
+        if severity_suggestion_generated_at is not UNSET:
+            field_dict["severitySuggestionGeneratedAt"] = severity_suggestion_generated_at
         if solutions is not UNSET:
             field_dict["solutions"] = solutions
+        if solutions_generated_at is not UNSET:
+            field_dict["solutionsGeneratedAt"] = solutions_generated_at
         if postmortem is not UNSET:
             field_dict["postmortem"] = postmortem
+        if postmortem_generated_at is not UNSET:
+            field_dict["postmortemGeneratedAt"] = postmortem_generated_at
 
         return field_dict
 
@@ -168,6 +217,23 @@ class Incident:
 
         summary = _parse_summary(d.pop("summary", UNSET))
 
+        def _parse_summary_generated_at(data: object) -> datetime.datetime | None | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            try:
+                if not isinstance(data, str):
+                    raise TypeError()
+                summary_generated_at_type_0 = isoparse(data)
+
+                return summary_generated_at_type_0
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            return cast(datetime.datetime | None | Unset, data)
+
+        summary_generated_at = _parse_summary_generated_at(d.pop("summaryGeneratedAt", UNSET))
+
         def _parse_severity_suggestion(data: object) -> None | str | Unset:
             if data is None:
                 return data
@@ -176,6 +242,25 @@ class Incident:
             return cast(None | str | Unset, data)
 
         severity_suggestion = _parse_severity_suggestion(d.pop("severitySuggestion", UNSET))
+
+        def _parse_severity_suggestion_generated_at(data: object) -> datetime.datetime | None | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            try:
+                if not isinstance(data, str):
+                    raise TypeError()
+                severity_suggestion_generated_at_type_0 = isoparse(data)
+
+                return severity_suggestion_generated_at_type_0
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            return cast(datetime.datetime | None | Unset, data)
+
+        severity_suggestion_generated_at = _parse_severity_suggestion_generated_at(
+            d.pop("severitySuggestionGeneratedAt", UNSET)
+        )
 
         def _parse_solutions(data: object) -> None | str | Unset:
             if data is None:
@@ -186,6 +271,23 @@ class Incident:
 
         solutions = _parse_solutions(d.pop("solutions", UNSET))
 
+        def _parse_solutions_generated_at(data: object) -> datetime.datetime | None | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            try:
+                if not isinstance(data, str):
+                    raise TypeError()
+                solutions_generated_at_type_0 = isoparse(data)
+
+                return solutions_generated_at_type_0
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            return cast(datetime.datetime | None | Unset, data)
+
+        solutions_generated_at = _parse_solutions_generated_at(d.pop("solutionsGeneratedAt", UNSET))
+
         def _parse_postmortem(data: object) -> None | str | Unset:
             if data is None:
                 return data
@@ -194,6 +296,23 @@ class Incident:
             return cast(None | str | Unset, data)
 
         postmortem = _parse_postmortem(d.pop("postmortem", UNSET))
+
+        def _parse_postmortem_generated_at(data: object) -> datetime.datetime | None | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            try:
+                if not isinstance(data, str):
+                    raise TypeError()
+                postmortem_generated_at_type_0 = isoparse(data)
+
+                return postmortem_generated_at_type_0
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            return cast(datetime.datetime | None | Unset, data)
+
+        postmortem_generated_at = _parse_postmortem_generated_at(d.pop("postmortemGeneratedAt", UNSET))
 
         incident = cls(
             id=id,
@@ -204,9 +323,13 @@ class Incident:
             description=description,
             resolved_at=resolved_at,
             summary=summary,
+            summary_generated_at=summary_generated_at,
             severity_suggestion=severity_suggestion,
+            severity_suggestion_generated_at=severity_suggestion_generated_at,
             solutions=solutions,
+            solutions_generated_at=solutions_generated_at,
             postmortem=postmortem,
+            postmortem_generated_at=postmortem_generated_at,
         )
 
         return incident
