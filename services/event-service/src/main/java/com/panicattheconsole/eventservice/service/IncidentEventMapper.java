@@ -35,7 +35,16 @@ final class IncidentEventMapper {
         return Optional.of(new IncidentEventDto(
                 event.getEventTimestamp(),
                 toApiType(event.getEventType()),
-                description));
+                description,
+                newValue(event)));
+    }
+
+    private static String newValue(TimelineEvent event) {
+        return switch (event.getEventType()) {
+            case "incident.status.changed" -> text(event.getPayload(), "newStatus").orElse(null);
+            case "incident.severity.escalated" -> text(event.getPayload(), "newSeverity").orElse(null);
+            default -> null;
+        };
     }
 
     private static String toApiType(String eventType) {

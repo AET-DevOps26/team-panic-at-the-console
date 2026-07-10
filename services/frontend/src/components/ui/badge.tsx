@@ -15,8 +15,8 @@ const badgeVariants = cva("inline-flex items-center rounded-full border px-2.5 p
       sev3: "border-transparent bg-yellow-500 text-white",
       sev4: "border-transparent bg-green-600 text-white",
       open: "border-transparent bg-blue-600 text-white",
-      investigating: "border-transparent bg-yellow-600 text-white",
-      resolved: "border-transparent bg-green-600 text-white",
+      investigating: "border-transparent bg-violet-600 text-white",
+      resolved: "border-transparent bg-slate-500 text-white",
     },
   },
   defaultVariants: {
@@ -24,10 +24,11 @@ const badgeVariants = cva("inline-flex items-center rounded-full border px-2.5 p
   },
 });
 
-export interface BadgeProps extends React.HTMLAttributes<HTMLDivElement>, VariantProps<typeof badgeVariants> {}
+export interface BadgeProps extends React.HTMLAttributes<HTMLSpanElement>, VariantProps<typeof badgeVariants> {}
 
+// span (not div) so badges can live inside inline contexts like Radix Select's ItemText
 function Badge({ className, variant, ...props }: BadgeProps) {
-  return <div className={cn(badgeVariants({ variant }), className)} {...props} />;
+  return <span className={cn(badgeVariants({ variant }), className)} {...props} />;
 }
 
 type Severity = components["schemas"]["Severity"];
@@ -42,6 +43,22 @@ export function SeverityBadge({ severity }: { severity: Severity }) {
   };
   return <Badge variant={variantMap[severity]}>{severity}</Badge>;
 }
+
+// Solid fill per status/severity for compact indicators like timeline dots;
+// mirrors the badge variants above. String-keyed because timeline events
+// carry the new value as a plain string.
+export const statusDotColor: Record<string, string> = {
+  open: "bg-blue-600",
+  investigating: "bg-violet-600",
+  resolved: "bg-slate-500",
+};
+
+export const severityDotColor: Record<string, string> = {
+  SEV1: "bg-red-600",
+  SEV2: "bg-orange-500",
+  SEV3: "bg-yellow-500",
+  SEV4: "bg-green-600",
+};
 
 export function StatusBadge({ status }: { status: IncidentStatus }) {
   const variantMap: Record<IncidentStatus, "open" | "investigating" | "resolved"> = {

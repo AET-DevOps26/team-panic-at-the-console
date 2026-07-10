@@ -33,6 +33,7 @@ class IncidentEventMapperTest {
         assertThat(dto).hasValueSatisfying(e -> {
             assertThat(e.type()).isEqualTo("status_changed");
             assertThat(e.description()).isEqualTo("status: open → investigating");
+            assertThat(e.newValue()).isEqualTo("investigating");
             assertThat(e.timestamp()).isEqualTo(timestamp);
         });
     }
@@ -45,6 +46,7 @@ class IncidentEventMapperTest {
         assertThat(dto).hasValueSatisfying(e -> {
             assertThat(e.type()).isEqualTo("severity_changed");
             assertThat(e.description()).isEqualTo("severity: SEV2 → SEV1");
+            assertThat(e.newValue()).isEqualTo("SEV1");
         });
     }
 
@@ -53,8 +55,10 @@ class IncidentEventMapperTest {
         Optional<IncidentEventDto> dto = IncidentEventMapper.toApi(
                 event("incident.severity.escalated", Map.of("newSeverity", "SEV1")));
 
-        assertThat(dto).hasValueSatisfying(e ->
-                assertThat(e.description()).isEqualTo("severity changed to SEV1"));
+        assertThat(dto).hasValueSatisfying(e -> {
+            assertThat(e.description()).isEqualTo("severity changed to SEV1");
+            assertThat(e.newValue()).isEqualTo("SEV1");
+        });
     }
 
     @Test
@@ -65,6 +69,7 @@ class IncidentEventMapperTest {
         assertThat(dto).hasValueSatisfying(e -> {
             assertThat(e.type()).isEqualTo("incident_created");
             assertThat(e.description()).isEqualTo("Incident created: Checkout 5xx spike (SEV1)");
+            assertThat(e.newValue()).isNull();
         });
     }
 

@@ -3,6 +3,7 @@ import { AlertTriangle, ExternalLink, Settings, Webhook, LayoutDashboard, LogOut
 import { appConfig } from "@/lib/appConfig";
 import { cn } from "@/lib/utils";
 import { Separator } from "@/components/ui/separator";
+import { GatewayStatus } from "@/components/layout/GatewayStatus";
 
 const linkedNavItems = [{ to: "/incidents", label: "Incidents", icon: AlertTriangle }];
 
@@ -63,6 +64,7 @@ export default function Sidebar() {
 
       {/* Deployment info */}
       <div className="px-6 pb-3 space-y-1 text-xs text-slate-500">
+        <GatewayStatus />
         {(appConfig.prometheusUrl || appConfig.grafanaUrl) && (
           <div className="flex items-center gap-3">
             {appConfig.prometheusUrl && (

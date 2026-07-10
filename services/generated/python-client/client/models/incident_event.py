@@ -7,6 +7,8 @@ from typing import Any, TypeVar
 from attrs import define as _attrs_define
 from dateutil.parser import isoparse
 
+from ..types import UNSET, Unset
+
 T = TypeVar("T", bound="IncidentEvent")
 
 
@@ -18,11 +20,15 @@ class IncidentEvent:
         timestamp (datetime.datetime):
         type_ (str):  Example: status_changed.
         description (str):  Example: status: open -> investigating.
+        new_value (str | Unset): New value after the change: the new status for status_changed entries and the new
+            severity for severity_changed entries. Lets clients color-code timeline entries without parsing the description.
+            Absent for other entry types and for events stored before this field existed. Example: investigating.
     """
 
     timestamp: datetime.datetime
     type_: str
     description: str
+    new_value: str | Unset = UNSET
 
     def to_dict(self) -> dict[str, Any]:
         timestamp = self.timestamp.isoformat()
@@ -30,6 +36,8 @@ class IncidentEvent:
         type_ = self.type_
 
         description = self.description
+
+        new_value = self.new_value
 
         field_dict: dict[str, Any] = {}
 
@@ -40,6 +48,8 @@ class IncidentEvent:
                 "description": description,
             }
         )
+        if new_value is not UNSET:
+            field_dict["newValue"] = new_value
 
         return field_dict
 
@@ -52,10 +62,13 @@ class IncidentEvent:
 
         description = d.pop("description")
 
+        new_value = d.pop("newValue", UNSET)
+
         incident_event = cls(
             timestamp=timestamp,
             type_=type_,
             description=description,
+            new_value=new_value,
         )
 
         return incident_event

@@ -885,6 +885,15 @@ components:
         description:
           type: string
           example: "status: open -> investigating"
+        newValue:
+          type: string
+          description: >-
+            New value after the change: the new status for status_changed
+            entries and the new severity for severity_changed entries. Lets
+            clients color-code timeline entries without parsing the
+            description. Absent for other entry types and for events stored
+            before this field existed.
+          example: investigating
 
     SummaryResponse:
       type: object
