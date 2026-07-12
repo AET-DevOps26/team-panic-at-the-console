@@ -13,6 +13,8 @@ data:
       - /etc/prometheus/alerts.yml
     scrape_configs:
       - job_name: prometheus
+        # Self-scrape must include the route-prefix set by --web.external-url.
+        metrics_path: {{ .Values.ingress.paths.prometheus }}/metrics
         static_configs:
           - targets: ["localhost:9090"]
       {{- if (index .Values.services "incident-service").enabled }}
@@ -169,6 +171,9 @@ spec:
     metadata:
       labels:
         app.kubernetes.io/name: prometheus
+      annotations:
+        # Roll the pod when scrape config or alert rules change.
+        checksum/config: {{ cat (toYaml .Values.monitoring) (toYaml .Values.services) (toYaml .Values.ingress) | sha256sum }}
     spec:
       securityContext:
         runAsNonRoot: true
