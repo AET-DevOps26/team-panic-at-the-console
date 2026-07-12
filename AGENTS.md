@@ -80,7 +80,7 @@ pixi run openapi-lint          # Lint api/openapi.yaml if present
 | LLM              | Ollama `qwen2.5:3b` (runs in cluster, no cloud LLM)                 |
 | Database         | PostgreSQL (shared instance, one DB per stateful service)           |
 | Event bus        | NATS JetStream (side effects: event log, notifications, genai, SSE) |
-| Observability    | shared cluster prometheus-operator (namespaced PodMonitor/PrometheusRule + Grafana dashboard CRs) |
+| Observability    | self-hosted namespace-local Prometheus + Grafana (plain Deployments, no operator/CRDs; optional operatorCrds compatibility mode) |
 
 See `CONTEXT.md` for full architectural decisions and `docs/adr/` for key trade-off records.
 

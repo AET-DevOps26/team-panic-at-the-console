@@ -62,12 +62,18 @@ spec:
         - name: {{ $name }}
           {{- if $svc.image.override }}
           image: "{{ $svc.image.override }}"
+          imagePullPolicy: {{ $svc.image.pullPolicy | default "IfNotPresent" }}
           {{- else }}
           image: "{{ $.Values.global.image.registry }}/{{ $svc.image.repository }}:{{ $.Values.global.image.tag }}"
+          imagePullPolicy: {{ $svc.image.pullPolicy | default $.Values.global.image.pullPolicy | default "IfNotPresent" }}
           {{- end }}
-          imagePullPolicy: IfNotPresent
           ports:
-            - containerPort: {{ $svc.port }}
+            - name: http
+              containerPort: {{ $svc.port }}
+            {{- with $svc.metricsPort }}
+            - name: metrics
+              containerPort: {{ . }}
+            {{- end }}
           {{- if $svc.probes }}
           {{- include "devops-platform.httpProbes" (dict "healthPath" $svc.healthPath "port" $svc.port "initialDelaySeconds" ($svc.probeInitialDelaySeconds | default 30) "readinessInitialDelaySeconds" ($svc.probeReadinessInitialDelaySeconds | default 10)) | nindent 10 }}
           {{- else if $svc.ollamaProbes }}

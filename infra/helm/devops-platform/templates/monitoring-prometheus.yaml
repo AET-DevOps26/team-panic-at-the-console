@@ -1,0 +1,249 @@
+{{- if and .Values.monitoring.enabled (not .Values.monitoring.operatorCrds.enabled) }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometheus-config
+  labels:
+    app.kubernetes.io/name: prometheus
+data:
+  prometheus.yml: |
+    global:
+      scrape_interval: {{ .Values.monitoring.prometheus.scrapeInterval }}
+    rule_files:
+      - /etc/prometheus/alerts.yml
+    scrape_configs:
+      - job_name: prometheus
+        static_configs:
+          - targets: ["localhost:9090"]
+      {{- if (index .Values.services "incident-service").enabled }}
+      - job_name: incident-service
+        metrics_path: /actuator/prometheus
+        static_configs:
+          - targets: ["incident-service:{{ (index .Values.services "incident-service").port }}"]
+      {{- end }}
+      {{- if (index .Values.services "event-service").enabled }}
+      - job_name: event-service
+        metrics_path: /actuator/prometheus
+        static_configs:
+          - targets: ["event-service:{{ (index .Values.services "event-service").port }}"]
+      {{- end }}
+      {{- if (index .Values.services "user-service").enabled }}
+      - job_name: user-service
+        metrics_path: /actuator/prometheus
+        static_configs:
+          - targets: ["user-service:{{ (index .Values.services "user-service").port }}"]
+      {{- end }}
+      {{- if (index .Values.services "gateway").enabled }}
+      - job_name: gateway
+        metrics_path: /actuator/prometheus
+        static_configs:
+          - targets: ["gateway:{{ (index .Values.services "gateway").metricsPort | default (index .Values.services "gateway").port }}"]
+      {{- end }}
+      {{- if (index .Values.services "genai-service").enabled }}
+      - job_name: genai-service
+        metrics_path: /metrics
+        static_configs:
+          - targets: ["genai-service:{{ (index .Values.services "genai-service").port }}"]
+      {{- end }}
+  alerts.yml: |
+    groups:
+      - name: spring-services
+        rules:
+          - alert: SpringServiceDown
+            expr: up{job=~"incident-service|event-service|user-service|gateway"} == 0
+            for: 1m
+            labels:
+              severity: critical
+            annotations:
+              summary: "{{`{{ $labels.job }}`}} is down"
+              description: "Prometheus cannot scrape {{`{{ $labels.job }}`}} metrics for 1 minute."
+          - alert: HighServerErrorRate
+            expr: |
+              sum by (job) (
+                rate(http_server_requests_seconds_count{
+                  job=~"incident-service|event-service|user-service|gateway",
+                  outcome="SERVER_ERROR"
+                }[5m])
+              )
+              /
+              sum by (job) (
+                rate(http_server_requests_seconds_count{
+                  job=~"incident-service|event-service|user-service|gateway"
+                }[5m])
+              ) > 0.01
+            for: 2m
+            labels:
+              severity: critical
+            annotations:
+              summary: "High 5xx rate on {{`{{ $labels.job }}`}}"
+              description: "{{`{{ $labels.job }}`}} server error rate exceeds 1% over 5 minutes."
+          - alert: HighClientErrorRate
+            expr: |
+              sum by (job) (
+                rate(http_server_requests_seconds_count{
+                  job=~"incident-service|event-service|user-service|gateway",
+                  outcome="CLIENT_ERROR"
+                }[5m])
+              )
+              /
+              sum by (job) (
+                rate(http_server_requests_seconds_count{
+                  job=~"incident-service|event-service|user-service|gateway"
+                }[5m])
+              ) > 0.10
+            for: 5m
+            labels:
+              severity: warning
+            annotations:
+              summary: "High 4xx rate on {{`{{ $labels.job }}`}}"
+              description: "{{`{{ $labels.job }}`}} client error rate exceeds 10% over 5 minutes."
+          - alert: SlowP95Latency
+            expr: |
+              histogram_quantile(
+                0.95,
+                sum by (le, job) (
+                  rate(http_server_requests_seconds_bucket{
+                    job=~"incident-service|event-service|user-service|gateway"
+                  }[5m])
+                )
+              ) > 2
+            for: 5m
+            labels:
+              severity: warning
+            annotations:
+              summary: "Slow p95 latency on {{`{{ $labels.job }}`}}"
+              description: "{{`{{ $labels.job }}`}} p95 response time exceeds 2s over 5 minutes."
+      - name: genai-service
+        rules:
+          - alert: GenAIServiceMetricsMissing
+            expr: absent(nats_consumer_connected)
+            for: 5m
+            labels:
+              severity: critical
+            annotations:
+              summary: "genai-service metrics not scraped"
+              description: "Prometheus is not receiving genai-service /metrics (nats_consumer_connected absent for 5m)."
+          - alert: GenAINatsConsumerDisconnected
+            expr: nats_consumer_connected == 0
+            for: 2m
+            labels:
+              severity: warning
+            annotations:
+              summary: "genai-service NATS consumer disconnected"
+              description: "nats_consumer_connected has been 0 for 2 minutes."
+          - alert: SlowAIGeneration
+            expr: |
+              histogram_quantile(
+                0.95,
+                sum by (type, provider, le) (
+                  rate(ai_generation_seconds_bucket[5m])
+                )
+              ) > 60
+            for: 5m
+            labels:
+              severity: warning
+            annotations:
+              summary: "Slow AI generation for {{`{{ $labels.type }}`}} ({{`{{ $labels.provider }}`}})"
+              description: "p95 ai_generation_seconds exceeds 60s over the last 5 minutes."
+          - alert: LLMFallbackSpike
+            expr: increase(llm_fallback_total[5m]) > 3
+            for: 5m
+            labels:
+              severity: warning
+            annotations:
+              summary: "Logos to Ollama fallback spike"
+              description: "More than 3 LLM fallbacks in 5 minutes."
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: prometheus
+  labels:
+    app.kubernetes.io/name: prometheus
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: prometheus
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: prometheus
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65534
+        fsGroup: 65534
+      containers:
+        - name: prometheus
+          image: {{ .Values.monitoring.prometheus.image | quote }}
+          args:
+            - --config.file=/etc/prometheus/prometheus.yml
+            - --storage.tsdb.path=/prometheus
+            - --storage.tsdb.retention.time={{ .Values.monitoring.prometheus.retention }}
+            - --web.enable-lifecycle
+            # Serve under the ingress sub-path; route-prefix defaults to this URL's path.
+            - --web.external-url=https://{{ .Values.ingress.host }}{{ .Values.ingress.paths.prometheus }}
+          ports:
+            - name: http
+              containerPort: 9090
+          volumeMounts:
+            - name: config
+              mountPath: /etc/prometheus
+            - name: data
+              mountPath: /prometheus
+          readinessProbe:
+            httpGet:
+              path: {{ .Values.ingress.paths.prometheus }}/-/ready
+              port: http
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: {{ .Values.ingress.paths.prometheus }}/-/healthy
+              port: http
+            periodSeconds: 15
+          resources:
+            {{- toYaml .Values.monitoring.prometheus.resources | nindent 12 }}
+      volumes:
+        - name: config
+          configMap:
+            name: prometheus-config
+        - name: data
+          {{- if .Values.monitoring.prometheus.persistence.enabled }}
+          persistentVolumeClaim:
+            claimName: prometheus-data
+          {{- else }}
+          emptyDir: {}
+          {{- end }}
+{{- if .Values.monitoring.prometheus.persistence.enabled }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: prometheus-data
+  labels:
+    app.kubernetes.io/name: prometheus
+spec:
+  accessModes: ["ReadWriteOnce"]
+  {{- with .Values.monitoring.prometheus.persistence.storageClass }}
+  storageClassName: {{ . | quote }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ .Values.monitoring.prometheus.persistence.size }}
+{{- end }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: prometheus
+  labels:
+    app.kubernetes.io/name: prometheus
+spec:
+  selector:
+    app.kubernetes.io/name: prometheus
+  ports:
+    - name: http
+      port: 9090
+      targetPort: http
+{{- end }}
