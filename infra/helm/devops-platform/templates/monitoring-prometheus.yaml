@@ -182,6 +182,8 @@ spec:
             - --storage.tsdb.path=/prometheus
             - --storage.tsdb.retention.time={{ .Values.monitoring.prometheus.retention }}
             - --web.enable-lifecycle
+            # Serve under the ingress sub-path; route-prefix defaults to this URL's path.
+            - --web.external-url=https://{{ .Values.ingress.host }}{{ .Values.ingress.paths.prometheus }}
           ports:
             - name: http
               containerPort: 9090
@@ -192,12 +194,12 @@ spec:
               mountPath: /prometheus
           readinessProbe:
             httpGet:
-              path: /-/ready
+              path: {{ .Values.ingress.paths.prometheus }}/-/ready
               port: http
             periodSeconds: 10
           livenessProbe:
             httpGet:
-              path: /-/healthy
+              path: {{ .Values.ingress.paths.prometheus }}/-/healthy
               port: http
             periodSeconds: 15
           resources:

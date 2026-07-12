@@ -99,7 +99,7 @@ An enumeration of what the `PromptBuilder` is asked to produce: `SUMMARY`, `SEVE
 
 **Comments**: Immutable. No edit or delete. Consistent with the append-only Event Log.
 
-**Observability stack**: on Kubernetes the chart relies on the **shared cluster prometheus-operator** rather than self-hosting one. The deploy user is namespace-scoped and cannot create the cluster-scoped resources (ClusterRoles, CRDs) a bundled `kube-prometheus-stack` requires, so the chart ships only namespaced CRs (`PodMonitor`, `PrometheusRule`) and a Grafana dashboard `ConfigMap`; the cluster's Prometheus scrapes them and the cluster's Grafana renders them. The local docker-compose stack still self-hosts Prometheus + Grafana for development. All services expose `/metrics` (Micrometer for Spring Boot, `prometheus-fastapi-instrumentator` for Python). Distributed tracing: out of scope.
+**Observability stack**: the chart **self-hosts Prometheus + Grafana inside the release namespace** (`monitoring.enabled`, default on). Both are plain `Deployment`/`Service`/`ConfigMap` resources: no `kube-prometheus-stack`, no CRDs, no cluster-scoped RBAC, so a namespace-scoped deploy user can install them. Prometheus scrapes each service's `/metrics` via static `scrape_configs`, evaluates alert rules itself (no Alertmanager), and provisions Grafana with a Prometheus datasource plus the bundled dashboards. Grafana is exposed under `/grafana` and Prometheus under `/prometheus`; the Grafana admin password comes from `secrets.grafanaPassword` (falls back to `monitoring.grafana.adminPassword`). An optional `monitoring.operatorCrds.enabled` compatibility mode instead ships namespaced CRs (`PodMonitor`, `PrometheusRule`, Grafana dashboard `ConfigMap`) for clusters that already run a shared prometheus-operator. The local docker-compose stack self-hosts Prometheus + Grafana for development. All services expose `/metrics` (Micrometer for Spring Boot, `prometheus-fastapi-instrumentator` for Python). Distributed tracing: out of scope.
 
 **Helm chart structure**: flat chart (one chart, all services as templates). No subcharts.
 
@@ -112,7 +112,7 @@ An enumeration of what the `PromptBuilder` is asked to produce: `SUMMARY`, `SEVE
 | Postgres | 256Mi / 512Mi | 100m / 500m |
 | NATS | 64Mi / 128Mi | 50m / 200m |
 
-**Alerting**: `PrometheusRule` CRs evaluated by the shared cluster Alertmanager, routing to Grafana UI only (no Slack/email). Full alert set:
+**Alerting**: the self-hosted Prometheus evaluates alert rules directly from its config (no Alertmanager, no external routing); alerts surface in the Prometheus and Grafana UIs. In `operatorCrds` compatibility mode the same rules ship as a `PrometheusRule` CR for the shared cluster operator instead. Full alert set:
 | Alert | Condition | Severity |
 |---|---|---|
 | Service down | health check fails >1min | critical |

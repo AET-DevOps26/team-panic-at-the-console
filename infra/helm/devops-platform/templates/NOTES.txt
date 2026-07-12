@@ -22,9 +22,12 @@ Swagger UI (OpenAPI):
 Observability:
   Grafana:
     http(s)://<ingress-address>{{ .Values.ingress.paths.grafana }}
-  Prometheus is cluster-internal at:
-    http://prometheus:9090
-  Grafana credentials use monitoring.grafana.adminUser/adminPassword.
+  {{- if not .Values.monitoring.operatorCrds.enabled }}
+  Prometheus:
+    http(s)://<ingress-address>{{ .Values.ingress.paths.prometheus }}
+  {{- end }}
+  Grafana admin user: {{ .Values.monitoring.grafana.adminUser }}
+  Grafana admin password: secrets.grafanaPassword (falls back to monitoring.grafana.adminPassword).
 {{ end }}
 
 NATS (cluster-internal):
