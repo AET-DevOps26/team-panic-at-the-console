@@ -13,7 +13,8 @@ data:
         uid: prometheus
         type: prometheus
         access: proxy
-        url: http://prometheus:9090
+        # Prometheus serves its API under the route-prefix from --web.external-url.
+        url: http://prometheus:9090{{ if not .Values.monitoring.operatorCrds.enabled }}{{ .Values.ingress.paths.prometheus }}{{ end }}
         isDefault: true
   dashboards.yml: |
     apiVersion: 1
@@ -64,6 +65,9 @@ spec:
     metadata:
       labels:
         app.kubernetes.io/name: grafana
+      annotations:
+        # Roll the pod when datasource provisioning or the admin password change.
+        checksum/config: {{ cat (toYaml .Values.monitoring) (toYaml .Values.secrets) (toYaml .Values.ingress) | sha256sum }}
     spec:
       securityContext:
         runAsNonRoot: true
