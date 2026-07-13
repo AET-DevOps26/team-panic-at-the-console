@@ -530,6 +530,77 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+    patch:
+      operationId: updateCurrentUser
+      summary: Update the authenticated user profile
+      description: |
+        Partial update of the caller's own profile. Requires a valid `session` cookie (see
+        `GET /users/me`). Changing `email` additionally requires `currentPassword`; changing
+        only `displayName` does not. The session cookie stays valid after the update.
+      tags: [users]
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateProfileRequest"
+      responses:
+        "200":
+          description: Updated user profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "400":
+          description: Invalid request (validation failed, or email change without currentPassword)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Not authenticated, or currentPassword is wrong
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Email already registered to another account
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /users/me/password:
+    post:
+      operationId: changePassword
+      summary: Change the authenticated user's password
+      description: |
+        Requires a valid `session` cookie (see `GET /users/me`) and the current password.
+        Existing sessions are not revoked (ADR 0007: stateless session JWTs expire via TTL).
+      tags: [users]
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChangePasswordRequest"
+      responses:
+        "204":
+          description: Password changed
+        "400":
+          description: Invalid request (validation failed)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Not authenticated, or currentPassword is wrong
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 
   /users:
     get:
@@ -763,6 +834,47 @@ components:
             configured with one (public instances); ignored when the
             instance leaves registration open.
           example: let-me-in
+
+    UpdateProfileRequest:
+      type: object
+      description: >-
+        Partial profile update; at least one of `email` or `displayName` must be
+        present. `currentPassword` is required when `email` is present.
+      additionalProperties: false
+      minProperties: 1
+      properties:
+        email:
+          type: string
+          format: email
+          example: new.address@example.com
+        displayName:
+          type: string
+          minLength: 1
+          maxLength: 100
+          example: Alex Responder
+        currentPassword:
+          type: string
+          format: password
+          writeOnly: true
+          example: "change-me-8+"
+
+    ChangePasswordRequest:
+      type: object
+      required: [currentPassword, newPassword]
+      additionalProperties: false
+      properties:
+        currentPassword:
+          type: string
+          format: password
+          writeOnly: true
+          example: "change-me-8+"
+        newPassword:
+          type: string
+          format: password
+          minLength: 8
+          maxLength: 128
+          writeOnly: true
+          example: "new-secret-9!"
 
     LoginRequest:
       type: object

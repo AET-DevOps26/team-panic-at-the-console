@@ -28,6 +28,11 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(new ErrorResponse(e.getMessage()));
     }
 
+    @ExceptionHandler(InvalidProfileUpdateException.class)
+    public ResponseEntity<ErrorResponse> handleInvalidProfileUpdate(InvalidProfileUpdateException e) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new ErrorResponse(e.getMessage()));
+    }
+
     @ExceptionHandler(InvalidInviteCodeException.class)
     public ResponseEntity<ErrorResponse> handleInvalidInviteCode(InvalidInviteCodeException e) {
         return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new ErrorResponse(e.getMessage()));

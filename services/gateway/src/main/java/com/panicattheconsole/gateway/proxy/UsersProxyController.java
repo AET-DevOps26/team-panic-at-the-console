@@ -1,6 +1,8 @@
 package com.panicattheconsole.gateway.proxy;
 
 import org.openapitools.api.UsersApi;
+import org.openapitools.model.ChangePasswordRequest;
+import org.openapitools.model.UpdateProfileRequest;
 import org.openapitools.model.User;
 import org.openapitools.model.UserListResponse;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -29,6 +31,18 @@ class UsersProxyController implements UsersApi {
     public ResponseEntity<User> getCurrentUser() {
         return DownstreamProxy.getForwardingCookies(
                 userServiceClient, "/users/me", User.class, cookie());
+    }
+
+    @Override
+    public ResponseEntity<User> updateCurrentUser(UpdateProfileRequest updateProfileRequest) {
+        return DownstreamProxy.patchForwardingCookies(
+                userServiceClient, "/users/me", updateProfileRequest, User.class, cookie());
+    }
+
+    @Override
+    public ResponseEntity<Void> changePassword(ChangePasswordRequest changePasswordRequest) {
+        return DownstreamProxy.postForwardingCookies(
+                userServiceClient, "/users/me/password", changePasswordRequest, Void.class, cookie());
     }
 
     @Override

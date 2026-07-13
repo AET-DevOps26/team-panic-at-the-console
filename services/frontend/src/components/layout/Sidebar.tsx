@@ -6,12 +6,12 @@ import { cn } from "@/lib/utils";
 import { Separator } from "@/components/ui/separator";
 import { GatewayStatus } from "@/components/layout/GatewayStatus";
 
-const linkedNavItems = [{ to: "/incidents", label: "Incidents", icon: AlertTriangle }];
-
-const disabledNavItems = [
-  { label: "Sources", icon: Webhook },
-  { label: "Settings", icon: Settings },
+const linkedNavItems = [
+  { to: "/incidents", label: "Incidents", icon: AlertTriangle },
+  { to: "/settings", label: "Settings", icon: Settings },
 ];
+
+const disabledNavItems = [{ label: "Sources", icon: Webhook }];
 
 export default function Sidebar() {
   const navigate = useNavigate();

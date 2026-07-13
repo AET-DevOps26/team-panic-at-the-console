@@ -13,6 +13,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.panicattheconsole.userservice.exception.EmailAlreadyRegisteredException;
 import com.panicattheconsole.userservice.exception.InvalidCredentialsException;
+import com.panicattheconsole.userservice.exception.InvalidProfileUpdateException;
+import com.panicattheconsole.userservice.exception.NotAuthenticatedException;
 
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
@@ -57,6 +59,45 @@ public class UserAccountService {
     @Transactional(readOnly = true)
     public Optional<UserAccount> findById(UUID id) {
         return repository.findById(id);
+    }
+
+    /**
+     * Updates the caller's own profile. Changing the email requires the current
+     * password so a hijacked session cannot silently take over the account.
+     */
+    public UserAccount updateProfile(UUID id, String email, String displayName, String currentPassword) {
+        if (email == null && displayName == null) {
+            throw new InvalidProfileUpdateException("Provide at least one of email or displayName");
+        }
+        UserAccount account = repository.findById(id).orElseThrow(NotAuthenticatedException::new);
+        if (email != null) {
+            String normalizedEmail = normalize(email);
+            if (!normalizedEmail.equals(account.getEmail())) {
+                if (currentPassword == null || currentPassword.isBlank()) {
+                    throw new InvalidProfileUpdateException("Changing the email requires currentPassword");
+                }
+                if (!passwordEncoder.matches(currentPassword, account.getPasswordHash())) {
+                    throw new InvalidCredentialsException();
+                }
+                if (repository.existsByEmail(normalizedEmail)) {
+                    throw new EmailAlreadyRegisteredException(normalizedEmail);
+                }
+                account.setEmail(normalizedEmail);
+            }
+        }
+        if (displayName != null) {
+            account.setDisplayName(displayName);
+        }
+        return repository.save(account);
+    }
+
+    public void changePassword(UUID id, String currentPassword, String newPassword) {
+        UserAccount account = repository.findById(id).orElseThrow(NotAuthenticatedException::new);
+        if (!passwordEncoder.matches(currentPassword, account.getPasswordHash())) {
+            throw new InvalidCredentialsException();
+        }
+        account.setPasswordHash(passwordEncoder.encode(newPassword));
+        repository.save(account);
     }
 
     @Transactional(readOnly = true)

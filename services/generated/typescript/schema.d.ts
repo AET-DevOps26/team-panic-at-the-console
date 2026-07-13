@@ -334,6 +334,35 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
+        /**
+         * Update the authenticated user profile
+         * @description Partial update of the caller's own profile. Requires a valid `session` cookie (see
+         *     `GET /users/me`). Changing `email` additionally requires `currentPassword`; changing
+         *     only `displayName` does not. The session cookie stays valid after the update.
+         *
+         */
+        patch: operations["updateCurrentUser"];
+        trace?: never;
+    };
+    "/users/me/password": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Change the authenticated user's password
+         * @description Requires a valid `session` cookie (see `GET /users/me`) and the current password.
+         *     Existing sessions are not revoked (ADR 0007: stateless session JWTs expire via TTL).
+         *
+         */
+        post: operations["changePassword"];
+        delete?: never;
+        options?: never;
+        head?: never;
         patch?: never;
         trace?: never;
     };
@@ -461,6 +490,33 @@ export interface components {
              * @example let-me-in
              */
             inviteCode?: string;
+        };
+        /** @description Partial profile update; at least one of `email` or `displayName` must be present. `currentPassword` is required when `email` is present. */
+        UpdateProfileRequest: {
+            /**
+             * Format: email
+             * @example new.address@example.com
+             */
+            email?: string;
+            /** @example Alex Responder */
+            displayName?: string;
+            /**
+             * Format: password
+             * @example change-me-8+
+             */
+            currentPassword?: string;
+        };
+        ChangePasswordRequest: {
+            /**
+             * Format: password
+             * @example change-me-8+
+             */
+            currentPassword: string;
+            /**
+             * Format: password
+             * @example new-secret-9!
+             */
+            newPassword: string;
         };
         LoginRequest: {
             /**
@@ -1436,6 +1492,97 @@ export interface operations {
                 };
             };
             /** @description Not authenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    updateCurrentUser: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateProfileRequest"];
+            };
+        };
+        responses: {
+            /** @description Updated user profile */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["User"];
+                };
+            };
+            /** @description Invalid request (validation failed, or email change without currentPassword) */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not authenticated, or currentPassword is wrong */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Email already registered to another account */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    changePassword: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ChangePasswordRequest"];
+            };
+        };
+        responses: {
+            /** @description Password changed */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Invalid request (validation failed) */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not authenticated, or currentPassword is wrong */
             401: {
                 headers: {
                     [name: string]: unknown;

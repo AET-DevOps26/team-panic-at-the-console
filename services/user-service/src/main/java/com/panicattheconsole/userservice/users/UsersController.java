@@ -3,6 +3,8 @@ package com.panicattheconsole.userservice.users;
 import java.util.List;
 
 import org.openapitools.api.UsersApi;
+import org.openapitools.model.ChangePasswordRequest;
+import org.openapitools.model.UpdateProfileRequest;
 import org.openapitools.model.User;
 import org.openapitools.model.UserListResponse;
 import org.springframework.http.ResponseEntity;
@@ -40,6 +42,24 @@ class UsersController implements UsersApi {
         UserAccount account = users.findById(session.userId())
                 .orElseThrow(NotAuthenticatedException::new);
         return ResponseEntity.ok(UserMapper.toApi(account));
+    }
+
+    @Override
+    public ResponseEntity<User> updateCurrentUser(UpdateProfileRequest request) {
+        SessionUser session = requireSession();
+        UserAccount account = users.updateProfile(
+                session.userId(),
+                request.getEmail(),
+                request.getDisplayName(),
+                request.getCurrentPassword());
+        return ResponseEntity.ok(UserMapper.toApi(account));
+    }
+
+    @Override
+    public ResponseEntity<Void> changePassword(ChangePasswordRequest request) {
+        SessionUser session = requireSession();
+        users.changePassword(session.userId(), request.getCurrentPassword(), request.getNewPassword());
+        return ResponseEntity.noContent().build();
     }
 
     @Override
