@@ -166,7 +166,10 @@ export interface paths {
         /** List comments on an incident */
         get: operations["listComments"];
         put?: never;
-        /** Add a comment to an incident (immutable) */
+        /**
+         * Add a comment to an incident (immutable)
+         * @description The comment's authorId is taken from the gateway-injected `X-User-Id` header (the validated session identity), never from the request body.
+         */
         post: operations["addComment"];
         delete?: never;
         options?: never;
@@ -255,6 +258,8 @@ export interface paths {
          * Create a new user account
          * @description Public self-registration. New accounts receive the `MEMBER` role.
          *     Passwords are stored hashed server-side; the cleartext password is never returned.
+         *     Instances configured with an invitation code (`AUTH_INVITE_CODE`) reject
+         *     registrations whose `inviteCode` does not match with 403.
          *
          */
         post: operations["registerUser"];
@@ -326,6 +331,35 @@ export interface paths {
         get: operations["getCurrentUser"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Update the authenticated user profile
+         * @description Partial update of the caller's own profile. Requires a valid `session` cookie (see
+         *     `GET /users/me`). Changing `email` additionally requires `currentPassword`; changing
+         *     only `displayName` does not. The session cookie stays valid after the update.
+         *
+         */
+        patch: operations["updateCurrentUser"];
+        trace?: never;
+    };
+    "/users/me/password": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Change the authenticated user's password
+         * @description Requires a valid `session` cookie (see `GET /users/me`) and the current password.
+         *     Existing sessions are not revoked (ADR 0007: stateless session JWTs expire via TTL).
+         *
+         */
+        post: operations["changePassword"];
         delete?: never;
         options?: never;
         head?: never;
@@ -451,6 +485,38 @@ export interface components {
             password: string;
             /** @example New User */
             displayName: string;
+            /**
+             * @description Instance invitation code. Required when the deployment is configured with one (public instances); ignored when the instance leaves registration open.
+             * @example let-me-in
+             */
+            inviteCode?: string;
+        };
+        /** @description Partial profile update; at least one of `email` or `displayName` must be present. `currentPassword` is required when `email` is present. */
+        UpdateProfileRequest: {
+            /**
+             * Format: email
+             * @example new.address@example.com
+             */
+            email?: string;
+            /** @example Alex Responder */
+            displayName?: string;
+            /**
+             * Format: password
+             * @example change-me-8+
+             */
+            currentPassword?: string;
+        };
+        ChangePasswordRequest: {
+            /**
+             * Format: password
+             * @example change-me-8+
+             */
+            currentPassword: string;
+            /**
+             * Format: password
+             * @example new-secret-9!
+             */
+            newPassword: string;
         };
         LoginRequest: {
             /**
@@ -539,6 +605,13 @@ export interface components {
              * @description When the AI postmortem was last generated.
              */
             postmortemGeneratedAt?: string | null;
+            /**
+             * @description UUIDs of the responders currently assigned to this incident (see PATCH /incidents/{incidentId}/assign).
+             * @example [
+             *       "018e2c5f-1234-7abc-8def-0000000000aa"
+             *     ]
+             */
+            assignedUserIds?: string[];
         };
         /** @description One entry from an incident's append-only Event Log. */
         IncidentEvent: {
@@ -1316,6 +1389,15 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
+            /** @description Invalid invitation code */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
             /** @description Email already registered */
             409: {
                 headers: {
@@ -1410,6 +1492,97 @@ export interface operations {
                 };
             };
             /** @description Not authenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    updateCurrentUser: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateProfileRequest"];
+            };
+        };
+        responses: {
+            /** @description Updated user profile */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["User"];
+                };
+            };
+            /** @description Invalid request (validation failed, or email change without currentPassword) */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not authenticated, or currentPassword is wrong */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Email already registered to another account */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    changePassword: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ChangePasswordRequest"];
+            };
+        };
+        responses: {
+            /** @description Password changed */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Invalid request (validation failed) */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not authenticated, or currentPassword is wrong */
             401: {
                 headers: {
                     [name: string]: unknown;

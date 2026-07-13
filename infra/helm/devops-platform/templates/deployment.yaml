@@ -108,6 +108,18 @@ spec:
                 secretKeyRef:
                   name: {{ include "devops-platform.postgresSecretName" $ }}
                   key: password
+            {{- else if eq .name "AUTH_JWT_SECRET" }}
+            - name: AUTH_JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "devops-platform.authSecretName" $ }}
+                  key: jwtSecret
+            {{- else if eq .name "AUTH_INVITE_CODE" }}
+            - name: AUTH_INVITE_CODE
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "devops-platform.authSecretName" $ }}
+                  key: inviteCode
             {{- else }}
             - name: {{ .name }}
               {{- if .value }}

@@ -7,14 +7,18 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.RestClient;
 
+import com.panicattheconsole.gateway.auth.IdentityHeaderRelay;
+
 @TestConfiguration
 @ConditionalOnProperty(name = "gateway.downstream-clients.enabled", havingValue = "false")
 public class MockDownstreamClientsConfig {
 
     @Bean
     @ConditionalOnMissingBean(RestClient.Builder.class)
-    RestClient.Builder restClientBuilder() {
-        return RestClient.builder();
+    RestClient.Builder restClientBuilder(IdentityHeaderRelay relay) {
+        // Same identity-header relay as ServiceClientsConfig so tests can assert
+        // the X-User-Id / X-User-Role headers on mocked downstream requests.
+        return RestClient.builder().requestInterceptor(relay);
     }
 
     @Bean

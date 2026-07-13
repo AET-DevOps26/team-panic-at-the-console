@@ -13,6 +13,7 @@ import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.test.web.servlet.MockMvc;
 
 import com.panicattheconsole.gateway.GatewayApplication;
+import com.panicattheconsole.gateway.auth.TestSessions;
 
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.method;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
@@ -72,7 +73,8 @@ class NotificationsProxyControllerTest {
 
         mvc.perform(get("/notifications")
                         .queryParam("recipientId", RECIPIENT_ID)
-                        .queryParam("unreadOnly", "true"))
+                        .queryParam("unreadOnly", "true")
+                        .cookie(TestSessions.sessionCookie()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.total").value(1))
                 .andExpect(jsonPath("$.unreadCount").value(1))
@@ -88,7 +90,7 @@ class NotificationsProxyControllerTest {
                 .andExpect(method(HttpMethod.POST))
                 .andRespond(withStatus(HttpStatus.NO_CONTENT));
 
-        mvc.perform(post("/notifications/{id}/read", NOTIFICATION_ID))
+        mvc.perform(post("/notifications/{id}/read", NOTIFICATION_ID).cookie(TestSessions.sessionCookie()))
                 .andExpect(status().isNoContent());
 
         notificationServer.verify();
@@ -101,7 +103,7 @@ class NotificationsProxyControllerTest {
                 .andExpect(method(HttpMethod.POST))
                 .andRespond(withStatus(HttpStatus.NOT_FOUND));
 
-        mvc.perform(post("/notifications/{id}/read", NOTIFICATION_ID))
+        mvc.perform(post("/notifications/{id}/read", NOTIFICATION_ID).cookie(TestSessions.sessionCookie()))
                 .andExpect(status().isNotFound());
 
         notificationServer.verify();
@@ -115,7 +117,8 @@ class NotificationsProxyControllerTest {
                 .andRespond(withStatus(HttpStatus.NO_CONTENT));
 
         mvc.perform(post("/notifications/read-all")
-                        .queryParam("recipientId", RECIPIENT_ID))
+                        .queryParam("recipientId", RECIPIENT_ID)
+                        .cookie(TestSessions.sessionCookie()))
                 .andExpect(status().isNoContent());
 
         notificationServer.verify();

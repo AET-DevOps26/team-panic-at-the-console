@@ -36,6 +36,8 @@ class Incident:
         solutions_generated_at (datetime.datetime | None | Unset): When the AI solution suggestions were last generated.
         postmortem (None | str | Unset): AI-drafted postmortem. Only set for resolved incidents.
         postmortem_generated_at (datetime.datetime | None | Unset): When the AI postmortem was last generated.
+        assigned_user_ids (list[UUID] | Unset): UUIDs of the responders currently assigned to this incident (see PATCH
+            /incidents/{incidentId}/assign). Example: ['018e2c5f-1234-7abc-8def-0000000000aa'].
     """
 
     id: UUID
@@ -53,6 +55,7 @@ class Incident:
     solutions_generated_at: datetime.datetime | None | Unset = UNSET
     postmortem: None | str | Unset = UNSET
     postmortem_generated_at: datetime.datetime | None | Unset = UNSET
+    assigned_user_ids: list[UUID] | Unset = UNSET
 
     def to_dict(self) -> dict[str, Any]:
         id = str(self.id)
@@ -135,6 +138,13 @@ class Incident:
         else:
             postmortem_generated_at = self.postmortem_generated_at
 
+        assigned_user_ids: list[str] | Unset = UNSET
+        if not isinstance(self.assigned_user_ids, Unset):
+            assigned_user_ids = []
+            for assigned_user_ids_item_data in self.assigned_user_ids:
+                assigned_user_ids_item = str(assigned_user_ids_item_data)
+                assigned_user_ids.append(assigned_user_ids_item)
+
         field_dict: dict[str, Any] = {}
 
         field_dict.update(
@@ -166,6 +176,8 @@ class Incident:
             field_dict["postmortem"] = postmortem
         if postmortem_generated_at is not UNSET:
             field_dict["postmortemGeneratedAt"] = postmortem_generated_at
+        if assigned_user_ids is not UNSET:
+            field_dict["assignedUserIds"] = assigned_user_ids
 
         return field_dict
 
@@ -314,6 +326,15 @@ class Incident:
 
         postmortem_generated_at = _parse_postmortem_generated_at(d.pop("postmortemGeneratedAt", UNSET))
 
+        _assigned_user_ids = d.pop("assignedUserIds", UNSET)
+        assigned_user_ids: list[UUID] | Unset = UNSET
+        if _assigned_user_ids is not UNSET:
+            assigned_user_ids = []
+            for assigned_user_ids_item_data in _assigned_user_ids:
+                assigned_user_ids_item = UUID(assigned_user_ids_item_data)
+
+                assigned_user_ids.append(assigned_user_ids_item)
+
         incident = cls(
             id=id,
             title=title,
@@ -330,6 +351,7 @@ class Incident:
             solutions_generated_at=solutions_generated_at,
             postmortem=postmortem,
             postmortem_generated_at=postmortem_generated_at,
+            assigned_user_ids=assigned_user_ids,
         )
 
         return incident

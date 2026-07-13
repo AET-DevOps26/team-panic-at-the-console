@@ -1,18 +1,33 @@
-import { Link, NavLink } from "react-router-dom";
+import { Link, NavLink, useNavigate } from "react-router-dom";
 import { AlertTriangle, ExternalLink, Settings, Webhook, LayoutDashboard, LogOut } from "lucide-react";
+import { useCurrentUser, useLogout } from "@/api/queries";
 import { appConfig } from "@/lib/appConfig";
 import { cn } from "@/lib/utils";
 import { Separator } from "@/components/ui/separator";
 import { GatewayStatus } from "@/components/layout/GatewayStatus";
 
-const linkedNavItems = [{ to: "/incidents", label: "Incidents", icon: AlertTriangle }];
-
-const disabledNavItems = [
-  { label: "Sources", icon: Webhook },
-  { label: "Settings", icon: Settings },
+const linkedNavItems = [
+  { to: "/incidents", label: "Incidents", icon: AlertTriangle },
+  { to: "/settings", label: "Settings", icon: Settings },
 ];
 
+const disabledNavItems = [{ label: "Sources", icon: Webhook }];
+
 export default function Sidebar() {
+  const navigate = useNavigate();
+  const { data: user } = useCurrentUser();
+  const logout = useLogout();
+
+  async function handleSignOut() {
+    try {
+      await logout.mutateAsync();
+    } finally {
+      // The cookie is httpOnly, so the only sensible recovery from a failed
+      // logout call is still to leave the app.
+      navigate("/login", { replace: true });
+    }
+  }
+
   return (
     <aside className="flex h-full w-60 flex-col bg-slate-900 text-slate-100">
       {/* Brand */}
@@ -55,15 +70,26 @@ export default function Sidebar() {
 
       {/* Bottom: user area */}
       <Separator className="bg-slate-700" />
-      <div className="px-3 py-3">
-        <button className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition-colors">
+      <div className="px-3 py-3 space-y-1">
+        {user && (
+          <div className="px-3 py-1">
+            <p className="text-sm font-medium text-slate-100 truncate">{user.displayName}</p>
+            <p className="text-xs text-slate-400 truncate">{user.email}</p>
+          </div>
+        )}
+        <button
+          onClick={handleSignOut}
+          disabled={logout.isPending}
+          className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition-colors disabled:opacity-50"
+        >
           <LogOut className="h-4 w-4" />
-          Sign out
+          {logout.isPending ? "Signing out…" : "Sign out"}
         </button>
       </div>
+      <Separator className="bg-slate-700" />
 
       {/* Deployment info */}
-      <div className="px-6 pb-3 space-y-1 text-xs text-slate-500">
+      <div className="px-6 py-3 space-y-1 text-xs text-slate-500">
         <GatewayStatus />
         {(appConfig.prometheusUrl || appConfig.grafanaUrl) && (
           <div className="flex items-center gap-3">

@@ -136,23 +136,27 @@ public interface AuthApi {
 
     /**
      * POST /auth/register : Create a new user account
-     * Public self-registration. New accounts receive the &#x60;MEMBER&#x60; role. Passwords are stored hashed server-side; the cleartext password is never returned.
+     * Public self-registration. New accounts receive the &#x60;MEMBER&#x60; role. Passwords are stored hashed server-side; the cleartext password is never returned. Instances configured with an invitation code (&#x60;AUTH_INVITE_CODE&#x60;) reject registrations whose &#x60;inviteCode&#x60; does not match with 403.
      *
      * @param registerRequest  (required)
      * @return Account created (status code 201)
      *         or Invalid request (validation failed) (status code 400)
+     *         or Invalid invitation code (status code 403)
      *         or Email already registered (status code 409)
      */
     @Operation(
         operationId = "registerUser",
         summary = "Create a new user account",
-        description = "Public self-registration. New accounts receive the `MEMBER` role. Passwords are stored hashed server-side; the cleartext password is never returned. ",
+        description = "Public self-registration. New accounts receive the `MEMBER` role. Passwords are stored hashed server-side; the cleartext password is never returned. Instances configured with an invitation code (`AUTH_INVITE_CODE`) reject registrations whose `inviteCode` does not match with 403. ",
         tags = { "auth" },
         responses = {
             @ApiResponse(responseCode = "201", description = "Account created", content = {
                 @Content(mediaType = "application/json", schema = @Schema(implementation = User.class))
             }),
             @ApiResponse(responseCode = "400", description = "Invalid request (validation failed)", content = {
+                @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))
+            }),
+            @ApiResponse(responseCode = "403", description = "Invalid invitation code", content = {
                 @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))
             }),
             @ApiResponse(responseCode = "409", description = "Email already registered", content = {
@@ -174,6 +178,11 @@ public interface AuthApi {
             for (MediaType mediaType: MediaType.parseMediaTypes(request.getHeader("Accept"))) {
                 if (mediaType.isCompatibleWith(MediaType.valueOf("application/json"))) {
                     String exampleString = "{ \"createdAt\" : \"2026-05-08T10:00:00Z\", \"role\" : \"MEMBER\", \"displayName\" : \"Alex Responder\", \"id\" : \"018e2c5f-1234-7abc-8def-0000000000aa\", \"email\" : \"responder@example.com\" }";
+                    ApiUtil.setExampleResponse(request, "application/json", exampleString);
+                    break;
+                }
+                if (mediaType.isCompatibleWith(MediaType.valueOf("application/json"))) {
+                    String exampleString = "{ \"message\" : \"Invalid email or password\" }";
                     ApiUtil.setExampleResponse(request, "application/json", exampleString);
                     break;
                 }

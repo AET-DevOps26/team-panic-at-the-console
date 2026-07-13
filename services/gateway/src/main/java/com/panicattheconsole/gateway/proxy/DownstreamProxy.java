@@ -87,6 +87,18 @@ final class DownstreamProxy {
         return copySetCookie(downstream);
     }
 
+    static <T> ResponseEntity<T> patchForwardingCookies(
+            RestClient client, String path, Object requestBody, Class<T> bodyType, String cookieHeader) {
+        ResponseEntity<T> downstream = client.patch()
+                .uri(path)
+                .headers(h -> { if (cookieHeader != null) h.set(HttpHeaders.COOKIE, cookieHeader); })
+                .body(requestBody)
+                .retrieve()
+                .onStatus(HttpStatusCode::isError, (req, resp) -> {})
+                .toEntity(bodyType);
+        return copySetCookie(downstream);
+    }
+
     static <T> ResponseEntity<T> getForwardingCookies(
             RestClient client, String path, Class<T> bodyType, String cookieHeader, Object... uriVariables) {
         ResponseEntity<T> downstream = client.get()

@@ -106,6 +106,8 @@ services:
       GATEWAY_USER_SERVICE_URL: http://user-service:8084
       GATEWAY_NOTIFICATION_SERVICE_URL: http://notification-service:8085
       NATS_URL: ${NATS_URL:-nats://nats:4222}
+      # Session JWT secret shared with user-service (ADR 0007).
+      AUTH_JWT_SECRET: ${JWT_SECRET:-local-dev-only-jwt-secret-0123456789abcdef}
     healthcheck:
       <<: *healthcheck-spring
       test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://127.0.0.1:8080/api/v1/health || exit 1"]
@@ -113,6 +115,8 @@ services:
       incident-service:
         condition: service_healthy
       event-service:
+        condition: service_healthy
+      user-service:
         condition: service_healthy
     restart: unless-stopped
 
@@ -188,6 +192,10 @@ services:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/users
       SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-devops}
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-devops}
+      # Session JWT secret shared with the gateway (ADR 0007).
+      AUTH_JWT_SECRET: ${JWT_SECRET:-local-dev-only-jwt-secret-0123456789abcdef}
+      # Registration invitation code; empty keeps self-registration open.
+      AUTH_INVITE_CODE: ${INVITE_CODE:-}
     ports:
       - "8084:8084"
     healthcheck:

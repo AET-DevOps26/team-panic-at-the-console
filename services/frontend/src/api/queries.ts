@@ -15,6 +15,9 @@ export type EscalateSeverityRequest = components["schemas"]["EscalateSeverityReq
 export type AssignIncidentRequest = components["schemas"]["AssignIncidentRequest"];
 export type CreateCommentRequest = components["schemas"]["CreateCommentRequest"];
 export type LoginRequest = components["schemas"]["LoginRequest"];
+export type RegisterRequest = components["schemas"]["RegisterRequest"];
+export type UpdateProfileRequest = components["schemas"]["UpdateProfileRequest"];
+export type ChangePasswordRequest = components["schemas"]["ChangePasswordRequest"];
 export type User = components["schemas"]["User"];
 
 const MOCK = import.meta.env.VITE_MOCK === "true";
@@ -338,10 +341,81 @@ export function useRegeneratePostmortem(incidentId: string) {
 
 // ── Auth ──────────────────────────────────────────────────────────────────────
 
+const MOCK_USER: User = {
+  id: "018e2c5f-1234-7abc-8def-0000000000aa",
+  email: "demo@example.com",
+  displayName: "Demo Responder",
+  role: "MEMBER",
+  createdAt: new Date(Date.now() - 30 * 24 * 3600_000).toISOString(),
+};
+
+export function useCurrentUser() {
+  return useQuery({
+    queryKey: ["users", "me"],
+    queryFn: async (): Promise<User> => {
+      if (MOCK) return MOCK_USER;
+      const { data, error, response } = await apiClient.GET("/users/me");
+      if (error || !data) throw new ApiError("Not authenticated", response?.status);
+      return data;
+    },
+    retry: false,
+    staleTime: 5 * 60_000,
+  });
+}
+
+export function useUsers() {
+  return useQuery({
+    queryKey: ["users", "directory"],
+    queryFn: async (): Promise<User[]> => {
+      if (MOCK) return [MOCK_USER];
+      const { data, error } = await apiClient.GET("/users", {
+        params: { query: { limit: 100, offset: 0 } },
+      });
+      if (error || !data) throw new Error("Failed to fetch users");
+      return data.items;
+    },
+    staleTime: 60_000,
+  });
+}
+
+export function useUpdateProfile() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (body: UpdateProfileRequest): Promise<User | undefined> => {
+      if (MOCK) {
+        return {
+          ...MOCK_USER,
+          displayName: body.displayName ?? MOCK_USER.displayName,
+          email: body.email ?? MOCK_USER.email,
+        };
+      }
+      const { data, error, response } = await apiClient.PATCH("/users/me", { body });
+      if (error) throw new ApiError(error.message ?? "Profile update failed", response?.status);
+      return data;
+    },
+    onSuccess: (user) => {
+      if (user) queryClient.setQueryData(["users", "me"], user);
+      // The directory (assignment pickers, mention lists) shows the same fields.
+      void queryClient.invalidateQueries({ queryKey: ["users", "directory"] });
+    },
+  });
+}
+
+export function useChangePassword() {
+  return useMutation({
+    mutationFn: async (body: ChangePasswordRequest): Promise<void> => {
+      if (MOCK) return;
+      const { error, response } = await apiClient.POST("/users/me/password", { body });
+      if (error) throw new ApiError(error.message ?? "Password change failed", response?.status);
+    },
+  });
+}
+
 export function useLogin() {
+  const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (body: LoginRequest): Promise<User | undefined> => {
-      if (MOCK) return undefined;
+      if (MOCK) return MOCK_USER;
       // Frontend and gateway share a host behind the edge/ingress in every real
       // deployment, so the default (same-origin) credentials mode already sends and
       // stores the httpOnly `session` cookie. We deliberately do not force `include`:
@@ -350,6 +424,35 @@ export function useLogin() {
       const { data, error } = await apiClient.POST("/auth/login", { body });
       if (error) throw new Error(error.message ?? "Invalid email or password");
       return data;
+    },
+    onSuccess: (user) => {
+      if (user) queryClient.setQueryData(["users", "me"], user);
+    },
+  });
+}
+
+export function useRegister() {
+  return useMutation({
+    mutationFn: async (body: RegisterRequest): Promise<User | undefined> => {
+      if (MOCK) return MOCK_USER;
+      const { data, error, response } = await apiClient.POST("/auth/register", { body });
+      if (error) throw new ApiError(error.message ?? "Registration failed", response?.status);
+      return data;
+    },
+  });
+}
+
+export function useLogout() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async () => {
+      if (MOCK) return;
+      const { error } = await apiClient.POST("/auth/logout");
+      if (error) throw new Error("Logout failed");
+    },
+    onSuccess: () => {
+      // Drop every cached query: the next login may be a different user.
+      queryClient.clear();
     },
   });
 }

@@ -4,6 +4,7 @@
 
 # Claude Code
 .claude/settings.local.json
+.claude/skills/
 
 # Traefik / Let's Encrypt (prod compose volume)
 letsencrypt/

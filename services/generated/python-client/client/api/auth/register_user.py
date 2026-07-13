@@ -41,6 +41,11 @@ def _parse_response(*, client: AuthenticatedClient | Client, response: httpx.Res
 
         return response_400
 
+    if response.status_code == 403:
+        response_403 = ErrorResponse.from_dict(response.json())
+
+        return response_403
+
     if response.status_code == 409:
         response_409 = ErrorResponse.from_dict(response.json())
 
@@ -72,6 +77,8 @@ def sync_detailed(
 
      Public self-registration. New accounts receive the `MEMBER` role.
     Passwords are stored hashed server-side; the cleartext password is never returned.
+    Instances configured with an invitation code (`AUTH_INVITE_CODE`) reject
+    registrations whose `inviteCode` does not match with 403.
 
     Args:
         body (RegisterRequest):
@@ -104,6 +111,8 @@ def sync(
 
      Public self-registration. New accounts receive the `MEMBER` role.
     Passwords are stored hashed server-side; the cleartext password is never returned.
+    Instances configured with an invitation code (`AUTH_INVITE_CODE`) reject
+    registrations whose `inviteCode` does not match with 403.
 
     Args:
         body (RegisterRequest):
@@ -131,6 +140,8 @@ async def asyncio_detailed(
 
      Public self-registration. New accounts receive the `MEMBER` role.
     Passwords are stored hashed server-side; the cleartext password is never returned.
+    Instances configured with an invitation code (`AUTH_INVITE_CODE`) reject
+    registrations whose `inviteCode` does not match with 403.
 
     Args:
         body (RegisterRequest):
@@ -161,6 +172,8 @@ async def asyncio(
 
      Public self-registration. New accounts receive the `MEMBER` role.
     Passwords are stored hashed server-side; the cleartext password is never returned.
+    Instances configured with an invitation code (`AUTH_INVITE_CODE`) reject
+    registrations whose `inviteCode` does not match with 403.
 
     Args:
         body (RegisterRequest):

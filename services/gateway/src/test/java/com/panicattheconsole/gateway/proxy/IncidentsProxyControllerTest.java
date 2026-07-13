@@ -15,6 +15,7 @@ import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.test.web.servlet.MockMvc;
 
 import com.panicattheconsole.gateway.GatewayApplication;
+import com.panicattheconsole.gateway.auth.TestSessions;
 
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.method;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
@@ -62,7 +63,7 @@ class IncidentsProxyControllerTest {
                                           "description":"status: open → investigating"}]
                                         """));
 
-        mvc.perform(get("/incidents/" + INCIDENT_ID + "/events"))
+        mvc.perform(get("/incidents/" + INCIDENT_ID + "/events").cookie(TestSessions.sessionCookie()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].type").value("status_changed"));
 
@@ -82,7 +83,8 @@ class IncidentsProxyControllerTest {
                                         {"items":[],"total":0,"page":0,"size":10}
                                         """));
 
-        mvc.perform(get("/incidents").queryParam("page", "0").queryParam("size", "10"))
+        mvc.perform(get("/incidents").queryParam("page", "0").queryParam("size", "10")
+                        .cookie(TestSessions.sessionCookie()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.total").value(0));
 
@@ -108,7 +110,7 @@ class IncidentsProxyControllerTest {
                                         }
                                         """));
 
-        mvc.perform(get("/incidents/{id}", INCIDENT_ID))
+        mvc.perform(get("/incidents/{id}", INCIDENT_ID).cookie(TestSessions.sessionCookie()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.title").value("Checkout spike"));
 
@@ -137,6 +139,7 @@ class IncidentsProxyControllerTest {
 
         mvc.perform(
                         patch("/incidents/{id}/description", INCIDENT_ID)
+                                .cookie(TestSessions.sessionCookie())
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content("{\"description\":\"Rollback in progress\"}"))
                 .andExpect(status().isOk())
