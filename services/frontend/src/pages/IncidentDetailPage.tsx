@@ -14,7 +14,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import type React from "react";
 import NotFoundPage from "@/pages/NotFoundPage";
-import { isNotFound, useIncident, useIncidentEvents, useComments, useAddComment, useRegeneratePostmortem, useRegenerateSeverity, useRegenerateSolutions, useRegenerateSummary, useSetIncidentSeverity, useUpdateIncidentStatus, type Incident, type IncidentEvent, type IncidentStatus, type Severity, type Comment } from "@/api/queries";
+import { isNotFound, useIncident, useIncidentEvents, useComments, useAddComment, useRegeneratePostmortem, useRegenerateSeverity, useRegenerateSolutions, useRegenerateSummary, useSetIncidentSeverity, useUpdateIncidentStatus, useUsers, type Incident, type IncidentEvent, type IncidentStatus, type Severity, type Comment } from "@/api/queries";
+import { AssigneesCard } from "@/components/incident/AssigneesCard";
 import { cn, formatDateTime, formatRelativeTime } from "@/lib/utils";
 import { isAutoGenerating, solutionsToMarkdown, suggestedSeverity, useIntervalRerender, REGEN_WATCH_MS } from "@/lib/genai";
 
@@ -261,6 +262,9 @@ export default function IncidentDetailPage() {
   const { data: comments, isLoading: commentsLoading } = useComments(id ?? "");
   const addComment = useAddComment(id ?? "");
   const [commentText, setCommentText] = useState("");
+  const { data: users } = useUsers();
+  const authorName = (authorId?: string) =>
+    users?.find((u) => u.id === authorId)?.displayName ?? "Unknown user";
   const genai = useGenaiProgress(id ?? "", incident);
 
   if (isLoading) {
@@ -373,7 +377,11 @@ export default function IncidentDetailPage() {
                       <div className="space-y-4">
                         {comments.map((c: Comment) => (
                           <div key={c.id} className="space-y-1">
-                            <p className="text-xs text-muted-foreground">{formatDateTime(c.createdAt)}</p>
+                            <p className="text-xs text-muted-foreground">
+                              <span className="font-medium text-foreground">{authorName(c.authorId)}</span>
+                              {" · "}
+                              {formatDateTime(c.createdAt)}
+                            </p>
                             <p className="text-sm">{c.text}</p>
                             <Separator />
                           </div>
@@ -438,17 +446,7 @@ export default function IncidentDetailPage() {
               </CardContent>
             </Card>
 
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-base">Assignees</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-muted-foreground">No assignees yet.</p>
-                <Button variant="outline" size="sm" className="mt-3 w-full">
-                  Assign user
-                </Button>
-              </CardContent>
-            </Card>
+            <AssigneesCard incident={incident} />
           </div>
         </div>
       </div>

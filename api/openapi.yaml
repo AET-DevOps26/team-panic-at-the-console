@@ -318,6 +318,9 @@ paths:
     post:
       operationId: addComment
       summary: Add a comment to an incident (immutable)
+      description: >-
+        The comment's authorId is taken from the gateway-injected `X-User-Id`
+        header (the validated session identity), never from the request body.
       tags: [incidents]
       security: []
       parameters:
@@ -407,6 +410,8 @@ paths:
       description: |
         Public self-registration. New accounts receive the `MEMBER` role.
         Passwords are stored hashed server-side; the cleartext password is never returned.
+        Instances configured with an invitation code (`AUTH_INVITE_CODE`) reject
+        registrations whose `inviteCode` does not match with 403.
       tags: [auth]
       security: []
       requestBody:
@@ -424,6 +429,12 @@ paths:
                 $ref: "#/components/schemas/User"
         "400":
           description: Invalid request (validation failed)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Invalid invitation code
           content:
             application/json:
               schema:
@@ -743,6 +754,15 @@ components:
           minLength: 1
           maxLength: 100
           example: New User
+        inviteCode:
+          type: string
+          maxLength: 200
+          writeOnly: true
+          description: >-
+            Instance invitation code. Required when the deployment is
+            configured with one (public instances); ignored when the
+            instance leaves registration open.
+          example: let-me-in
 
     LoginRequest:
       type: object
@@ -869,6 +889,15 @@ components:
           type: [string, "null"]
           format: date-time
           description: When the AI postmortem was last generated.
+        assignedUserIds:
+          type: array
+          items:
+            type: string
+            format: uuid
+          description: >-
+            UUIDs of the responders currently assigned to this incident
+            (see PATCH /incidents/{incidentId}/assign).
+          example: ["018e2c5f-1234-7abc-8def-0000000000aa"]
 
     IncidentEvent:
       type: object

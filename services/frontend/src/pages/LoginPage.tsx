@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { LayoutDashboard } from "lucide-react";
 import { useLogin } from "@/api/queries";
 import { Button } from "@/components/ui/button";
@@ -64,9 +64,9 @@ export default function LoginPage() {
 
         <p className="text-center text-sm text-muted-foreground">
           No account?{" "}
-          <span className="font-medium text-primary">
+          <Link to="/register" className="font-medium text-primary hover:underline">
             Create one
-          </span>
+          </Link>
         </p>
       </div>
     </div>

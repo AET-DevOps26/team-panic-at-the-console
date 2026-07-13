@@ -17,6 +17,18 @@ secrets:
   logosApiKey: ""
   # Grafana admin password. Empty => falls back to monitoring.grafana.adminPassword (dev default).
   grafanaPassword: ""
+  # Session JWT signing secret (min 32 chars). Empty => falls back to auth.jwtSecret (dev default).
+  jwtSecret: ""
+  # Registration invitation code. Empty => falls back to auth.inviteCode.
+  inviteCode: ""
+
+auth:
+  # Dev default for the session JWT secret shared by gateway and user-service
+  # (ADR 0007). Override via secrets.jwtSecret in SOPS values for real deploys.
+  jwtSecret: local-dev-only-jwt-secret-0123456789abcdef
+  # Dev default for the registration invitation code. Blank keeps
+  # self-registration open; public instances set secrets.inviteCode.
+  inviteCode: ""
 
 nats:
   image: nats:2.10-alpine
@@ -129,6 +141,9 @@ services:
         value: "http://user-service:8084"
       - name: GATEWAY_NOTIFICATION_SERVICE_URL
         value: "http://notification-service:8085"
+      # Session JWT secret shared with user-service; resolved from the
+      # auth-credentials secret in deployment.yaml.
+      - name: AUTH_JWT_SECRET
 
   incident-service:
     enabled: true
@@ -184,6 +199,11 @@ services:
       - name: SPRING_DATASOURCE_USERNAME
         value: devops
       - name: SPRING_DATASOURCE_PASSWORD
+      # Session JWT secret shared with the gateway; resolved from the
+      # auth-credentials secret in deployment.yaml.
+      - name: AUTH_JWT_SECRET
+      # Registration invitation code from the same secret.
+      - name: AUTH_INVITE_CODE
 
   notification-service:
     enabled: true

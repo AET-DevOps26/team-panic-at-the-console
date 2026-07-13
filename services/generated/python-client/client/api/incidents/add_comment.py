@@ -81,6 +81,9 @@ def sync_detailed(
 ) -> Response[Any | Comment | ErrorResponse]:
     """Add a comment to an incident (immutable)
 
+     The comment's authorId is taken from the gateway-injected `X-User-Id` header (the validated session
+    identity), never from the request body.
+
     Args:
         incident_id (UUID):  Example: 018e2c5f-1234-7abc-8def-000000000001.
         body (CreateCommentRequest): Request to add a comment to an incident.
@@ -113,6 +116,9 @@ def sync(
 ) -> Any | Comment | ErrorResponse | None:
     """Add a comment to an incident (immutable)
 
+     The comment's authorId is taken from the gateway-injected `X-User-Id` header (the validated session
+    identity), never from the request body.
+
     Args:
         incident_id (UUID):  Example: 018e2c5f-1234-7abc-8def-000000000001.
         body (CreateCommentRequest): Request to add a comment to an incident.
@@ -139,6 +145,9 @@ async def asyncio_detailed(
     body: CreateCommentRequest,
 ) -> Response[Any | Comment | ErrorResponse]:
     """Add a comment to an incident (immutable)
+
+     The comment's authorId is taken from the gateway-injected `X-User-Id` header (the validated session
+    identity), never from the request body.
 
     Args:
         incident_id (UUID):  Example: 018e2c5f-1234-7abc-8def-000000000001.
@@ -169,6 +178,9 @@ async def asyncio(
     body: CreateCommentRequest,
 ) -> Any | Comment | ErrorResponse | None:
     """Add a comment to an incident (immutable)
+
+     The comment's authorId is taken from the gateway-injected `X-User-Id` header (the validated session
+    identity), never from the request body.
 
     Args:
         incident_id (UUID):  Example: 018e2c5f-1234-7abc-8def-000000000001.

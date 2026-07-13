@@ -166,7 +166,10 @@ export interface paths {
         /** List comments on an incident */
         get: operations["listComments"];
         put?: never;
-        /** Add a comment to an incident (immutable) */
+        /**
+         * Add a comment to an incident (immutable)
+         * @description The comment's authorId is taken from the gateway-injected `X-User-Id` header (the validated session identity), never from the request body.
+         */
         post: operations["addComment"];
         delete?: never;
         options?: never;
@@ -255,6 +258,8 @@ export interface paths {
          * Create a new user account
          * @description Public self-registration. New accounts receive the `MEMBER` role.
          *     Passwords are stored hashed server-side; the cleartext password is never returned.
+         *     Instances configured with an invitation code (`AUTH_INVITE_CODE`) reject
+         *     registrations whose `inviteCode` does not match with 403.
          *
          */
         post: operations["registerUser"];
@@ -451,6 +456,11 @@ export interface components {
             password: string;
             /** @example New User */
             displayName: string;
+            /**
+             * @description Instance invitation code. Required when the deployment is configured with one (public instances); ignored when the instance leaves registration open.
+             * @example let-me-in
+             */
+            inviteCode?: string;
         };
         LoginRequest: {
             /**
@@ -539,6 +549,13 @@ export interface components {
              * @description When the AI postmortem was last generated.
              */
             postmortemGeneratedAt?: string | null;
+            /**
+             * @description UUIDs of the responders currently assigned to this incident (see PATCH /incidents/{incidentId}/assign).
+             * @example [
+             *       "018e2c5f-1234-7abc-8def-0000000000aa"
+             *     ]
+             */
+            assignedUserIds?: string[];
         };
         /** @description One entry from an incident's append-only Event Log. */
         IncidentEvent: {
@@ -1309,6 +1326,15 @@ export interface operations {
             };
             /** @description Invalid request (validation failed) */
             400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Invalid invitation code */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };
