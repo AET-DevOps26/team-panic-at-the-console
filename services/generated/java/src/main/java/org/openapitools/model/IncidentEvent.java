@@ -32,6 +32,8 @@ public class IncidentEvent {
 
   private String description;
 
+  private @Nullable String newValue;
+
   public IncidentEvent() {
     super();
   }
@@ -105,6 +107,26 @@ public class IncidentEvent {
     this.description = description;
   }
 
+  public IncidentEvent newValue(@Nullable String newValue) {
+    this.newValue = newValue;
+    return this;
+  }
+
+  /**
+   * New value after the change: the new status for status_changed entries and the new severity for severity_changed entries. Lets clients color-code timeline entries without parsing the description. Absent for other entry types and for events stored before this field existed.
+   * @return newValue
+   */
+
+  @Schema(name = "newValue", example = "investigating", description = "New value after the change: the new status for status_changed entries and the new severity for severity_changed entries. Lets clients color-code timeline entries without parsing the description. Absent for other entry types and for events stored before this field existed.", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
+  @JsonProperty("newValue")
+  public @Nullable String getNewValue() {
+    return newValue;
+  }
+
+  public void setNewValue(@Nullable String newValue) {
+    this.newValue = newValue;
+  }
+
   @Override
   public boolean equals(Object o) {
     if (this == o) {
@@ -116,12 +138,13 @@ public class IncidentEvent {
     IncidentEvent incidentEvent = (IncidentEvent) o;
     return Objects.equals(this.timestamp, incidentEvent.timestamp) &&
         Objects.equals(this.type, incidentEvent.type) &&
-        Objects.equals(this.description, incidentEvent.description);
+        Objects.equals(this.description, incidentEvent.description) &&
+        Objects.equals(this.newValue, incidentEvent.newValue);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(timestamp, type, description);
+    return Objects.hash(timestamp, type, description, newValue);
   }
 
   @Override
@@ -131,6 +154,7 @@ public class IncidentEvent {
     sb.append("    timestamp: ").append(toIndentedString(timestamp)).append("\n");
     sb.append("    type: ").append(toIndentedString(type)).append("\n");
     sb.append("    description: ").append(toIndentedString(description)).append("\n");
+    sb.append("    newValue: ").append(toIndentedString(newValue)).append("\n");
     sb.append("}");
     return sb.toString();
   }

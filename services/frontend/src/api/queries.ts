@@ -15,6 +15,9 @@ export type EscalateSeverityRequest = components["schemas"]["EscalateSeverityReq
 export type AssignIncidentRequest = components["schemas"]["AssignIncidentRequest"];
 export type CreateCommentRequest = components["schemas"]["CreateCommentRequest"];
 export type LoginRequest = components["schemas"]["LoginRequest"];
+export type RegisterRequest = components["schemas"]["RegisterRequest"];
+export type UpdateProfileRequest = components["schemas"]["UpdateProfileRequest"];
+export type ChangePasswordRequest = components["schemas"]["ChangePasswordRequest"];
 export type User = components["schemas"]["User"];
 
 const MOCK = import.meta.env.VITE_MOCK === "true";
@@ -43,7 +46,7 @@ const MOCK_INCIDENTS: Incident[] = [
     title: "Checkout service 5xx spike",
     description: "High error rate on checkout API after deploy v2.4.1. Payment service latency rose to 12% and checkout error rate crossed 5%.",
     status: "investigating",
-    severity: "SEV1",
+    severity: "SEV2",
     createdAt: new Date(Date.now() - 3 * 3600_000).toISOString(),
     resolvedAt: null,
     summary: "Checkout API error rate spiked to **5%** after deploy `v2.4.1`; payment-service latency is the suspected driver.",
@@ -84,7 +87,7 @@ const MOCK_INCIDENTS: Incident[] = [
 
 const MOCK_EVENTS: IncidentEvent[] = [
   { timestamp: new Date(Date.now() - 3 * 3600_000).toISOString(), type: "incident_created", description: "Incident created manually" },
-  { timestamp: new Date(Date.now() - 2.5 * 3600_000).toISOString(), type: "status_changed", description: "status: open → investigating" },
+  { timestamp: new Date(Date.now() - 2.5 * 3600_000).toISOString(), type: "status_changed", description: "status: open → investigating", newValue: "investigating" },
   { timestamp: new Date(Date.now() - 2 * 3600_000).toISOString(), type: "assigned", description: "Assigned to alice@example.com" },
   { timestamp: new Date(Date.now() - 1 * 3600_000).toISOString(), type: "comment_added", description: "Possible root cause: connection pool misconfiguration in v2.4.1" },
 ];
@@ -100,7 +103,8 @@ export function useHealth() {
       return data;
     },
     retry: false,
-    refetchInterval: 60_000,
+    // Recheck quickly while the gateway is down so recovery shows promptly.
+    refetchInterval: (query) => (query.state.status === "error" ? 15_000 : 30_000),
   });
 }
 
@@ -337,10 +341,81 @@ export function useRegeneratePostmortem(incidentId: string) {
 
 // ── Auth ──────────────────────────────────────────────────────────────────────
 
+const MOCK_USER: User = {
+  id: "018e2c5f-1234-7abc-8def-0000000000aa",
+  email: "demo@example.com",
+  displayName: "Demo Responder",
+  role: "MEMBER",
+  createdAt: new Date(Date.now() - 30 * 24 * 3600_000).toISOString(),
+};
+
+export function useCurrentUser() {
+  return useQuery({
+    queryKey: ["users", "me"],
+    queryFn: async (): Promise<User> => {
+      if (MOCK) return MOCK_USER;
+      const { data, error, response } = await apiClient.GET("/users/me");
+      if (error || !data) throw new ApiError("Not authenticated", response?.status);
+      return data;
+    },
+    retry: false,
+    staleTime: 5 * 60_000,
+  });
+}
+
+export function useUsers() {
+  return useQuery({
+    queryKey: ["users", "directory"],
+    queryFn: async (): Promise<User[]> => {
+      if (MOCK) return [MOCK_USER];
+      const { data, error } = await apiClient.GET("/users", {
+        params: { query: { limit: 100, offset: 0 } },
+      });
+      if (error || !data) throw new Error("Failed to fetch users");
+      return data.items;
+    },
+    staleTime: 60_000,
+  });
+}
+
+export function useUpdateProfile() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (body: UpdateProfileRequest): Promise<User | undefined> => {
+      if (MOCK) {
+        return {
+          ...MOCK_USER,
+          displayName: body.displayName ?? MOCK_USER.displayName,
+          email: body.email ?? MOCK_USER.email,
+        };
+      }
+      const { data, error, response } = await apiClient.PATCH("/users/me", { body });
+      if (error) throw new ApiError(error.message ?? "Profile update failed", response?.status);
+      return data;
+    },
+    onSuccess: (user) => {
+      if (user) queryClient.setQueryData(["users", "me"], user);
+      // The directory (assignment pickers, mention lists) shows the same fields.
+      void queryClient.invalidateQueries({ queryKey: ["users", "directory"] });
+    },
+  });
+}
+
+export function useChangePassword() {
+  return useMutation({
+    mutationFn: async (body: ChangePasswordRequest): Promise<void> => {
+      if (MOCK) return;
+      const { error, response } = await apiClient.POST("/users/me/password", { body });
+      if (error) throw new ApiError(error.message ?? "Password change failed", response?.status);
+    },
+  });
+}
+
 export function useLogin() {
+  const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (body: LoginRequest): Promise<User | undefined> => {
-      if (MOCK) return undefined;
+      if (MOCK) return MOCK_USER;
       // Frontend and gateway share a host behind the edge/ingress in every real
       // deployment, so the default (same-origin) credentials mode already sends and
       // stores the httpOnly `session` cookie. We deliberately do not force `include`:
@@ -349,6 +424,35 @@ export function useLogin() {
       const { data, error } = await apiClient.POST("/auth/login", { body });
       if (error) throw new Error(error.message ?? "Invalid email or password");
       return data;
+    },
+    onSuccess: (user) => {
+      if (user) queryClient.setQueryData(["users", "me"], user);
+    },
+  });
+}
+
+export function useRegister() {
+  return useMutation({
+    mutationFn: async (body: RegisterRequest): Promise<User | undefined> => {
+      if (MOCK) return MOCK_USER;
+      const { data, error, response } = await apiClient.POST("/auth/register", { body });
+      if (error) throw new ApiError(error.message ?? "Registration failed", response?.status);
+      return data;
+    },
+  });
+}
+
+export function useLogout() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async () => {
+      if (MOCK) return;
+      const { error } = await apiClient.POST("/auth/logout");
+      if (error) throw new Error("Logout failed");
+    },
+    onSuccess: () => {
+      // Drop every cached query: the next login may be a different user.
+      queryClient.clear();
     },
   });
 }

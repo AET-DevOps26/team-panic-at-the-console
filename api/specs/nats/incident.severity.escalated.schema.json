@@ -1,12 +1,13 @@
 {
   "$schema": "https://json-schema.org/draft-07/schema",
   "$id": "https://github.com/aet-devops26/team-panic-at-the-console/api/specs/nats/incident.severity.escalated.schema.json",
-  "description": "Carries newSeverity so notification-service can include the updated level in the alert without an extra REST call.",
+  "description": "Carries newSeverity so notification-service can include the updated level in the alert without an extra REST call, and oldSeverity so event-service can render the transition in the timeline.",
   "type": "object",
-  "required": ["incidentId", "newSeverity", "timestamp"],
+  "required": ["incidentId", "oldSeverity", "newSeverity", "timestamp"],
   "additionalProperties": false,
   "properties": {
     "incidentId": { "type": "string", "format": "uuid" },
+    "oldSeverity": { "type": "string", "enum": ["SEV1", "SEV2", "SEV3", "SEV4"] },
     "newSeverity": { "type": "string", "enum": ["SEV1", "SEV2", "SEV3", "SEV4"] },
     "timestamp": { "type": "string", "format": "date-time" }
   }

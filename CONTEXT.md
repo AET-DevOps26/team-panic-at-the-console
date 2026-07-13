@@ -63,7 +63,7 @@ An enumeration of what the `PromptBuilder` is asked to produce: `SUMMARY`, `SEVE
 
 **Data aggregation**: None needed. `incident-service` owns all incident data including AI results. Frontend makes a single REST call to get a complete incident view.
 
-**NATS event shape**: Events are thin by default — `{incidentId, timestamp}` only. Exceptions carry one additional identifier where a REST callback would be ambiguous: `incident.comment.added` adds `commentId`, `incident.assigned` adds `userId`, `incident.severity.escalated` adds `newSeverity`, `incident.regen.requested` adds `task` (which AI field to regenerate), rule-engine events add the minimal fields needed to act (`sourceId`, `severity`, `requestedSeverity`). Full schemas in `api/specs/nats/*.schema.json`.
+**NATS event shape**: Events are thin by default — `{incidentId, timestamp}` only. Exceptions carry the minimal extra fields a subscriber needs to act without a REST callback: `incident.created` adds `title` and `severity` (timeline rendering), `incident.status.changed` adds `oldStatus` and `newStatus` (the generic `incident.updated` cannot distinguish status changes from other updates), `incident.severity.escalated` adds `oldSeverity` and `newSeverity`, `incident.comment.added` adds `commentId` and `content` (comments are immutable, so the copy never goes stale), `incident.assigned` adds `userId`, `incident.regen.requested` adds `task` (which AI field to regenerate), rule-engine events add the minimal fields needed to act (`sourceId`, `severity`, `requestedSeverity`). Full schemas in `api/specs/nats/*.schema.json`.
 
 **`incident.create.requested` and incident title/description**: The schema carries only `{sourceId, severity, timestamp}`. `sourceId` references the External Event in webhook-service. `incident-service` must either: (a) call `GET /external-events/{sourceId}` on webhook-service to build a title (requires exposing that endpoint + `WEBHOOK_SERVICE_URL` env), or (b) auto-generate a title from the sourceId (e.g. `"Auto-created from external event {sourceId}"`). The genai-service will generate a Summary on `incident.created` regardless. Decision needed before implementing `incident-service`'s NATS consumer.
 
@@ -80,6 +80,7 @@ An enumeration of what the `PromptBuilder` is asked to produce: `SUMMARY`, `SEVE
 | ------------------ | --------------------------- | ------------------------------------------------------------------------------ |
 | `incident-service` | `incident.created`          | event-service, genai-service, notification-service, gateway (SSE)              |
 | `incident-service` | `incident.updated`          | event-service, gateway (SSE)                                                   |
+| `incident-service` | `incident.status.changed`   | event-service, gateway (SSE)                                                   |
 | `incident-service` | `incident.severity.escalated` | event-service, notification-service, gateway (SSE)                          |
 | `incident-service` | `incident.resolved`         | event-service, genai-service (postmortem), notification-service, gateway (SSE) |
 | `incident-service` | `incident.comment.added`    | event-service, notification-service                                            |
@@ -98,7 +99,7 @@ An enumeration of what the `PromptBuilder` is asked to produce: `SUMMARY`, `SEVE
 
 **Comments**: Immutable. No edit or delete. Consistent with the append-only Event Log.
 
-**Observability stack**: on Kubernetes the chart relies on the **shared cluster prometheus-operator** rather than self-hosting one. The deploy user is namespace-scoped and cannot create the cluster-scoped resources (ClusterRoles, CRDs) a bundled `kube-prometheus-stack` requires, so the chart ships only namespaced CRs (`PodMonitor`, `PrometheusRule`) and a Grafana dashboard `ConfigMap`; the cluster's Prometheus scrapes them and the cluster's Grafana renders them. The local docker-compose stack still self-hosts Prometheus + Grafana for development. All services expose `/metrics` (Micrometer for Spring Boot, `prometheus-fastapi-instrumentator` for Python). Distributed tracing: out of scope.
+**Observability stack**: the chart **self-hosts Prometheus + Grafana inside the release namespace** (`monitoring.enabled`, default on). Both are plain `Deployment`/`Service`/`ConfigMap` resources: no `kube-prometheus-stack`, no CRDs, no cluster-scoped RBAC, so a namespace-scoped deploy user can install them. Prometheus scrapes each service's `/metrics` via static `scrape_configs`, evaluates alert rules itself (no Alertmanager), and provisions Grafana with a Prometheus datasource plus the bundled dashboards. Grafana is exposed under `/grafana` and Prometheus under `/prometheus`; the Grafana admin password comes from `secrets.grafanaPassword` (falls back to `monitoring.grafana.adminPassword`). An optional `monitoring.operatorCrds.enabled` compatibility mode instead ships namespaced CRs (`PodMonitor`, `PrometheusRule`, Grafana dashboard `ConfigMap`) for clusters that already run a shared prometheus-operator. The local docker-compose stack self-hosts Prometheus + Grafana for development. All services expose `/metrics` (Micrometer for Spring Boot, `prometheus-fastapi-instrumentator` for Python). Distributed tracing: out of scope.
 
 **Helm chart structure**: flat chart (one chart, all services as templates). No subcharts.
 
@@ -111,7 +112,7 @@ An enumeration of what the `PromptBuilder` is asked to produce: `SUMMARY`, `SEVE
 | Postgres | 256Mi / 512Mi | 100m / 500m |
 | NATS | 64Mi / 128Mi | 50m / 200m |
 
-**Alerting**: `PrometheusRule` CRs evaluated by the shared cluster Alertmanager, routing to Grafana UI only (no Slack/email). Full alert set:
+**Alerting**: the self-hosted Prometheus evaluates alert rules directly from its config (no Alertmanager, no external routing); alerts surface in the Prometheus and Grafana UIs. In `operatorCrds` compatibility mode the same rules ship as a `PrometheusRule` CR for the shared cluster operator instead. Full alert set:
 | Alert | Condition | Severity |
 |---|---|---|
 | Service down | health check fails >1min | critical |

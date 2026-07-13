@@ -65,7 +65,13 @@ public class IncidentService {
         incident.setSourceId(sourceId);
 
         Incident saved = incidentRepository.save(incident);
-        publishAfterCommit("incident.created", createBaseEvent(saved.getId()));
+
+        Map<String, Object> event = createBaseEvent(saved.getId());
+        if (saved.getTitle() != null) {
+            event.put("title", saved.getTitle());
+        }
+        event.put("severity", saved.getSeverity().toString());
+        publishAfterCommit("incident.created", event);
 
         return saved;
     }
@@ -77,8 +83,9 @@ public class IncidentService {
 
     /**
      * Timeline entries for genai prompts and internal reads.
-     * event-service is not wired yet; synthesize from incident state and comments
-     * until then.
+     * The public timeline is served by event-service (via the gateway); this
+     * synthesized view stays because genai-service calls incident-service
+     * directly and needs no cross-service dependency for prompt building.
      */
     public List<org.openapitools.model.IncidentEvent> listIncidentEvents(UUID incidentId) {
         Incident incident = getIncident(incidentId);
@@ -107,6 +114,13 @@ public class IncidentService {
         Incident saved = incidentRepository.save(incident);
         publishAfterCommit("incident.updated", createBaseEvent(saved.getId()));
 
+        // Dedicated subject with the transition: incident.updated is too generic
+        // for event-service to render a status change in the timeline.
+        Map<String, Object> statusEvent = createBaseEvent(saved.getId());
+        statusEvent.put("oldStatus", oldStatus.name().toLowerCase());
+        statusEvent.put("newStatus", newStatus.name().toLowerCase());
+        publishAfterCommit("incident.status.changed", statusEvent);
+
         if (newStatus == IncidentStatus.RESOLVED) {
             publishAfterCommit("incident.resolved", createBaseEvent(saved.getId()));
         }
@@ -123,6 +137,7 @@ public class IncidentService {
         Incident saved = incidentRepository.save(incident);
 
         Map<String, Object> event = createBaseEvent(saved.getId());
+        event.put("oldSeverity", oldSeverity.toString());
         event.put("newSeverity", newSeverity.toString());
         publishAfterCommit("incident.severity.escalated", event);
 
@@ -213,6 +228,9 @@ public class IncidentService {
 
         Map<String, Object> event = createBaseEvent(incidentId);
         event.put("commentId", commentId.toString());
+        // Comments are immutable, so carrying the content lets event-service
+        // render it in the timeline without it ever going stale.
+        event.put("content", content);
         publishAfterCommit("incident.comment.added", event);
         log.info("Added comment to incident [id={}, commentId={}]", incidentId, commentId);
 

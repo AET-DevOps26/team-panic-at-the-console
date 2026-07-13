@@ -1,4 +1,7 @@
 import { useEffect, useState } from "react";
+import type { components } from "@openapi/schema";
+
+type Severity = components["schemas"]["Severity"];
 
 // Creating an incident auto-generates summary, severity suggestion, and solution
 // suggestions; resolving one auto-generates the postmortem. Generation runs async
@@ -32,6 +35,15 @@ export function solutionsToMarkdown(solutions: string): string {
     .filter((line) => line.length > 0)
     .map((line) => (/^(?:[-*+]|\d+[.)])\s/.test(line) ? line : `- ${line}`))
     .join("\n");
+}
+
+// The AI severity suggestion is stored as a single string, 'SEV<n>: <reason>'
+// (the OpenAPI spec documents this format). The prefix originates from
+// genai-service's enum-validated structured output, so it can be parsed back
+// into a Severity to offer one-click apply. Returns null when the string
+// doesn't match (e.g. rows persisted before the current format).
+export function suggestedSeverity(suggestion: string | null | undefined): Severity | null {
+  return (suggestion?.match(/^(SEV[1-4]):/)?.[1] as Severity | undefined) ?? null;
 }
 
 // Re-renders the component periodically while `active`, so the time-window checks

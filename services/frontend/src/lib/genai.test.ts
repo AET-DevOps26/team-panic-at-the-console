@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { AUTO_GENERATION_WINDOW_MS, isAutoGenerating, solutionsToMarkdown } from "./genai";
+import { AUTO_GENERATION_WINDOW_MS, isAutoGenerating, solutionsToMarkdown, suggestedSeverity } from "./genai";
 
 describe("isAutoGenerating", () => {
   const now = Date.parse("2026-06-26T12:00:00Z");
@@ -49,5 +49,30 @@ describe("solutionsToMarkdown", () => {
 
   it("does not treat a leading dash without a space as a marker", () => {
     expect(solutionsToMarkdown("-verbose flag fix")).toBe("- -verbose flag fix");
+  });
+});
+
+describe("suggestedSeverity", () => {
+  it("parses the severity prefix", () => {
+    expect(suggestedSeverity("SEV2: Checkout is degraded for all users")).toBe("SEV2");
+  });
+
+  it("returns null for a missing suggestion", () => {
+    expect(suggestedSeverity(null)).toBe(null);
+    expect(suggestedSeverity(undefined)).toBe(null);
+    expect(suggestedSeverity("")).toBe(null);
+  });
+
+  it("returns null when the prefix is not a valid severity", () => {
+    expect(suggestedSeverity("SEV5: out of range")).toBe(null);
+    expect(suggestedSeverity("High: free-form severity")).toBe(null);
+  });
+
+  it("requires the prefix at the start of the string", () => {
+    expect(suggestedSeverity("Suggested SEV1: total outage")).toBe(null);
+  });
+
+  it("requires the colon separator", () => {
+    expect(suggestedSeverity("SEV1 total outage")).toBe(null);
   });
 });

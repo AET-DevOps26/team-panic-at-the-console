@@ -11,6 +11,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
 import com.panicattheconsole.gateway.GatewayApplication;
+import com.panicattheconsole.gateway.auth.TestSessions;
 import com.panicattheconsole.gateway.proxy.MockDownstreamClientsConfig;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -34,7 +35,7 @@ class IncidentStreamControllerTest {
 
     @Test
     void stream_opensImmediatelyWithSseHeaders() throws Exception {
-        MvcResult result = mvc.perform(get("/incidents/stream"))
+        MvcResult result = mvc.perform(get("/incidents/stream").cookie(TestSessions.sessionCookie()))
                 .andExpect(request().asyncStarted())
                 .andExpect(status().isOk())
                 .andExpect(header().string("X-Accel-Buffering", "no"))
@@ -47,7 +48,7 @@ class IncidentStreamControllerTest {
 
     @Test
     void stream_forwardsIncidentEventsAsEnvelopes() throws Exception {
-        MvcResult result = mvc.perform(get("/incidents/stream"))
+        MvcResult result = mvc.perform(get("/incidents/stream").cookie(TestSessions.sessionCookie()))
                 .andExpect(request().asyncStarted())
                 .andReturn();
 
@@ -64,7 +65,7 @@ class IncidentStreamControllerTest {
 
     @Test
     void stream_forwardsEnvelopeWithoutIncidentIdOnUnparsablePayload() throws Exception {
-        MvcResult result = mvc.perform(get("/incidents/stream"))
+        MvcResult result = mvc.perform(get("/incidents/stream").cookie(TestSessions.sessionCookie()))
                 .andExpect(request().asyncStarted())
                 .andReturn();
 

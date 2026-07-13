@@ -21,15 +21,22 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RestController;
 
+import jakarta.servlet.http.HttpServletRequest;
+
 @RestController
 class IncidentsController implements IncidentsApi {
 
     private static final Logger log = LoggerFactory.getLogger(IncidentsController.class);
 
-    private final IncidentService incidentService;
+    /** Validated session identity injected by the gateway (ADR 0007). */
+    static final String USER_ID_HEADER = "X-User-Id";
 
-    IncidentsController(IncidentService incidentService) {
+    private final IncidentService incidentService;
+    private final HttpServletRequest httpRequest;
+
+    IncidentsController(IncidentService incidentService, HttpServletRequest httpRequest) {
         this.incidentService = incidentService;
+        this.httpRequest = httpRequest;
     }
 
     @Override
@@ -107,15 +114,23 @@ class IncidentsController implements IncidentsApi {
 
     @Override
     public ResponseEntity<Comment> addComment(UUID incidentId, CreateCommentRequest createCommentRequest) {
-        // Note: In real implementation, we'd get userId from request context (X-User-Id
-        // header)
-        // For now, generate a placeholder
+        UUID authorId = sessionUserId();
         UUID commentId = UUID.randomUUID();
-        UUID authorId = UUID.randomUUID(); // TODO: Extract from security context
-
         com.panicattheconsole.incidentservice.incident.Comment comment = incidentService.addComment(incidentId,
                 commentId, authorId, createCommentRequest.getText());
         return ResponseEntity.status(HttpStatus.CREATED).body(IncidentMapper.commentToApi(comment));
+    }
+
+    private UUID sessionUserId() {
+        String header = httpRequest.getHeader(USER_ID_HEADER);
+        if (header == null || header.isBlank()) {
+            throw new IllegalArgumentException("Missing " + USER_ID_HEADER + " header");
+        }
+        try {
+            return UUID.fromString(header);
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException("Invalid " + USER_ID_HEADER + " header");
+        }
     }
 
     @Override

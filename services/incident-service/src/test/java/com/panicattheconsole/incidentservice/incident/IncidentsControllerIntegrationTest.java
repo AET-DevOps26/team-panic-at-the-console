@@ -212,20 +212,26 @@ class IncidentsControllerIntegrationTest {
                                 Map.class);
 
                 assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+                assertThat(response.getBody()).containsEntry("assignedUserIds", List.of(userId.toString()));
                 assertThat(incidentService.getIncident(INCIDENT_ID).getAssignedUsers())
                                 .contains(userId);
         }
 
         @Test
         void addComment_createsCommentAndListsIt() {
+                UUID authorId = UUID.fromString("018e2c5f-1234-7abc-8def-0000000000aa");
+                org.springframework.http.HttpHeaders headers = new org.springframework.http.HttpHeaders();
+                headers.set("X-User-Id", authorId.toString());
+
                 ResponseEntity<Map> createResponse = rest.postForEntity(
                                 incidentUrl("/incidents/" + INCIDENT_ID + "/comments"),
-                                Map.of("text", "Investigating now"),
+                                new HttpEntity<>(Map.of("text", "Investigating now"), headers),
                                 Map.class);
 
                 assertThat(createResponse.getStatusCode()).isEqualTo(HttpStatus.CREATED);
                 assertThat(createResponse.getBody()).containsEntry("incidentId", INCIDENT_ID.toString());
                 assertThat(createResponse.getBody()).containsEntry("text", "Investigating now");
+                assertThat(createResponse.getBody()).containsEntry("authorId", authorId.toString());
 
                 ResponseEntity<Map> listResponse = rest.getForEntity(
                                 incidentUrl("/incidents/" + INCIDENT_ID + "/comments"),
@@ -236,6 +242,16 @@ class IncidentsControllerIntegrationTest {
                 assertThat(((List<?>) listResponse.getBody().get("items")).get(0))
                                 .asInstanceOf(MAP)
                                 .containsEntry("text", "Investigating now");
+        }
+
+        @Test
+        void addComment_withoutIdentityHeaderReturns400() {
+                ResponseEntity<Map> response = rest.postForEntity(
+                                incidentUrl("/incidents/" + INCIDENT_ID + "/comments"),
+                                Map.of("text", "anonymous comment"),
+                                Map.class);
+
+                assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
         }
 
         @Test

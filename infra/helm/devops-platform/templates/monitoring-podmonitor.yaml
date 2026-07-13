@@ -1,4 +1,4 @@
-{{- if .Values.monitoring.enabled }}
+{{- if and .Values.monitoring.enabled .Values.monitoring.operatorCrds.enabled }}
 apiVersion: monitoring.coreos.com/v1
 kind: PodMonitor
 metadata:
@@ -46,7 +46,7 @@ spec:
     matchLabels:
       app.kubernetes.io/name: gateway
   podMetricsEndpoints:
-    - portNumber: 8090
+    - portName: metrics
       path: /actuator/prometheus
       interval: 15s
 {{- end }}

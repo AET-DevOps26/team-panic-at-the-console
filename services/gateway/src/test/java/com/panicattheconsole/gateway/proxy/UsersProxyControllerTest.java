@@ -13,6 +13,7 @@ import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.test.web.servlet.MockMvc;
 
 import com.panicattheconsole.gateway.GatewayApplication;
+import com.panicattheconsole.gateway.auth.TestSessions;
 
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.header;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.method;
@@ -50,17 +51,18 @@ class UsersProxyControllerTest {
 
     @Test
     void getCurrentUser_proxiesUserServiceWithCookie() throws Exception {
+        String token = TestSessions.token();
         userServer
                 .expect(requestTo("http://localhost:8084/users/me"))
                 .andExpect(method(HttpMethod.GET))
-                .andExpect(header("Cookie", "session=jwt123"))
+                .andExpect(header("Cookie", "session=" + token))
                 .andRespond(
                         withStatus(HttpStatus.OK)
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .body(USER_JSON));
 
         mvc.perform(get("/users/me")
-                        .cookie(new jakarta.servlet.http.Cookie("session", "jwt123")))
+                        .cookie(new jakarta.servlet.http.Cookie("session", token)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.email").value("alex@example.com"));
 
@@ -68,7 +70,8 @@ class UsersProxyControllerTest {
     }
 
     @Test
-    void getCurrentUser_propagatesUnauthorized() throws Exception {
+    void getCurrentUser_propagatesDownstreamUnauthorized() throws Exception {
+        // Gateway-valid session, but the account no longer exists downstream.
         userServer
                 .expect(requestTo("http://localhost:8084/users/me"))
                 .andExpect(method(HttpMethod.GET))
@@ -77,7 +80,7 @@ class UsersProxyControllerTest {
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .body("{\"message\":\"Not authenticated\"}"));
 
-        mvc.perform(get("/users/me"))
+        mvc.perform(get("/users/me").cookie(TestSessions.sessionCookie()))
                 .andExpect(status().isUnauthorized());
 
         userServer.verify();
@@ -85,10 +88,11 @@ class UsersProxyControllerTest {
 
     @Test
     void listUsers_proxiesWithPaginationAndCookie() throws Exception {
+        String token = TestSessions.token();
         userServer
                 .expect(requestTo("http://localhost:8084/users?limit=10&offset=0"))
                 .andExpect(method(HttpMethod.GET))
-                .andExpect(header("Cookie", "session=jwt123"))
+                .andExpect(header("Cookie", "session=" + token))
                 .andRespond(
                         withStatus(HttpStatus.OK)
                                 .contentType(MediaType.APPLICATION_JSON)
@@ -99,7 +103,7 @@ class UsersProxyControllerTest {
         mvc.perform(get("/users")
                         .queryParam("limit", "10")
                         .queryParam("offset", "0")
-                        .cookie(new jakarta.servlet.http.Cookie("session", "jwt123")))
+                        .cookie(new jakarta.servlet.http.Cookie("session", token)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.total").value(0));
 

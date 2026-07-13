@@ -237,6 +237,8 @@ jobs:
           v = {
             "image_tag":         os.environ["IMAGE_TAG"],
             "postgres_password": os.environ["POSTGRES_PASSWORD"],
+            "jwt_secret":        os.environ["JWT_SECRET"],
+            "invite_code":       os.environ["INVITE_CODE"],
           }
           with open("/tmp/ansible-vars.yml", "w") as f:
             yaml.dump(v, f)
@@ -244,6 +246,10 @@ jobs:
         env:
           IMAGE_TAG: ${{ inputs.tag }}
           POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+          # Session JWT signing secret shared by gateway and user-service (ADR 0007).
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          # Registration invitation code; empty keeps self-registration open.
+          INVITE_CODE: ${{ secrets.INVITE_CODE }}
 
       - name: Run Ansible playbook
         run: |

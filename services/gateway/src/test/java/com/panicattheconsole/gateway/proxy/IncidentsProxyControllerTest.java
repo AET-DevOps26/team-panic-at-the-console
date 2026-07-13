@@ -15,6 +15,7 @@ import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.test.web.servlet.MockMvc;
 
 import com.panicattheconsole.gateway.GatewayApplication;
+import com.panicattheconsole.gateway.auth.TestSessions;
 
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.method;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
@@ -38,9 +39,35 @@ class IncidentsProxyControllerTest {
     @Autowired
     MockRestServiceServer incidentServer;
 
+    @Autowired
+    MockRestServiceServer eventServer;
+
     @BeforeEach
     void resetServers() {
         incidentServer.reset();
+        eventServer.reset();
+    }
+
+    @Test
+    void listIncidentEvents_proxiesEventService() throws Exception {
+        eventServer
+                .expect(requestTo("http://localhost:8082/incidents/" + INCIDENT_ID + "/events"))
+                .andExpect(method(HttpMethod.GET))
+                .andRespond(
+                        withStatus(HttpStatus.OK)
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .body(
+                                        """
+                                        [{"timestamp":"2026-07-07T10:15:30Z",
+                                          "type":"status_changed",
+                                          "description":"status: open → investigating"}]
+                                        """));
+
+        mvc.perform(get("/incidents/" + INCIDENT_ID + "/events").cookie(TestSessions.sessionCookie()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].type").value("status_changed"));
+
+        eventServer.verify();
     }
 
     @Test
@@ -56,7 +83,8 @@ class IncidentsProxyControllerTest {
                                         {"items":[],"total":0,"page":0,"size":10}
                                         """));
 
-        mvc.perform(get("/incidents").queryParam("page", "0").queryParam("size", "10"))
+        mvc.perform(get("/incidents").queryParam("page", "0").queryParam("size", "10")
+                        .cookie(TestSessions.sessionCookie()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.total").value(0));
 
@@ -82,7 +110,7 @@ class IncidentsProxyControllerTest {
                                         }
                                         """));
 
-        mvc.perform(get("/incidents/{id}", INCIDENT_ID))
+        mvc.perform(get("/incidents/{id}", INCIDENT_ID).cookie(TestSessions.sessionCookie()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.title").value("Checkout spike"));
 
@@ -111,6 +139,7 @@ class IncidentsProxyControllerTest {
 
         mvc.perform(
                         patch("/incidents/{id}/description", INCIDENT_ID)
+                                .cookie(TestSessions.sessionCookie())
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content("{\"description\":\"Rollback in progress\"}"))
                 .andExpect(status().isOk())

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Plus, Search, RefreshCw, Loader2 } from "lucide-react";
+import { Plus, Search, RefreshCw, Loader2, ArrowUp, ArrowDown, ArrowUpDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -90,12 +90,70 @@ function CreateIncidentDialog() {
   );
 }
 
+type SortKey = "title" | "severity" | "status" | "createdAt" | "resolvedAt";
+type SortDir = "asc" | "desc";
+
+const severityRank: Record<Severity, number> = { SEV1: 1, SEV2: 2, SEV3: 3, SEV4: 4 };
+const statusRank: Record<IncidentStatus, number> = { open: 1, investigating: 2, resolved: 3 };
+
+function compareBy(a: Incident, b: Incident, key: SortKey): number {
+  switch (key) {
+    case "title":
+      return a.title.localeCompare(b.title);
+    case "severity":
+      return severityRank[a.severity] - severityRank[b.severity];
+    case "status":
+      return statusRank[a.status] - statusRank[b.status];
+    case "createdAt":
+      return Date.parse(a.createdAt) - Date.parse(b.createdAt);
+    case "resolvedAt":
+      return Date.parse(a.resolvedAt ?? "") - Date.parse(b.resolvedAt ?? "");
+  }
+}
+
+function SortableHead({
+  label,
+  sortKey,
+  sort,
+  onSort,
+  className,
+}: {
+  label: string;
+  sortKey: SortKey;
+  sort: { key: SortKey; dir: SortDir };
+  onSort: (key: SortKey) => void;
+  className?: string;
+}) {
+  const active = sort.key === sortKey;
+  return (
+    <TableHead className={className} aria-sort={active ? (sort.dir === "asc" ? "ascending" : "descending") : undefined}>
+      <button
+        type="button"
+        className="flex items-center gap-1 hover:text-foreground transition-colors"
+        onClick={() => onSort(sortKey)}
+      >
+        {label}
+        {active ? (
+          sort.dir === "asc" ? <ArrowUp className="h-3.5 w-3.5" /> : <ArrowDown className="h-3.5 w-3.5" />
+        ) : (
+          <ArrowUpDown className="h-3.5 w-3.5 opacity-40" />
+        )}
+      </button>
+    </TableHead>
+  );
+}
+
 export default function IncidentListPage() {
   const { data: incidents, isLoading, refetch } = useIncidents();
   const navigate = useNavigate();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<IncidentStatus | "all">("all");
   const [severityFilter, setSeverityFilter] = useState<Severity | "all">("all");
+  const [sort, setSort] = useState<{ key: SortKey; dir: SortDir }>({ key: "createdAt", dir: "desc" });
+
+  function toggleSort(key: SortKey) {
+    setSort((prev) => (prev.key === key ? { key, dir: prev.dir === "asc" ? "desc" : "asc" } : { key, dir: "asc" }));
+  }
 
   // Freshly created incidents get their AI summary asynchronously; the SSE
   // stream (useIncidentStream in AppShell) refetches the list when it lands.
@@ -104,12 +162,22 @@ export default function IncidentListPage() {
   const summaryGenerating = (incidents ?? []).some((inc) => isAutoGenerating(inc.createdAt, inc.summary));
   useIntervalRerender(summaryGenerating);
 
-  const rows = (incidents ?? []).filter((inc) => {
-    const matchesSearch = inc.title.toLowerCase().includes(search.toLowerCase());
-    const matchesStatus = statusFilter === "all" || inc.status === statusFilter;
-    const matchesSeverity = severityFilter === "all" || inc.severity === severityFilter;
-    return matchesSearch && matchesStatus && matchesSeverity;
-  });
+  const rows = (incidents ?? [])
+    .filter((inc) => {
+      const matchesSearch = inc.title.toLowerCase().includes(search.toLowerCase());
+      const matchesStatus = statusFilter === "all" || inc.status === statusFilter;
+      const matchesSeverity = severityFilter === "all" || inc.severity === severityFilter;
+      return matchesSearch && matchesStatus && matchesSeverity;
+    })
+    .sort((a, b) => {
+      // Unresolved incidents sort after resolved ones regardless of direction.
+      if (sort.key === "resolvedAt" && (!a.resolvedAt || !b.resolvedAt)) {
+        if (!a.resolvedAt && !b.resolvedAt) return 0;
+        return a.resolvedAt ? -1 : 1;
+      }
+      const cmp = compareBy(a, b, sort.key);
+      return sort.dir === "asc" ? cmp : -cmp;
+    });
 
   return (
     <div className="flex flex-col h-full">
@@ -170,16 +238,17 @@ export default function IncidentListPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Title</TableHead>
-                <TableHead className="w-24">Severity</TableHead>
-                <TableHead className="w-36">Status</TableHead>
-                <TableHead className="w-36">Created</TableHead>
+                <SortableHead label="Title" sortKey="title" sort={sort} onSort={toggleSort} />
+                <SortableHead label="Severity" sortKey="severity" sort={sort} onSort={toggleSort} className="w-24" />
+                <SortableHead label="Status" sortKey="status" sort={sort} onSort={toggleSort} className="w-36" />
+                <SortableHead label="Created" sortKey="createdAt" sort={sort} onSort={toggleSort} className="w-36" />
+                <SortableHead label="Resolved" sortKey="resolvedAt" sort={sort} onSort={toggleSort} className="w-36" />
               </TableRow>
             </TableHeader>
             <TableBody>
               {rows.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={4} className="text-center py-12 text-muted-foreground">
+                  <TableCell colSpan={5} className="text-center py-12 text-muted-foreground">
                     No incidents match your filters.
                   </TableCell>
                 </TableRow>
@@ -206,6 +275,9 @@ export default function IncidentListPage() {
                       <StatusBadge status={incident.status} />
                     </TableCell>
                     <TableCell className="text-muted-foreground text-sm">{formatRelativeTime(incident.createdAt)}</TableCell>
+                    <TableCell className="text-muted-foreground text-sm">
+                      {incident.resolvedAt ? formatRelativeTime(incident.resolvedAt) : "–"}
+                    </TableCell>
                   </TableRow>
                 ))
               )}

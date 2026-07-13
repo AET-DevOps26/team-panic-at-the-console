@@ -13,6 +13,9 @@ public class GatewayProperties {
     private String incidentServiceUrl;
 
     @NotBlank
+    private String eventServiceUrl;
+
+    @NotBlank
     private String userServiceUrl;
 
     @NotBlank
@@ -24,6 +27,14 @@ public class GatewayProperties {
 
     public void setIncidentServiceUrl(String incidentServiceUrl) {
         this.incidentServiceUrl = incidentServiceUrl;
+    }
+
+    public String getEventServiceUrl() {
+        return eventServiceUrl;
+    }
+
+    public void setEventServiceUrl(String eventServiceUrl) {
+        this.eventServiceUrl = eventServiceUrl;
     }
 
     public String getUserServiceUrl() {

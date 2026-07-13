@@ -28,6 +28,8 @@ public class RegisterRequest {
 
   private String displayName;
 
+  private @Nullable String inviteCode;
+
   public RegisterRequest() {
     super();
   }
@@ -101,6 +103,26 @@ public class RegisterRequest {
     this.displayName = displayName;
   }
 
+  public RegisterRequest inviteCode(@Nullable String inviteCode) {
+    this.inviteCode = inviteCode;
+    return this;
+  }
+
+  /**
+   * Instance invitation code. Required when the deployment is configured with one (public instances); ignored when the instance leaves registration open.
+   * @return inviteCode
+   */
+  @Size(max = 200)
+  @Schema(name = "inviteCode", example = "let-me-in", description = "Instance invitation code. Required when the deployment is configured with one (public instances); ignored when the instance leaves registration open.", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
+  @JsonProperty("inviteCode")
+  public @Nullable String getInviteCode() {
+    return inviteCode;
+  }
+
+  public void setInviteCode(@Nullable String inviteCode) {
+    this.inviteCode = inviteCode;
+  }
+
   @Override
   public boolean equals(Object o) {
     if (this == o) {
@@ -112,12 +134,13 @@ public class RegisterRequest {
     RegisterRequest registerRequest = (RegisterRequest) o;
     return Objects.equals(this.email, registerRequest.email) &&
         Objects.equals(this.password, registerRequest.password) &&
-        Objects.equals(this.displayName, registerRequest.displayName);
+        Objects.equals(this.displayName, registerRequest.displayName) &&
+        Objects.equals(this.inviteCode, registerRequest.inviteCode);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(email, password, displayName);
+    return Objects.hash(email, password, displayName, inviteCode);
   }
 
   @Override
@@ -127,6 +150,7 @@ public class RegisterRequest {
     sb.append("    email: ").append(toIndentedString(email)).append("\n");
     sb.append("    password: ").append("*").append("\n");
     sb.append("    displayName: ").append(toIndentedString(displayName)).append("\n");
+    sb.append("    inviteCode: ").append(toIndentedString(inviteCode)).append("\n");
     sb.append("}");
     return sb.toString();
   }

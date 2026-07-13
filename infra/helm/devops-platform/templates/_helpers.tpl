@@ -6,6 +6,18 @@
 postgres-credentials
 {{- end -}}
 
+{{- define "devops-platform.grafanaPassword" -}}
+{{- .Values.secrets.grafanaPassword | default .Values.monitoring.grafana.adminPassword -}}
+{{- end -}}
+
+{{- define "devops-platform.jwtSecret" -}}
+{{- .Values.secrets.jwtSecret | default .Values.auth.jwtSecret -}}
+{{- end -}}
+
+{{- define "devops-platform.authSecretName" -}}
+auth-credentials
+{{- end -}}
+
 {{/*
 HTTP liveness/readiness for Spring Boot and genai-service (process up only; no downstream checks).
 */}}

@@ -318,6 +318,9 @@ paths:
     post:
       operationId: addComment
       summary: Add a comment to an incident (immutable)
+      description: >-
+        The comment's authorId is taken from the gateway-injected `X-User-Id`
+        header (the validated session identity), never from the request body.
       tags: [incidents]
       security: []
       parameters:
@@ -407,6 +410,8 @@ paths:
       description: |
         Public self-registration. New accounts receive the `MEMBER` role.
         Passwords are stored hashed server-side; the cleartext password is never returned.
+        Instances configured with an invitation code (`AUTH_INVITE_CODE`) reject
+        registrations whose `inviteCode` does not match with 403.
       tags: [auth]
       security: []
       requestBody:
@@ -424,6 +429,12 @@ paths:
                 $ref: "#/components/schemas/User"
         "400":
           description: Invalid request (validation failed)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Invalid invitation code
           content:
             application/json:
               schema:
@@ -515,6 +526,77 @@ paths:
                 $ref: "#/components/schemas/User"
         "401":
           description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    patch:
+      operationId: updateCurrentUser
+      summary: Update the authenticated user profile
+      description: |
+        Partial update of the caller's own profile. Requires a valid `session` cookie (see
+        `GET /users/me`). Changing `email` additionally requires `currentPassword`; changing
+        only `displayName` does not. The session cookie stays valid after the update.
+      tags: [users]
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateProfileRequest"
+      responses:
+        "200":
+          description: Updated user profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "400":
+          description: Invalid request (validation failed, or email change without currentPassword)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Not authenticated, or currentPassword is wrong
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Email already registered to another account
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /users/me/password:
+    post:
+      operationId: changePassword
+      summary: Change the authenticated user's password
+      description: |
+        Requires a valid `session` cookie (see `GET /users/me`) and the current password.
+        Existing sessions are not revoked (ADR 0007: stateless session JWTs expire via TTL).
+      tags: [users]
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChangePasswordRequest"
+      responses:
+        "204":
+          description: Password changed
+        "400":
+          description: Invalid request (validation failed)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Not authenticated, or currentPassword is wrong
           content:
             application/json:
               schema:
@@ -743,6 +825,56 @@ components:
           minLength: 1
           maxLength: 100
           example: New User
+        inviteCode:
+          type: string
+          maxLength: 200
+          writeOnly: true
+          description: >-
+            Instance invitation code. Required when the deployment is
+            configured with one (public instances); ignored when the
+            instance leaves registration open.
+          example: let-me-in
+
+    UpdateProfileRequest:
+      type: object
+      description: >-
+        Partial profile update; at least one of `email` or `displayName` must be
+        present. `currentPassword` is required when `email` is present.
+      additionalProperties: false
+      minProperties: 1
+      properties:
+        email:
+          type: string
+          format: email
+          example: new.address@example.com
+        displayName:
+          type: string
+          minLength: 1
+          maxLength: 100
+          example: Alex Responder
+        currentPassword:
+          type: string
+          format: password
+          writeOnly: true
+          example: "change-me-8+"
+
+    ChangePasswordRequest:
+      type: object
+      required: [currentPassword, newPassword]
+      additionalProperties: false
+      properties:
+        currentPassword:
+          type: string
+          format: password
+          writeOnly: true
+          example: "change-me-8+"
+        newPassword:
+          type: string
+          format: password
+          minLength: 8
+          maxLength: 128
+          writeOnly: true
+          example: "new-secret-9!"
 
     LoginRequest:
       type: object
@@ -869,6 +1001,15 @@ components:
           type: [string, "null"]
           format: date-time
           description: When the AI postmortem was last generated.
+        assignedUserIds:
+          type: array
+          items:
+            type: string
+            format: uuid
+          description: >-
+            UUIDs of the responders currently assigned to this incident
+            (see PATCH /incidents/{incidentId}/assign).
+          example: ["018e2c5f-1234-7abc-8def-0000000000aa"]
 
     IncidentEvent:
       type: object
@@ -885,6 +1026,15 @@ components:
         description:
           type: string
           example: "status: open -> investigating"
+        newValue:
+          type: string
+          description: >-
+            New value after the change: the new status for status_changed
+            entries and the new severity for severity_changed entries. Lets
+            clients color-code timeline entries without parsing the
+            description. Absent for other entry types and for events stored
+            before this field existed.
+          example: investigating
 
     SummaryResponse:
       type: object

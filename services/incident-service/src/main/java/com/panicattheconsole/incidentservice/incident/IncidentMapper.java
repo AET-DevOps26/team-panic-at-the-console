@@ -60,6 +60,7 @@ final class IncidentMapper {
         if (incident.getDescription() != null) {
             api.setDescription(JsonNullable.of(incident.getDescription()));
         }
+        api.setAssignedUserIds(incident.getAssignedUsers().stream().sorted().toList());
         return api;
     }
 

@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema",
+  "$id": "https://github.com/aet-devops26/team-panic-at-the-console/api/specs/nats/incident.status.changed.schema.json",
+  "description": "Carries oldStatus and newStatus so event-service can render a status transition in the timeline without a REST callback (the generic incident.updated event cannot distinguish status changes from other updates).",
+  "type": "object",
+  "required": ["incidentId", "oldStatus", "newStatus", "timestamp"],
+  "additionalProperties": false,
+  "properties": {
+    "incidentId": { "type": "string", "format": "uuid" },
+    "oldStatus": { "type": "string", "enum": ["open", "investigating", "resolved"] },
+    "newStatus": { "type": "string", "enum": ["open", "investigating", "resolved"] },
+    "timestamp": { "type": "string", "format": "date-time" }
+  }
+}

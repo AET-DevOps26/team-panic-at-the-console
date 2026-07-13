@@ -6,6 +6,7 @@ src/main/java/org/openapitools/api/IncidentsApi.java
 src/main/java/org/openapitools/api/NotificationsApi.java
 src/main/java/org/openapitools/api/UsersApi.java
 src/main/java/org/openapitools/model/AssignIncidentRequest.java
+src/main/java/org/openapitools/model/ChangePasswordRequest.java
 src/main/java/org/openapitools/model/Comment.java
 src/main/java/org/openapitools/model/CommentListResponse.java
 src/main/java/org/openapitools/model/CreateCommentRequest.java
@@ -29,6 +30,7 @@ src/main/java/org/openapitools/model/SeverityResponse.java
 src/main/java/org/openapitools/model/SolutionsResponse.java
 src/main/java/org/openapitools/model/SummaryResponse.java
 src/main/java/org/openapitools/model/UpdateDescriptionRequest.java
+src/main/java/org/openapitools/model/UpdateProfileRequest.java
 src/main/java/org/openapitools/model/UpdateStatusRequest.java
 src/main/java/org/openapitools/model/User.java
 src/main/java/org/openapitools/model/UserListResponse.java

@@ -15,6 +15,7 @@ import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.test.web.servlet.MockMvc;
 
 import com.panicattheconsole.gateway.GatewayApplication;
+import com.panicattheconsole.gateway.auth.TestSessions;
 
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.method;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
@@ -59,7 +60,7 @@ class GenaiProxyControllerTest {
                                         {"accepted":true,"task":"SUMMARY"}
                                         """));
 
-        mvc.perform(post("/incidents/{id}/genai/summary", INCIDENT_ID))
+        mvc.perform(post("/incidents/{id}/genai/summary", INCIDENT_ID).cookie(TestSessions.sessionCookie()))
                 .andExpect(status().isAccepted())
                 .andExpect(jsonPath("$.accepted").value(true))
                 .andExpect(jsonPath("$.task").value("SUMMARY"));

@@ -1,12 +1,12 @@
 import { useParams, Link } from "react-router-dom";
 import { useState } from "react";
-import { ArrowLeft, RefreshCw, Clock, Loader2, MessageSquare, AlertTriangle, Zap } from "lucide-react";
+import { ArrowLeft, Check, RefreshCw, Clock, Loader2, MessageSquare, AlertTriangle, Zap } from "lucide-react";
 import { EditableDescription } from "@/components/incident/EditableDescription";
 import { Markdown } from "@/components/Markdown";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { SeverityBadge, StatusBadge } from "@/components/ui/badge";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { SeverityBadge, StatusBadge, severityDotColor, statusDotColor } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -14,14 +14,22 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import type React from "react";
 import NotFoundPage from "@/pages/NotFoundPage";
-import { isNotFound, useIncident, useIncidentEvents, useComments, useAddComment, useRegeneratePostmortem, useRegenerateSeverity, useRegenerateSolutions, useRegenerateSummary, useSetIncidentSeverity, useUpdateIncidentStatus, type Incident, type IncidentEvent, type IncidentStatus, type Severity, type Comment } from "@/api/queries";
+import { isNotFound, useIncident, useIncidentEvents, useComments, useAddComment, useRegeneratePostmortem, useRegenerateSeverity, useRegenerateSolutions, useRegenerateSummary, useSetIncidentSeverity, useUpdateIncidentStatus, useUsers, type Incident, type IncidentEvent, type IncidentStatus, type Severity, type Comment } from "@/api/queries";
+import { AssigneesCard } from "@/components/incident/AssigneesCard";
 import { cn, formatDateTime, formatRelativeTime } from "@/lib/utils";
-import { isAutoGenerating, solutionsToMarkdown, useIntervalRerender, REGEN_WATCH_MS } from "@/lib/genai";
+import { isAutoGenerating, solutionsToMarkdown, suggestedSeverity, useIntervalRerender, REGEN_WATCH_MS } from "@/lib/genai";
 
 
 function TimelineItem({ event }: { event: IncidentEvent }) {
   const iconClass = "h-2 w-2 rounded-full mt-1.5 shrink-0";
-  const dotColor = event.type === "incident_created" ? "bg-blue-500" : event.type === "status_changed" ? "bg-yellow-500" : "bg-slate-400";
+  // Change entries take the color of the value they changed to; creation is
+  // colored as "open" since new incidents always start there. Slate fallback
+  // covers other entry types and events stored before newValue existed.
+  const dotColor =
+    event.type === "incident_created" ? statusDotColor.open
+    : event.type === "status_changed" ? statusDotColor[event.newValue ?? ""] ?? "bg-slate-400"
+    : event.type === "severity_changed" ? severityDotColor[event.newValue ?? ""] ?? "bg-slate-400"
+    : "bg-slate-400";
   return (
     <div className="flex gap-3">
       <div className="flex flex-col items-center">
@@ -115,6 +123,23 @@ function GeneratingIndicator({ label }: { label: string }) {
   );
 }
 
+function ApplySuggestedSeverity({ incident, disabled }: { incident: Incident; disabled: boolean }) {
+  const setSeverity = useSetIncidentSeverity(incident.id);
+  const suggested = suggestedSeverity(incident.severitySuggestion);
+  if (!suggested || suggested === incident.severity) return null;
+
+  return (
+    <div className="space-y-1 pt-1">
+      <Button variant="outline" size="sm" onClick={() => setSeverity.mutate({ severity: suggested })} disabled={disabled || setSeverity.isPending}>
+        {setSeverity.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />}
+        Apply
+        <SeverityBadge severity={suggested} />
+      </Button>
+      {setSeverity.isError && <p className="text-xs text-red-600">Failed to apply severity. Please try again.</p>}
+    </div>
+  );
+}
+
 function AiSection({ incident, generating, onRegenerate }: { incident: Incident; generating: Record<AiField, boolean>; onRegenerate: (field: AiField) => void }) {
   const solutionsMarkdown = incident.solutions ? solutionsToMarkdown(incident.solutions) : "";
 
@@ -132,7 +157,10 @@ function AiSection({ incident, generating, onRegenerate }: { incident: Incident;
 
       <AiPanel title="Severity suggestion" onRegenerate={() => onRegenerate("severitySuggestion")} generating={generating.severitySuggestion} generatedAt={incident.severitySuggestionGeneratedAt}>
         {incident.severitySuggestion ? (
-          <Markdown className={cn(generating.severitySuggestion && "opacity-50")}>{incident.severitySuggestion}</Markdown>
+          <>
+            <Markdown className={cn(generating.severitySuggestion && "opacity-50")}>{incident.severitySuggestion}</Markdown>
+            <ApplySuggestedSeverity incident={incident} disabled={generating.severitySuggestion} />
+          </>
         ) : generating.severitySuggestion ? (
           <GeneratingIndicator label="Generating suggestion…" />
         ) : (
@@ -173,50 +201,57 @@ const STATUS_OPTIONS: { value: IncidentStatus; label: string }[] = [
 
 const SEVERITY_OPTIONS: Severity[] = ["SEV1", "SEV2", "SEV3", "SEV4"];
 
-function ActionsCard({ incident }: { incident: Incident }) {
+// Badge-shaped select trigger: keeps the colored pill look of the Details
+// card while making it an editable dropdown.
+const badgeTriggerClass = "h-auto w-auto gap-1 rounded-full border-none bg-transparent p-0 focus:ring-offset-1";
+
+function StatusSelect({ incident }: { incident: Incident }) {
   const updateStatus = useUpdateIncidentStatus(incident.id);
+
+  return (
+    <div className="space-y-1">
+      <div className="flex items-center justify-between">
+        <span className="text-muted-foreground">Status</span>
+        <Select value={incident.status} onValueChange={(value) => value !== incident.status && updateStatus.mutate({ status: value as IncidentStatus })} disabled={updateStatus.isPending}>
+          <SelectTrigger aria-label="Change status" className={badgeTriggerClass}>
+            <StatusBadge status={incident.status} />
+          </SelectTrigger>
+          <SelectContent align="end">
+            {STATUS_OPTIONS.map(({ value }) => (
+              <SelectItem key={value} value={value}>
+                <StatusBadge status={value} />
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+      {updateStatus.isError && <p className="text-xs text-red-600 text-right">Failed to update status. Please try again.</p>}
+    </div>
+  );
+}
+
+function SeveritySelect({ incident }: { incident: Incident }) {
   const setSeverity = useSetIncidentSeverity(incident.id);
 
   return (
-    <Card>
-      <CardHeader className="pb-3">
-        <CardTitle className="text-base">Actions</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-3">
-        <div className="space-y-1.5">
-          <Label htmlFor="incident-status">Status</Label>
-          <Select value={incident.status} onValueChange={(value) => value !== incident.status && updateStatus.mutate({ status: value as IncidentStatus })} disabled={updateStatus.isPending}>
-            <SelectTrigger id="incident-status" className="h-9">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {STATUS_OPTIONS.map(({ value, label }) => (
-                <SelectItem key={value} value={value}>
-                  {label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          {updateStatus.isError && <p className="text-xs text-red-600">Failed to update status. Please try again.</p>}
-        </div>
-        <div className="space-y-1.5">
-          <Label htmlFor="incident-severity">Severity</Label>
-          <Select value={incident.severity} onValueChange={(value) => value !== incident.severity && setSeverity.mutate({ severity: value as Severity })} disabled={setSeverity.isPending}>
-            <SelectTrigger id="incident-severity" className="h-9">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {SEVERITY_OPTIONS.map((sev) => (
-                <SelectItem key={sev} value={sev}>
-                  {sev}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          {setSeverity.isError && <p className="text-xs text-red-600">Failed to update severity. Please try again.</p>}
-        </div>
-      </CardContent>
-    </Card>
+    <div className="space-y-1">
+      <div className="flex items-center justify-between">
+        <span className="text-muted-foreground">Severity</span>
+        <Select value={incident.severity} onValueChange={(value) => value !== incident.severity && setSeverity.mutate({ severity: value as Severity })} disabled={setSeverity.isPending}>
+          <SelectTrigger aria-label="Change severity" className={badgeTriggerClass}>
+            <SeverityBadge severity={incident.severity} />
+          </SelectTrigger>
+          <SelectContent align="end">
+            {SEVERITY_OPTIONS.map((sev) => (
+              <SelectItem key={sev} value={sev}>
+                <SeverityBadge severity={sev} />
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+      {setSeverity.isError && <p className="text-xs text-red-600 text-right">Failed to update severity. Please try again.</p>}
+    </div>
   );
 }
 
@@ -227,6 +262,9 @@ export default function IncidentDetailPage() {
   const { data: comments, isLoading: commentsLoading } = useComments(id ?? "");
   const addComment = useAddComment(id ?? "");
   const [commentText, setCommentText] = useState("");
+  const { data: users } = useUsers();
+  const authorName = (authorId?: string) =>
+    users?.find((u) => u.id === authorId)?.displayName ?? "Unknown user";
   const genai = useGenaiProgress(id ?? "", incident);
 
   if (isLoading) {
@@ -277,13 +315,7 @@ export default function IncidentDetailPage() {
           <span>/</span>
           <span className="text-foreground font-medium truncate max-w-xs">{incident.title}</span>
         </div>
-        <div className="flex items-start justify-between gap-4">
-          <h1 className="text-xl font-semibold min-w-0">{incident.title}</h1>
-          <div className="flex items-center gap-2 shrink-0">
-            <SeverityBadge severity={incident.severity} />
-            <StatusBadge status={incident.status} />
-          </div>
-        </div>
+        <h1 className="text-xl font-semibold min-w-0">{incident.title}</h1>
         <EditableDescription incident={incident} />
       </header>
 
@@ -345,7 +377,11 @@ export default function IncidentDetailPage() {
                       <div className="space-y-4">
                         {comments.map((c: Comment) => (
                           <div key={c.id} className="space-y-1">
-                            <p className="text-xs text-muted-foreground">{formatDateTime(c.createdAt)}</p>
+                            <p className="text-xs text-muted-foreground">
+                              <span className="font-medium text-foreground">{authorName(c.authorId)}</span>
+                              {" · "}
+                              {formatDateTime(c.createdAt)}
+                            </p>
                             <p className="text-sm">{c.text}</p>
                             <Separator />
                           </div>
@@ -390,15 +426,9 @@ export default function IncidentDetailPage() {
                 <CardTitle className="text-base">Details</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Status</span>
-                  <StatusBadge status={incident.status} />
-                </div>
+                <StatusSelect incident={incident} />
                 <Separator />
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Severity</span>
-                  <SeverityBadge severity={incident.severity} />
-                </div>
+                <SeveritySelect incident={incident} />
                 <Separator />
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Created</span>
@@ -416,19 +446,7 @@ export default function IncidentDetailPage() {
               </CardContent>
             </Card>
 
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-base">Assignees</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-muted-foreground">No assignees yet.</p>
-                <Button variant="outline" size="sm" className="mt-3 w-full">
-                  Assign user
-                </Button>
-              </CardContent>
-            </Card>
-
-            <ActionsCard incident={incident} />
+            <AssigneesCard incident={incident} />
           </div>
         </div>
       </div>

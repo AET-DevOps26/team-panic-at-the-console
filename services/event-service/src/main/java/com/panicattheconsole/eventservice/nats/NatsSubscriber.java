@@ -51,6 +51,7 @@ public class NatsSubscriber {
 
                 dispatcher.subscribe("incident.created");
                 dispatcher.subscribe("incident.updated");
+                dispatcher.subscribe("incident.status.changed");
                 dispatcher.subscribe("incident.resolved");
                 dispatcher.subscribe("incident.assigned");
                 dispatcher.subscribe("incident.comment.added");

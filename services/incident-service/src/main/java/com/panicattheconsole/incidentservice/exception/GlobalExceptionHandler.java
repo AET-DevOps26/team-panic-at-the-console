@@ -38,6 +38,15 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         return ResponseEntity.status(HttpStatus.CONFLICT).body(error);
     }
 
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<Map<String, String>> handleInvalidArgument(IllegalArgumentException e) {
+        log.warn("Invalid request: {}", e.getMessage());
+        Map<String, String> error = new HashMap<>();
+        error.put("error", "BAD_REQUEST");
+        error.put("message", e.getMessage());
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
+    }
+
     @ExceptionHandler(RuntimeException.class)
     public ResponseEntity<Map<String, String>> handleRuntimeException(RuntimeException e) {
         log.error("Unexpected runtime error", e);

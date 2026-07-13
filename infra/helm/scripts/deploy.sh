@@ -77,8 +77,8 @@ cp "$REPO_ROOT/infra/observability/grafana/dashboards/"*.json "$CHART_STAGE/file
 
 echo ">> helm upgrade --install (namespace=$DEPLOY_NAMESPACE tag=$TAG)"
 HELM_VALUES=(--values "$DEC_VALUES")
-# Optional extra encrypted values, merged last. Absent by default since the chart no
-# longer self-hosts Grafana; kept as a hook for deploy-specific secret overrides.
+# Optional extra encrypted values, merged last. Use this for deploy-specific
+# monitoring overrides such as the Grafana admin password.
 MONITORING_ENC="${MONITORING_VALUES_FILE:-$REPO_ROOT/infra/helm/secrets/values.monitoring.enc.yaml}"
 if [ -f "$MONITORING_ENC" ]; then
   echo ">> merge monitoring values from $MONITORING_ENC"

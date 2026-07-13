@@ -1,6 +1,7 @@
 """Contains all the data models used in inputs/outputs"""
 
 from .assign_incident_request import AssignIncidentRequest
+from .change_password_request import ChangePasswordRequest
 from .comment import Comment
 from .comment_list_response import CommentListResponse
 from .create_comment_request import CreateCommentRequest
@@ -25,6 +26,7 @@ from .severity_response import SeverityResponse
 from .solutions_response import SolutionsResponse
 from .summary_response import SummaryResponse
 from .update_description_request import UpdateDescriptionRequest
+from .update_profile_request import UpdateProfileRequest
 from .update_status_request import UpdateStatusRequest
 from .user import User
 from .user_list_response import UserListResponse
@@ -32,6 +34,7 @@ from .user_role import UserRole
 
 __all__ = (
     "AssignIncidentRequest",
+    "ChangePasswordRequest",
     "Comment",
     "CommentListResponse",
     "CreateCommentRequest",
@@ -56,6 +59,7 @@ __all__ = (
     "SolutionsResponse",
     "SummaryResponse",
     "UpdateDescriptionRequest",
+    "UpdateProfileRequest",
     "UpdateStatusRequest",
     "User",
     "UserListResponse",

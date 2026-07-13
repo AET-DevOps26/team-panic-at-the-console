@@ -16,6 +16,24 @@ spec:
     - host: {{ .Values.ingress.host }}
       http:
         paths:
+          {{- if .Values.monitoring.enabled }}
+          - path: {{ .Values.ingress.paths.grafana }}
+            pathType: Prefix
+            backend:
+              service:
+                name: grafana
+                port:
+                  number: 3000
+          {{- if not .Values.monitoring.operatorCrds.enabled }}
+          - path: {{ .Values.ingress.paths.prometheus }}
+            pathType: Prefix
+            backend:
+              service:
+                name: prometheus
+                port:
+                  number: 9090
+          {{- end }}
+          {{- end }}
           - path: {{ .Values.ingress.paths.frontend }}
             pathType: Prefix
             backend:

@@ -6,7 +6,9 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
 import java.time.OffsetDateTime;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.UUID;
 import org.openapitools.jackson.nullable.JsonNullable;
 import org.openapitools.model.IncidentStatus;
@@ -67,6 +69,9 @@ public class Incident {
 
   @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
   private JsonNullable<OffsetDateTime> postmortemGeneratedAt = JsonNullable.<OffsetDateTime>undefined();
+
+  @Valid
+  private List<UUID> assignedUserIds = new ArrayList<>();
 
   public Incident() {
     super();
@@ -383,6 +388,34 @@ public class Incident {
     this.postmortemGeneratedAt = postmortemGeneratedAt;
   }
 
+  public Incident assignedUserIds(List<UUID> assignedUserIds) {
+    this.assignedUserIds = assignedUserIds;
+    return this;
+  }
+
+  public Incident addAssignedUserIdsItem(UUID assignedUserIdsItem) {
+    if (this.assignedUserIds == null) {
+      this.assignedUserIds = new ArrayList<>();
+    }
+    this.assignedUserIds.add(assignedUserIdsItem);
+    return this;
+  }
+
+  /**
+   * UUIDs of the responders currently assigned to this incident (see PATCH /incidents/{incidentId}/assign).
+   * @return assignedUserIds
+   */
+  @Valid
+  @Schema(name = "assignedUserIds", example = "[018e2c5f-1234-7abc-8def-0000000000aa]", description = "UUIDs of the responders currently assigned to this incident (see PATCH /incidents/{incidentId}/assign).", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
+  @JsonProperty("assignedUserIds")
+  public List<UUID> getAssignedUserIds() {
+    return assignedUserIds;
+  }
+
+  public void setAssignedUserIds(List<UUID> assignedUserIds) {
+    this.assignedUserIds = assignedUserIds;
+  }
+
   @Override
   public boolean equals(Object o) {
     if (this == o) {
@@ -406,7 +439,8 @@ public class Incident {
         equalsNullable(this.solutions, incident.solutions) &&
         equalsNullable(this.solutionsGeneratedAt, incident.solutionsGeneratedAt) &&
         equalsNullable(this.postmortem, incident.postmortem) &&
-        equalsNullable(this.postmortemGeneratedAt, incident.postmortemGeneratedAt);
+        equalsNullable(this.postmortemGeneratedAt, incident.postmortemGeneratedAt) &&
+        Objects.equals(this.assignedUserIds, incident.assignedUserIds);
   }
 
   private static <T> boolean equalsNullable(JsonNullable<T> a, JsonNullable<T> b) {
@@ -415,7 +449,7 @@ public class Incident {
 
   @Override
   public int hashCode() {
-    return Objects.hash(id, title, hashCodeNullable(description), status, severity, createdAt, hashCodeNullable(resolvedAt), hashCodeNullable(summary), hashCodeNullable(summaryGeneratedAt), hashCodeNullable(severitySuggestion), hashCodeNullable(severitySuggestionGeneratedAt), hashCodeNullable(solutions), hashCodeNullable(solutionsGeneratedAt), hashCodeNullable(postmortem), hashCodeNullable(postmortemGeneratedAt));
+    return Objects.hash(id, title, hashCodeNullable(description), status, severity, createdAt, hashCodeNullable(resolvedAt), hashCodeNullable(summary), hashCodeNullable(summaryGeneratedAt), hashCodeNullable(severitySuggestion), hashCodeNullable(severitySuggestionGeneratedAt), hashCodeNullable(solutions), hashCodeNullable(solutionsGeneratedAt), hashCodeNullable(postmortem), hashCodeNullable(postmortemGeneratedAt), assignedUserIds);
   }
 
   private static <T> int hashCodeNullable(JsonNullable<T> a) {
@@ -444,6 +478,7 @@ public class Incident {
     sb.append("    solutionsGeneratedAt: ").append(toIndentedString(solutionsGeneratedAt)).append("\n");
     sb.append("    postmortem: ").append(toIndentedString(postmortem)).append("\n");
     sb.append("    postmortemGeneratedAt: ").append(toIndentedString(postmortemGeneratedAt)).append("\n");
+    sb.append("    assignedUserIds: ").append(toIndentedString(assignedUserIds)).append("\n");
     sb.append("}");
     return sb.toString();
   }

@@ -5,7 +5,9 @@
  */
 package org.openapitools.api;
 
+import org.openapitools.model.ChangePasswordRequest;
 import org.openapitools.model.ErrorResponse;
+import org.openapitools.model.UpdateProfileRequest;
 import org.openapitools.model.User;
 import org.openapitools.model.UserListResponse;
 import io.swagger.v3.oas.annotations.ExternalDocumentation;
@@ -44,6 +46,59 @@ public interface UsersApi {
     default Optional<NativeWebRequest> getRequest() {
         return Optional.empty();
     }
+
+    /**
+     * POST /users/me/password : Change the authenticated user&#39;s password
+     * Requires a valid &#x60;session&#x60; cookie (see &#x60;GET /users/me&#x60;) and the current password. Existing sessions are not revoked (ADR 0007: stateless session JWTs expire via TTL).
+     *
+     * @param changePasswordRequest  (required)
+     * @return Password changed (status code 204)
+     *         or Invalid request (validation failed) (status code 400)
+     *         or Not authenticated, or currentPassword is wrong (status code 401)
+     */
+    @Operation(
+        operationId = "changePassword",
+        summary = "Change the authenticated user's password",
+        description = "Requires a valid `session` cookie (see `GET /users/me`) and the current password. Existing sessions are not revoked (ADR 0007: stateless session JWTs expire via TTL). ",
+        tags = { "users" },
+        responses = {
+            @ApiResponse(responseCode = "204", description = "Password changed"),
+            @ApiResponse(responseCode = "400", description = "Invalid request (validation failed)", content = {
+                @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))
+            }),
+            @ApiResponse(responseCode = "401", description = "Not authenticated, or currentPassword is wrong", content = {
+                @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))
+            })
+        }
+    )
+    @RequestMapping(
+        method = RequestMethod.POST,
+        value = "/users/me/password",
+        produces = { "application/json" },
+        consumes = { "application/json" }
+    )
+
+    default ResponseEntity<Void> changePassword(
+        @Parameter(name = "ChangePasswordRequest", description = "", required = true) @Valid @RequestBody ChangePasswordRequest changePasswordRequest
+    ) {
+        getRequest().ifPresent(request -> {
+            for (MediaType mediaType: MediaType.parseMediaTypes(request.getHeader("Accept"))) {
+                if (mediaType.isCompatibleWith(MediaType.valueOf("application/json"))) {
+                    String exampleString = "{ \"message\" : \"Invalid email or password\" }";
+                    ApiUtil.setExampleResponse(request, "application/json", exampleString);
+                    break;
+                }
+                if (mediaType.isCompatibleWith(MediaType.valueOf("application/json"))) {
+                    String exampleString = "{ \"message\" : \"Invalid email or password\" }";
+                    ApiUtil.setExampleResponse(request, "application/json", exampleString);
+                    break;
+                }
+            }
+        });
+        return new ResponseEntity<>(HttpStatus.NOT_IMPLEMENTED);
+
+    }
+
 
     /**
      * GET /users/me : Get the authenticated user profile
@@ -131,6 +186,75 @@ public interface UsersApi {
             for (MediaType mediaType: MediaType.parseMediaTypes(request.getHeader("Accept"))) {
                 if (mediaType.isCompatibleWith(MediaType.valueOf("application/json"))) {
                     String exampleString = "{ \"total\" : 2, \"offset\" : 0, \"limit\" : 50, \"items\" : [ { \"createdAt\" : \"2026-05-08T10:00:00Z\", \"role\" : \"MEMBER\", \"displayName\" : \"Alex Responder\", \"id\" : \"018e2c5f-1234-7abc-8def-0000000000aa\", \"email\" : \"responder@example.com\" }, { \"createdAt\" : \"2026-05-08T10:00:00Z\", \"role\" : \"MEMBER\", \"displayName\" : \"Alex Responder\", \"id\" : \"018e2c5f-1234-7abc-8def-0000000000aa\", \"email\" : \"responder@example.com\" } ] }";
+                    ApiUtil.setExampleResponse(request, "application/json", exampleString);
+                    break;
+                }
+                if (mediaType.isCompatibleWith(MediaType.valueOf("application/json"))) {
+                    String exampleString = "{ \"message\" : \"Invalid email or password\" }";
+                    ApiUtil.setExampleResponse(request, "application/json", exampleString);
+                    break;
+                }
+            }
+        });
+        return new ResponseEntity<>(HttpStatus.NOT_IMPLEMENTED);
+
+    }
+
+
+    /**
+     * PATCH /users/me : Update the authenticated user profile
+     * Partial update of the caller&#39;s own profile. Requires a valid &#x60;session&#x60; cookie (see &#x60;GET /users/me&#x60;). Changing &#x60;email&#x60; additionally requires &#x60;currentPassword&#x60;; changing only &#x60;displayName&#x60; does not. The session cookie stays valid after the update.
+     *
+     * @param updateProfileRequest  (required)
+     * @return Updated user profile (status code 200)
+     *         or Invalid request (validation failed, or email change without currentPassword) (status code 400)
+     *         or Not authenticated, or currentPassword is wrong (status code 401)
+     *         or Email already registered to another account (status code 409)
+     */
+    @Operation(
+        operationId = "updateCurrentUser",
+        summary = "Update the authenticated user profile",
+        description = "Partial update of the caller's own profile. Requires a valid `session` cookie (see `GET /users/me`). Changing `email` additionally requires `currentPassword`; changing only `displayName` does not. The session cookie stays valid after the update. ",
+        tags = { "users" },
+        responses = {
+            @ApiResponse(responseCode = "200", description = "Updated user profile", content = {
+                @Content(mediaType = "application/json", schema = @Schema(implementation = User.class))
+            }),
+            @ApiResponse(responseCode = "400", description = "Invalid request (validation failed, or email change without currentPassword)", content = {
+                @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))
+            }),
+            @ApiResponse(responseCode = "401", description = "Not authenticated, or currentPassword is wrong", content = {
+                @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))
+            }),
+            @ApiResponse(responseCode = "409", description = "Email already registered to another account", content = {
+                @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))
+            })
+        }
+    )
+    @RequestMapping(
+        method = RequestMethod.PATCH,
+        value = "/users/me",
+        produces = { "application/json" },
+        consumes = { "application/json" }
+    )
+
+    default ResponseEntity<User> updateCurrentUser(
+        @Parameter(name = "UpdateProfileRequest", description = "", required = true) @Valid @RequestBody UpdateProfileRequest updateProfileRequest
+    ) {
+        getRequest().ifPresent(request -> {
+            for (MediaType mediaType: MediaType.parseMediaTypes(request.getHeader("Accept"))) {
+                if (mediaType.isCompatibleWith(MediaType.valueOf("application/json"))) {
+                    String exampleString = "{ \"createdAt\" : \"2026-05-08T10:00:00Z\", \"role\" : \"MEMBER\", \"displayName\" : \"Alex Responder\", \"id\" : \"018e2c5f-1234-7abc-8def-0000000000aa\", \"email\" : \"responder@example.com\" }";
+                    ApiUtil.setExampleResponse(request, "application/json", exampleString);
+                    break;
+                }
+                if (mediaType.isCompatibleWith(MediaType.valueOf("application/json"))) {
+                    String exampleString = "{ \"message\" : \"Invalid email or password\" }";
+                    ApiUtil.setExampleResponse(request, "application/json", exampleString);
+                    break;
+                }
+                if (mediaType.isCompatibleWith(MediaType.valueOf("application/json"))) {
+                    String exampleString = "{ \"message\" : \"Invalid email or password\" }";
                     ApiUtil.setExampleResponse(request, "application/json", exampleString);
                     break;
                 }
