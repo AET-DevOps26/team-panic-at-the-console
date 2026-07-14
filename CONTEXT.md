@@ -136,7 +136,7 @@ An enumeration of what the `PromptBuilder` is asked to produce: `SUMMARY`, `SEVE
 | `rule_evaluations_total` | counter | `matched=true\|false` |
 | `webhooks_received_total` | counter | `source_type` |
 
-**DB ownership**: one shared Postgres pod, one database per stateful service (`init-dbs.sh` creates them).
+**DB ownership**: one shared Postgres pod, one database per stateful service. `init-dbs.sh` creates them idempotently and runs on every deploy (compose `postgres-init` one-shot, Helm pre-upgrade job), not just on first boot, so databases added to the list also appear on environments with existing Postgres volumes.
 | Service | Database | Stateful? |
 |---|---|---|
 | `incident-service` | `incidents` | yes |

@@ -26,6 +26,24 @@ services:
       retries: 10
     restart: unless-stopped
 
+  # Re-runs init-dbs.sh on every `up`: postgres only executes
+  # /docker-entrypoint-initdb.d on a fresh volume, so this one-shot is what
+  # creates databases added to the script after the volume was initialized.
+  postgres-init:
+    image: postgres:16-alpine
+    entrypoint: ["/bin/bash", "/init-dbs.sh"]
+    environment:
+      PGHOST: postgres
+      PGPASSWORD: ${POSTGRES_PASSWORD:-devops}
+      POSTGRES_USER: ${POSTGRES_USER:-devops}
+      POSTGRES_DB: postgres
+    volumes:
+      - ./infra/helm/devops-platform/files/init-dbs.sh:/init-dbs.sh:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: on-failure
+
   nats:
     image: nats:2.10-alpine
     command: ["--jetstream", "--http_port", "8222"]
@@ -142,8 +160,8 @@ services:
       <<: *healthcheck-spring
       test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://127.0.0.1:8081/health || exit 1"]
     depends_on:
-      postgres:
-        condition: service_healthy
+      postgres-init:
+        condition: service_completed_successfully
       nats:
         condition: service_started
     restart: unless-stopped
@@ -164,8 +182,8 @@ services:
       <<: *healthcheck-spring
       test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://127.0.0.1:8082/health || exit 1"]
     depends_on:
-      postgres:
-        condition: service_healthy
+      postgres-init:
+        condition: service_completed_successfully
       nats:
         condition: service_started
     restart: unless-stopped
@@ -183,8 +201,8 @@ services:
     ports:
       - "8083:8083"
     depends_on:
-      postgres:
-        condition: service_healthy
+      postgres-init:
+        condition: service_completed_successfully
       nats:
         condition: service_started
     restart: unless-stopped
@@ -208,8 +226,8 @@ services:
       <<: *healthcheck-spring
       test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://127.0.0.1:8084/health || exit 1"]
     depends_on:
-      postgres:
-        condition: service_healthy
+      postgres-init:
+        condition: service_completed_successfully
     restart: unless-stopped
 
   notification-service:
@@ -228,8 +246,8 @@ services:
       <<: *healthcheck-spring
       test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://127.0.0.1:8085/health || exit 1"]
     depends_on:
-      postgres:
-        condition: service_healthy
+      postgres-init:
+        condition: service_completed_successfully
       nats:
         condition: service_started
     restart: unless-stopped
@@ -252,8 +270,8 @@ services:
       <<: *healthcheck-spring
       test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://127.0.0.1:8086/health || exit 1"]
     depends_on:
-      postgres:
-        condition: service_healthy
+      postgres-init:
+        condition: service_completed_successfully
       nats:
         condition: service_started
     restart: unless-stopped
