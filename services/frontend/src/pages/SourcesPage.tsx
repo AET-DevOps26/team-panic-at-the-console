@@ -353,12 +353,9 @@ function SourcesCard() {
 }
 
 function SetupGuideCard() {
-  const [slug, setSlug] = useState("github");
-  const url = payloadUrl(SLUG_PATTERN.test(slug) ? slug : "<source>");
-
   const curlSnippet = `BODY='{"eventType":"alert_fired","service":"checkout"}'
 SIG="sha256=$(printf '%s' "$BODY" | openssl dgst -sha256 -hmac "$SECRET" -hex | sed 's/^.*= //')"
-curl -X POST ${url} \\
+curl -X POST ${payloadUrl("<source>")} \\
   -H 'Content-Type: application/json' \\
   -H "X-Hub-Signature-256: $SIG" \\
   -H 'X-Delivery-Id: test-1' \\
@@ -373,23 +370,7 @@ curl -X POST ${url} \\
           matches the event’s type.
         </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="space-y-2">
-          <Label htmlFor="urlBuilderSlug">Payload URL for source</Label>
-          <div className="flex items-center gap-2">
-            <Input
-              id="urlBuilderSlug"
-              className="w-40"
-              value={slug}
-              onChange={(e) => setSlug(e.target.value.toLowerCase())}
-              maxLength={64}
-            />
-            <div className="flex-1 min-w-0">
-              <CopyableValue value={url} />
-            </div>
-          </div>
-        </div>
-
+      <CardContent>
         <Tabs defaultValue="github">
           <TabsList>
             <TabsTrigger value="github">GitHub</TabsTrigger>
