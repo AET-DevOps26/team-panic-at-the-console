@@ -92,5 +92,6 @@ helm upgrade --install devops-platform "$CHART_STAGE" \
   --wait \
   --timeout 30m \
   --rollback-on-failure \
+  --force-conflicts \
   --set global.image.tag="$TAG" \
   "${HELM_VALUES[@]}"
