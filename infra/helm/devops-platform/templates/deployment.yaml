@@ -50,7 +50,7 @@ spec:
           env:
             - name: OLLAMA_MODEL
               value: {{ $.Values.global.ollamaModel | default "qwen2.5:3b" | quote }}
-          {{- with $svc.resources }}
+          {{- with (default $.Values.global.defaultResources $svc.resources) }}
           resources:
             {{- toYaml . | nindent 12 }}
           {{- end }}
@@ -79,7 +79,7 @@ spec:
           {{- else if $svc.ollamaProbes }}
           {{- include "devops-platform.ollamaProbes" (dict "port" $svc.port "model" ($.Values.global.ollamaModel | default "qwen2.5:3b")) | nindent 10 }}
           {{- end }}
-          {{- with $svc.resources }}
+          {{- with (default $.Values.global.defaultResources $svc.resources) }}
           resources:
             {{- toYaml . | nindent 12 }}
           {{- end }}
