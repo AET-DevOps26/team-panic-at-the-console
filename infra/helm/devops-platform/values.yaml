@@ -9,6 +9,10 @@ global:
   env:
     - name: NATS_URL
       value: nats://nats:4222
+    # Let the JVM use ~65% of the (tight) container memory as heap instead of the
+    # ~25% default. Inherited by the Java services; inert for the Python genai-service.
+    - name: JAVA_TOOL_OPTIONS
+      value: "-XX:MaxRAMPercentage=65"
 
 # Override these in SOPS values for non-dev deploys.
 secrets:
@@ -204,6 +208,9 @@ services:
       - name: AUTH_JWT_SECRET
       # Registration invitation code from the same secret.
       - name: AUTH_INVITE_CODE
+      # user-service does not inherit global.env, so set the JVM heap sizing here too.
+      - name: JAVA_TOOL_OPTIONS
+        value: "-XX:MaxRAMPercentage=65"
 
   notification-service:
     enabled: true
