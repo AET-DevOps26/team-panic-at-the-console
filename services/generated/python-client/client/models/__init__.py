@@ -6,8 +6,13 @@ from .comment import Comment
 from .comment_list_response import CommentListResponse
 from .create_comment_request import CreateCommentRequest
 from .create_incident_request import CreateIncidentRequest
+from .create_webhook_source_request import CreateWebhookSourceRequest
 from .error_response import ErrorResponse
 from .escalate_severity_request import EscalateSeverityRequest
+from .external_event_detail import ExternalEventDetail
+from .external_event_detail_raw_payload import ExternalEventDetailRawPayload
+from .external_event_list_response import ExternalEventListResponse
+from .external_event_summary import ExternalEventSummary
 from .health_check_response_200 import HealthCheckResponse200
 from .incident import Incident
 from .incident_event import IncidentEvent
@@ -18,6 +23,7 @@ from .notification import Notification
 from .notification_list_response import NotificationListResponse
 from .notification_type import NotificationType
 from .postmortem_response import PostmortemResponse
+from .receive_webhook_body import ReceiveWebhookBody
 from .regen_accepted import RegenAccepted
 from .regen_accepted_task import RegenAcceptedTask
 from .register_request import RegisterRequest
@@ -31,6 +37,10 @@ from .update_status_request import UpdateStatusRequest
 from .user import User
 from .user_list_response import UserListResponse
 from .user_role import UserRole
+from .webhook_receipt import WebhookReceipt
+from .webhook_source import WebhookSource
+from .webhook_source_list_response import WebhookSourceListResponse
+from .webhook_source_with_secret import WebhookSourceWithSecret
 
 __all__ = (
     "AssignIncidentRequest",
@@ -39,8 +49,13 @@ __all__ = (
     "CommentListResponse",
     "CreateCommentRequest",
     "CreateIncidentRequest",
+    "CreateWebhookSourceRequest",
     "ErrorResponse",
     "EscalateSeverityRequest",
+    "ExternalEventDetail",
+    "ExternalEventDetailRawPayload",
+    "ExternalEventListResponse",
+    "ExternalEventSummary",
     "HealthCheckResponse200",
     "Incident",
     "IncidentEvent",
@@ -51,6 +66,7 @@ __all__ = (
     "NotificationListResponse",
     "NotificationType",
     "PostmortemResponse",
+    "ReceiveWebhookBody",
     "RegenAccepted",
     "RegenAcceptedTask",
     "RegisterRequest",
@@ -64,4 +80,8 @@ __all__ = (
     "User",
     "UserListResponse",
     "UserRole",
+    "WebhookReceipt",
+    "WebhookSource",
+    "WebhookSourceListResponse",
+    "WebhookSourceWithSecret",
 )

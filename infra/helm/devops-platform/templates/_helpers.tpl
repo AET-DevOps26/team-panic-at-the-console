@@ -18,6 +18,10 @@ postgres-credentials
 auth-credentials
 {{- end -}}
 
+{{- define "devops-platform.webhookSecretName" -}}
+webhook-credentials
+{{- end -}}
+
 {{/*
 HTTP liveness/readiness for Spring Boot and genai-service (process up only; no downstream checks).
 */}}

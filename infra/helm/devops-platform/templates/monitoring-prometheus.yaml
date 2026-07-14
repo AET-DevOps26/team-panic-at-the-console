@@ -47,12 +47,18 @@ data:
         static_configs:
           - targets: ["genai-service:{{ (index .Values.services "genai-service").port }}"]
       {{- end }}
+      {{- if (index .Values.services "webhook-service").enabled }}
+      - job_name: webhook-service
+        metrics_path: /actuator/prometheus
+        static_configs:
+          - targets: ["webhook-service:{{ (index .Values.services "webhook-service").port }}"]
+      {{- end }}
   alerts.yml: |
     groups:
       - name: spring-services
         rules:
           - alert: SpringServiceDown
-            expr: up{job=~"incident-service|event-service|user-service|gateway"} == 0
+            expr: up{job=~"incident-service|event-service|user-service|gateway|webhook-service"} == 0
             for: 1m
             labels:
               severity: critical
@@ -63,14 +69,14 @@ data:
             expr: |
               sum by (job) (
                 rate(http_server_requests_seconds_count{
-                  job=~"incident-service|event-service|user-service|gateway",
+                  job=~"incident-service|event-service|user-service|gateway|webhook-service",
                   outcome="SERVER_ERROR"
                 }[5m])
               )
               /
               sum by (job) (
                 rate(http_server_requests_seconds_count{
-                  job=~"incident-service|event-service|user-service|gateway"
+                  job=~"incident-service|event-service|user-service|gateway|webhook-service"
                 }[5m])
               ) > 0.01
             for: 2m
@@ -83,14 +89,14 @@ data:
             expr: |
               sum by (job) (
                 rate(http_server_requests_seconds_count{
-                  job=~"incident-service|event-service|user-service|gateway",
+                  job=~"incident-service|event-service|user-service|gateway|webhook-service",
                   outcome="CLIENT_ERROR"
                 }[5m])
               )
               /
               sum by (job) (
                 rate(http_server_requests_seconds_count{
-                  job=~"incident-service|event-service|user-service|gateway"
+                  job=~"incident-service|event-service|user-service|gateway|webhook-service"
                 }[5m])
               ) > 0.10
             for: 5m
@@ -105,7 +111,7 @@ data:
                 0.95,
                 sum by (le, job) (
                   rate(http_server_requests_seconds_bucket{
-                    job=~"incident-service|event-service|user-service|gateway"
+                    job=~"incident-service|event-service|user-service|gateway|webhook-service"
                   }[5m])
                 )
               ) > 2

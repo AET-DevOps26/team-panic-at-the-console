@@ -42,4 +42,12 @@ class ServiceClientsConfig {
                 .requestInterceptor(relay)
                 .build();
     }
+
+    @Bean
+    RestClient webhookServiceClient(GatewayProperties properties, IdentityHeaderRelay relay) {
+        return RestClient.builder()
+                .baseUrl(properties.getWebhookServiceUrl())
+                .requestInterceptor(relay)
+                .build();
+    }
 }

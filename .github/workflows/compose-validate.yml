@@ -160,6 +160,10 @@ jobs:
           }
           probe /api/v1/health 200
           probe /swagger 200
+          # Asserts the /webhooks -> webhook-service route is wired: GET on the
+          # POST-only ingest endpoint is a 405 from the service itself (the
+          # frontend catch-all would answer 200 instead).
+          probe /webhooks/github 405
           # Asserts the / -> frontend route is wired.
           probe / 200
 

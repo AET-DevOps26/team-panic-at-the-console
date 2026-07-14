@@ -34,3 +34,8 @@ scrape_configs:
     metrics_path: /actuator/prometheus
     static_configs:
       - targets: ["gateway:8090"]
+
+  - job_name: webhook-service
+    metrics_path: /actuator/prometheus
+    static_configs:
+      - targets: ["webhook-service:8086"]

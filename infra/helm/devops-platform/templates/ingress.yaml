@@ -48,6 +48,16 @@ spec:
                 name: gateway
                 port:
                   number: {{ .Values.services.gateway.port }}
+          {{- if (index .Values.services "webhook-service").enabled }}
+          # Machine-facing ingest only; the service's read API stays internal.
+          - path: {{ .Values.ingress.paths.webhooks }}
+            pathType: Prefix
+            backend:
+              service:
+                name: webhook-service
+                port:
+                  number: {{ (index .Values.services "webhook-service").port }}
+          {{- end }}
           {{ $swaggerUi := index .Values.services "swagger-ui" }}
           {{ if and $swaggerUi $swaggerUi.enabled }}
           - path: {{ .Values.ingress.paths.swagger }}

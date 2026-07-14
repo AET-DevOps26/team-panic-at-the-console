@@ -6,6 +6,7 @@ import IncidentDetailPage from "@/pages/IncidentDetailPage";
 import LoginPage from "@/pages/LoginPage";
 import RegisterPage from "@/pages/RegisterPage";
 import SettingsPage from "@/pages/SettingsPage";
+import SourcesPage from "@/pages/SourcesPage";
 import NotFoundPage from "@/pages/NotFoundPage";
 
 export default function App() {
@@ -19,6 +20,7 @@ export default function App() {
             <Route index element={<Navigate to="/incidents" replace />} />
             <Route path="/incidents" element={<IncidentListPage />} />
             <Route path="/incidents/:id" element={<IncidentDetailPage />} />
+            <Route path="/sources" element={<SourcesPage />} />
             <Route path="/settings" element={<SettingsPage />} />
           </Route>
         </Route>

@@ -8,10 +8,9 @@ import { GatewayStatus } from "@/components/layout/GatewayStatus";
 
 const linkedNavItems = [
   { to: "/incidents", label: "Incidents", icon: AlertTriangle },
+  { to: "/sources", label: "Sources", icon: Webhook },
   { to: "/settings", label: "Settings", icon: Settings },
 ];
-
-const disabledNavItems = [{ label: "Sources", icon: Webhook }];
 
 export default function Sidebar() {
   const navigate = useNavigate();
@@ -55,16 +54,6 @@ export default function Sidebar() {
             <Icon className="h-4 w-4 shrink-0" />
             {label}
           </NavLink>
-        ))}
-        {disabledNavItems.map(({ label, icon: Icon }) => (
-          <button
-            key={label}
-            disabled
-            className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-slate-300 opacity-40 cursor-not-allowed"
-          >
-            <Icon className="h-4 w-4 shrink-0" />
-            {label}
-          </button>
         ))}
       </nav>
 

@@ -6,16 +6,20 @@ OpenAPI exploration uses the standalone **swagger-ui** service (`api/openapi.yam
 
 ## Implemented routes
 
-| Route                                 | Action                                                |
-| ------------------------------------- | ----------------------------------------------------- |
-| `GET /api/v1/health`                  | Gateway liveness (local)                              |
-| `POST /api/v1/incidents/{id}/genai/*` | Proxy to `incident-service` regen endpoints           |
-| `GET/POST/PATCH /api/v1/incidents*`   | Proxy to `incident-service` incident REST API         |
-| `POST /api/v1/auth/*`                 | Proxy to `user-service` (forwards session cookie)     |
-| `GET /api/v1/users*`                  | Proxy to `user-service` (forwards session cookie)     |
-| `GET/POST /api/v1/notifications*`     | Proxy to `notification-service` notification REST API |
+| Route                                      | Action                                                |
+| ------------------------------------------ | ----------------------------------------------------- |
+| `GET /api/v1/health`                       | Gateway liveness (local)                              |
+| `POST /api/v1/incidents/{id}/genai/*`      | Proxy to `incident-service` regen endpoints           |
+| `GET/POST/PATCH /api/v1/incidents*`        | Proxy to `incident-service` incident REST API         |
+| `POST /api/v1/auth/*`                      | Proxy to `user-service` (forwards session cookie)     |
+| `GET /api/v1/users*`                       | Proxy to `user-service` (forwards session cookie)     |
+| `GET/POST /api/v1/notifications*`          | Proxy to `notification-service` notification REST API |
+| `GET /api/v1/external-events*`             | Proxy to `webhook-service` external-events audit API  |
+| `GET/POST/DELETE /api/v1/webhook-sources*` | Proxy to `webhook-service` source management API      |
 
 GenAI compute runs via NATS (`genai-service`); Ollama reachability is checked on that service (`/api/v1/genai/ollama/health`), not exposed on the gateway.
+
+Webhook ingest (`POST /webhooks/{source}`) is NOT proxied here: the ingress / compose edge routes it directly to `webhook-service`, since senders authenticate via HMAC rather than a session.
 
 Ingress (and local compose `edge` on port 8080) sends traffic with prefix `/api`; clients should use `/api/v1/...`. Swagger UI is at `/swagger/` on the same host.
 
@@ -28,6 +32,7 @@ Downstream base URLs are required (`@NotBlank` on `GatewayProperties`). Local de
 | `gateway.incident-service-url` / `GATEWAY_INCIDENT_SERVICE_URL`         | `http://localhost:8081`                  |
 | `gateway.user-service-url` / `GATEWAY_USER_SERVICE_URL`                 | `http://localhost:8084`                  |
 | `gateway.notification-service-url` / `GATEWAY_NOTIFICATION_SERVICE_URL` | `http://localhost:8085`                  |
+| `gateway.webhook-service-url` / `GATEWAY_WEBHOOK_SERVICE_URL`           | `http://localhost:8086`                  |
 
 ## Local development
 

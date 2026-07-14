@@ -144,8 +144,8 @@ An enumeration of what the `PromptBuilder` is asked to produce: `SUMMARY`, `SEVE
 | `user-service` | `users` | yes |
 | `notification-service` | `notifications` | yes |
 | `rule-engine` | `rules` | yes |
+| `webhook-service` | `webhooks` | yes |
 | `gateway` | — | no |
-| `webhook-service` | — | no |
 | `genai-service` | — | no |
 
 **OpenAPI spec**: one combined `api/openapi.yaml` covering all services. Existing hook auto-regenerates clients on spec change.
