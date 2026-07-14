@@ -19,6 +19,8 @@ export type RegisterRequest = components["schemas"]["RegisterRequest"];
 export type UpdateProfileRequest = components["schemas"]["UpdateProfileRequest"];
 export type ChangePasswordRequest = components["schemas"]["ChangePasswordRequest"];
 export type User = components["schemas"]["User"];
+export type Notification = components["schemas"]["Notification"];
+export type NotificationListResponse = components["schemas"]["NotificationListResponse"];
 
 const MOCK = import.meta.env.VITE_MOCK === "true";
 
@@ -335,6 +337,79 @@ export function useRegeneratePostmortem(incidentId: string) {
       });
       if (error) throw new Error("Regeneration failed");
       return data;
+    },
+  });
+}
+
+// ── Notifications ─────────────────────────────────────────────────────────────
+
+const MOCK_NOTIFICATIONS: NotificationListResponse = {
+  items: [
+    {
+      id: "018e2c5f-1234-7abc-8def-00000000n001",
+      incidentId: "018e2c5f-1234-7abc-8def-000000000001",
+      type: "INCIDENT_ASSIGNED",
+      recipientId: "018e2c5f-1234-7abc-8def-0000000000aa",
+      message: "You were assigned to an incident.",
+      read: false,
+      createdAt: new Date(Date.now() - 20 * 60_000).toISOString(),
+    },
+    {
+      id: "018e2c5f-1234-7abc-8def-00000000n002",
+      incidentId: "018e2c5f-1234-7abc-8def-000000000002",
+      type: "INCIDENT_CREATED",
+      recipientId: null,
+      message: "New incident: Payment service slow response (SEV2)",
+      read: true,
+      createdAt: new Date(Date.now() - 2 * 3600_000).toISOString(),
+    },
+  ],
+  total: 2,
+  page: 0,
+  size: 10,
+  unreadCount: 1,
+};
+
+export function useNotifications(params?: { unreadOnly?: boolean; size?: number }) {
+  return useQuery({
+    queryKey: ["notifications", params],
+    queryFn: async (): Promise<NotificationListResponse> => {
+      if (MOCK) return MOCK_NOTIFICATIONS;
+      const { data, error } = await apiClient.GET("/notifications", {
+        params: { query: params },
+      });
+      if (error || !data) throw new Error("Failed to fetch notifications");
+      return data;
+    },
+  });
+}
+
+export function useMarkNotificationRead() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (notificationId: string) => {
+      if (MOCK) return;
+      const { error } = await apiClient.POST("/notifications/{notificationId}/read", {
+        params: { path: { notificationId } },
+      });
+      if (error) throw new Error("Failed to mark notification read");
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["notifications"] });
+    },
+  });
+}
+
+export function useMarkAllNotificationsRead() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async () => {
+      if (MOCK) return;
+      const { error } = await apiClient.POST("/notifications/read-all");
+      if (error) throw new Error("Failed to mark notifications read");
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["notifications"] });
     },
   });
 }

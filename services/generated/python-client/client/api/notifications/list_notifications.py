@@ -1,6 +1,5 @@
 from http import HTTPStatus
 from typing import Any
-from uuid import UUID
 
 import httpx
 
@@ -12,17 +11,11 @@ from ...types import UNSET, Response, Unset
 
 def _get_kwargs(
     *,
-    recipient_id: UUID | Unset = UNSET,
     unread_only: bool | Unset = False,
     page: int | Unset = 0,
     size: int | Unset = 50,
 ) -> dict[str, Any]:
     params: dict[str, Any] = {}
-
-    json_recipient_id: str | Unset = UNSET
-    if not isinstance(recipient_id, Unset):
-        json_recipient_id = str(recipient_id)
-    params["recipientId"] = json_recipient_id
 
     params["unreadOnly"] = unread_only
 
@@ -69,15 +62,16 @@ def _build_response(
 def sync_detailed(
     *,
     client: AuthenticatedClient | Client,
-    recipient_id: UUID | Unset = UNSET,
     unread_only: bool | Unset = False,
     page: int | Unset = 0,
     size: int | Unset = 50,
 ) -> Response[NotificationListResponse]:
-    """List notifications, newest first
+    """List notifications for the calling user, newest first
+
+     Scoped to the calling user (personal notifications plus broadcasts), identified by the gateway-
+    injected X-User-Id header.
 
     Args:
-        recipient_id (UUID | Unset):
         unread_only (bool | Unset):  Default: False.
         page (int | Unset):  Default: 0.
         size (int | Unset):  Default: 50.
@@ -91,7 +85,6 @@ def sync_detailed(
     """
 
     kwargs = _get_kwargs(
-        recipient_id=recipient_id,
         unread_only=unread_only,
         page=page,
         size=size,
@@ -107,15 +100,16 @@ def sync_detailed(
 def sync(
     *,
     client: AuthenticatedClient | Client,
-    recipient_id: UUID | Unset = UNSET,
     unread_only: bool | Unset = False,
     page: int | Unset = 0,
     size: int | Unset = 50,
 ) -> NotificationListResponse | None:
-    """List notifications, newest first
+    """List notifications for the calling user, newest first
+
+     Scoped to the calling user (personal notifications plus broadcasts), identified by the gateway-
+    injected X-User-Id header.
 
     Args:
-        recipient_id (UUID | Unset):
         unread_only (bool | Unset):  Default: False.
         page (int | Unset):  Default: 0.
         size (int | Unset):  Default: 50.
@@ -130,7 +124,6 @@ def sync(
 
     return sync_detailed(
         client=client,
-        recipient_id=recipient_id,
         unread_only=unread_only,
         page=page,
         size=size,
@@ -140,15 +133,16 @@ def sync(
 async def asyncio_detailed(
     *,
     client: AuthenticatedClient | Client,
-    recipient_id: UUID | Unset = UNSET,
     unread_only: bool | Unset = False,
     page: int | Unset = 0,
     size: int | Unset = 50,
 ) -> Response[NotificationListResponse]:
-    """List notifications, newest first
+    """List notifications for the calling user, newest first
+
+     Scoped to the calling user (personal notifications plus broadcasts), identified by the gateway-
+    injected X-User-Id header.
 
     Args:
-        recipient_id (UUID | Unset):
         unread_only (bool | Unset):  Default: False.
         page (int | Unset):  Default: 0.
         size (int | Unset):  Default: 50.
@@ -162,7 +156,6 @@ async def asyncio_detailed(
     """
 
     kwargs = _get_kwargs(
-        recipient_id=recipient_id,
         unread_only=unread_only,
         page=page,
         size=size,
@@ -176,15 +169,16 @@ async def asyncio_detailed(
 async def asyncio(
     *,
     client: AuthenticatedClient | Client,
-    recipient_id: UUID | Unset = UNSET,
     unread_only: bool | Unset = False,
     page: int | Unset = 0,
     size: int | Unset = 50,
 ) -> NotificationListResponse | None:
-    """List notifications, newest first
+    """List notifications for the calling user, newest first
+
+     Scoped to the calling user (personal notifications plus broadcasts), identified by the gateway-
+    injected X-User-Id header.
 
     Args:
-        recipient_id (UUID | Unset):
         unread_only (bool | Unset):  Default: False.
         page (int | Unset):  Default: 0.
         size (int | Unset):  Default: 50.
@@ -200,7 +194,6 @@ async def asyncio(
     return (
         await asyncio_detailed(
             client=client,
-            recipient_id=recipient_id,
             unread_only=unread_only,
             page=page,
             size=size,

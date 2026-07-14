@@ -44,7 +44,7 @@ class IncidentsController implements IncidentsApi {
         UUID incidentId = UUID.randomUUID();
         Severity severity = Severity.valueOf(createIncidentRequest.getSeverity().getValue());
         Incident incident = incidentService.createIncident(incidentId, severity, createIncidentRequest.getTitle(),
-                createIncidentRequest.getDescription(), null);
+                createIncidentRequest.getDescription(), null, sessionUserIdOrNull());
         return ResponseEntity.status(HttpStatus.CREATED).body(IncidentMapper.toApi(incident));
     }
 
@@ -92,7 +92,7 @@ class IncidentsController implements IncidentsApi {
     public ResponseEntity<org.openapitools.model.Incident> updateIncidentStatus(UUID incidentId,
             UpdateStatusRequest updateStatusRequest) {
         IncidentStatus status = IncidentStatus.fromValue(updateStatusRequest.getStatus().getValue());
-        Incident incident = incidentService.updateIncidentStatus(incidentId, status);
+        Incident incident = incidentService.updateIncidentStatus(incidentId, status, sessionUserIdOrNull());
         return ResponseEntity.ok(IncidentMapper.toApi(incident));
     }
 
@@ -100,7 +100,7 @@ class IncidentsController implements IncidentsApi {
     public ResponseEntity<org.openapitools.model.Incident> escalateIncidentSeverity(UUID incidentId,
             EscalateSeverityRequest escalateSeverityRequest) {
         Severity severity = Severity.valueOf(escalateSeverityRequest.getSeverity().getValue());
-        Incident incident = incidentService.escalateSeverity(incidentId, severity);
+        Incident incident = incidentService.escalateSeverity(incidentId, severity, sessionUserIdOrNull());
         return ResponseEntity.ok(IncidentMapper.toApi(incident));
     }
 
@@ -108,7 +108,7 @@ class IncidentsController implements IncidentsApi {
     public ResponseEntity<org.openapitools.model.Incident> assignIncident(UUID incidentId,
             AssignIncidentRequest assignIncidentRequest) {
         Incident incident = incidentService.updateAssignedUsers(incidentId,
-                new HashSet<>(assignIncidentRequest.getUserIds()));
+                new HashSet<>(assignIncidentRequest.getUserIds()), sessionUserIdOrNull());
         return ResponseEntity.ok(IncidentMapper.toApi(incident));
     }
 
@@ -130,6 +130,22 @@ class IncidentsController implements IncidentsApi {
             return UUID.fromString(header);
         } catch (IllegalArgumentException e) {
             throw new IllegalArgumentException("Invalid " + USER_ID_HEADER + " header");
+        }
+    }
+
+    /**
+     * Actor identity for event enrichment: optional, because some callers
+     * (service-to-service, tests) reach this API without a session.
+     */
+    private UUID sessionUserIdOrNull() {
+        String header = httpRequest.getHeader(USER_ID_HEADER);
+        if (header == null || header.isBlank()) {
+            return null;
+        }
+        try {
+            return UUID.fromString(header);
+        } catch (IllegalArgumentException e) {
+            return null;
         }
     }
 

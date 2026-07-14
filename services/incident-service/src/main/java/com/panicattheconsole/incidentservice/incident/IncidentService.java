@@ -2,6 +2,7 @@ package com.panicattheconsole.incidentservice.incident;
 
 import java.time.Instant;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
@@ -52,12 +53,24 @@ public class IncidentService {
         applicationEventPublisher.publishEvent(new IncidentNatsEvent(subject, payload));
     }
 
+    /**
+     * Enrich an event with the notification audience: the incident's current
+     * assignee set and the acting user (null for machine-triggered changes,
+     * e.g. rule-engine escalation requests).
+     */
+    private static void putAudience(Map<String, Object> event, Incident incident, UUID actorId) {
+        event.put("assignedUserIds", incident.getAssignedUsers().stream().map(UUID::toString).toList());
+        if (actorId != null) {
+            event.put("actorId", actorId.toString());
+        }
+    }
+
     public Incident createIncident(UUID incidentId, Severity severity, String title, UUID sourceId) {
-        return createIncident(incidentId, severity, title, null, sourceId);
+        return createIncident(incidentId, severity, title, null, sourceId, null);
     }
 
     public Incident createIncident(UUID incidentId, Severity severity, String title, String description,
-            UUID sourceId) {
+            UUID sourceId, UUID actorId) {
         log.info("Creating incident [id={}, severity={}, title={}]", incidentId, severity, title);
 
         Incident incident = new Incident(incidentId, IncidentStatus.OPEN, severity, title);
@@ -71,6 +84,9 @@ public class IncidentService {
             event.put("title", saved.getTitle());
         }
         event.put("severity", saved.getSeverity().toString());
+        if (actorId != null) {
+            event.put("actorId", actorId.toString());
+        }
         publishAfterCommit("incident.created", event);
 
         return saved;
@@ -94,6 +110,10 @@ public class IncidentService {
     }
 
     public Incident updateIncidentStatus(UUID incidentId, IncidentStatus newStatus) {
+        return updateIncidentStatus(incidentId, newStatus, null);
+    }
+
+    public Incident updateIncidentStatus(UUID incidentId, IncidentStatus newStatus, UUID actorId) {
         Incident incident = getIncident(incidentId);
         IncidentStatus oldStatus = incident.getStatus();
 
@@ -119,6 +139,7 @@ public class IncidentService {
         Map<String, Object> statusEvent = createBaseEvent(saved.getId());
         statusEvent.put("oldStatus", oldStatus.name().toLowerCase());
         statusEvent.put("newStatus", newStatus.name().toLowerCase());
+        putAudience(statusEvent, saved, actorId);
         publishAfterCommit("incident.status.changed", statusEvent);
 
         if (newStatus == IncidentStatus.RESOLVED) {
@@ -130,6 +151,10 @@ public class IncidentService {
     }
 
     public Incident escalateSeverity(UUID incidentId, Severity newSeverity) {
+        return escalateSeverity(incidentId, newSeverity, null);
+    }
+
+    public Incident escalateSeverity(UUID incidentId, Severity newSeverity, UUID actorId) {
         Incident incident = getIncident(incidentId);
         Severity oldSeverity = incident.getSeverity();
 
@@ -139,6 +164,7 @@ public class IncidentService {
         Map<String, Object> event = createBaseEvent(saved.getId());
         event.put("oldSeverity", oldSeverity.toString());
         event.put("newSeverity", newSeverity.toString());
+        putAudience(event, saved, actorId);
         publishAfterCommit("incident.severity.escalated", event);
 
         log.info("Escalated severity [id={}, old={}, new={}]", incidentId, oldSeverity, newSeverity);
@@ -231,21 +257,9 @@ public class IncidentService {
         // Comments are immutable, so carrying the content lets event-service
         // render it in the timeline without it ever going stale.
         event.put("content", content);
+        putAudience(event, incident, authorId);
         publishAfterCommit("incident.comment.added", event);
         log.info("Added comment to incident [id={}, commentId={}]", incidentId, commentId);
-
-        return saved;
-    }
-
-    public Incident assignUser(UUID incidentId, UUID userId) {
-        Incident incident = getIncident(incidentId);
-        incident.getAssignedUsers().add(userId);
-        Incident saved = incidentRepository.save(incident);
-
-        Map<String, Object> event = createBaseEvent(incidentId);
-        event.put("userId", userId.toString());
-        publishAfterCommit("incident.assigned", event);
-        log.info("Assigned user to incident [id={}, userId={}]", incidentId, userId);
 
         return saved;
     }
@@ -334,14 +348,29 @@ public class IncidentService {
     /**
      * Update assigned users for an incident.
      * Replaces the current assignment set with the provided one.
-     * Publishes incident.updated event.
+     * Publishes incident.updated, plus incident.assigned once per newly added
+     * user so notification-service can target them.
      */
-    public Incident updateAssignedUsers(UUID incidentId, Set<UUID> userIds) {
+    public Incident updateAssignedUsers(UUID incidentId, Set<UUID> userIds, UUID actorId) {
         Incident incident = getIncident(incidentId);
+        Set<UUID> added = new HashSet<>(userIds);
+        added.removeAll(incident.getAssignedUsers());
+
         incident.setAssignedUsers(userIds);
         Incident saved = incidentRepository.save(incident);
         publishAfterCommit("incident.updated", createBaseEvent(incidentId));
-        log.info("Updated assigned users for incident [id={}, count={}]", incidentId, userIds.size());
+
+        for (UUID userId : added) {
+            Map<String, Object> event = createBaseEvent(incidentId);
+            event.put("userId", userId.toString());
+            if (actorId != null) {
+                event.put("actorId", actorId.toString());
+            }
+            publishAfterCommit("incident.assigned", event);
+        }
+
+        log.info("Updated assigned users for incident [id={}, count={}, added={}]",
+                incidentId, userIds.size(), added.size());
         return saved;
     }
 

@@ -31,11 +31,16 @@ public class Notification {
     @Column
     private UUID recipientId;
 
+    /**
+     * The user whose action produced this notification; {@code null} for
+     * machine-triggered events. Actors never see notifications about their
+     * own actions (read-side suppression for broadcasts).
+     */
+    @Column
+    private UUID actorId;
+
     @Column(nullable = false)
     private String message;
-
-    @Column(name = "is_read", nullable = false)
-    private boolean read;
 
     @Column(nullable = false)
     private Instant createdAt;
@@ -48,18 +53,15 @@ public class Notification {
             NotificationType type,
             UUID recipientId,
             String message,
-            Instant createdAt) {
+            Instant createdAt,
+            UUID actorId) {
         this.id = UUID.randomUUID();
         this.incidentId = incidentId;
         this.type = type;
         this.recipientId = recipientId;
         this.message = message;
-        this.read = false;
         this.createdAt = createdAt;
-    }
-
-    public void markRead() {
-        this.read = true;
+        this.actorId = actorId;
     }
 
     public UUID getId() {
@@ -78,12 +80,12 @@ public class Notification {
         return recipientId;
     }
 
-    public String getMessage() {
-        return message;
+    public UUID getActorId() {
+        return actorId;
     }
 
-    public boolean isRead() {
-        return read;
+    public String getMessage() {
+        return message;
     }
 
     public Instant getCreatedAt() {

@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft-07/schema",
   "$id": "https://github.com/aet-devops26/team-panic-at-the-console/api/specs/nats/incident.comment.added.schema.json",
-  "description": "Carries commentId so subscribers can fetch the specific comment without scanning all comments on the incident, and content so event-service can render the comment in the timeline (comments are immutable, so the copy never goes stale).",
+  "description": "Carries commentId so subscribers can fetch the specific comment without scanning all comments on the incident, content so event-service can render the comment in the timeline (comments are immutable, so the copy never goes stale), plus assignedUserIds and actorId (the comment author) so notification-service can notify the incident's assignees except the author.",
   "type": "object",
   "required": ["incidentId", "commentId", "content", "timestamp"],
   "additionalProperties": false,
@@ -9,6 +9,8 @@
     "incidentId": { "type": "string", "format": "uuid" },
     "commentId": { "type": "string", "format": "uuid" },
     "content": { "type": "string" },
+    "assignedUserIds": { "type": "array", "items": { "type": "string", "format": "uuid" } },
+    "actorId": { "type": "string", "format": "uuid" },
     "timestamp": { "type": "string", "format": "date-time" }
   }
 }

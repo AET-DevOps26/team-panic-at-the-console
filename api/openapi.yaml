@@ -631,19 +631,13 @@ paths:
   /notifications:
     get:
       operationId: listNotifications
-      summary: List notifications, newest first
+      summary: List notifications for the calling user, newest first
+      description: >
+        Scoped to the calling user (personal notifications plus broadcasts),
+        identified by the gateway-injected X-User-Id header.
       tags: [notifications]
       security: []
       parameters:
-        - name: recipientId
-          in: query
-          required: false
-          description: >
-            Scope to a user: returns their personal notifications plus broadcasts.
-            Omit to return all notifications.
-          schema:
-            type: string
-            format: uuid
         - name: unreadOnly
           in: query
           required: false
@@ -673,24 +667,17 @@ paths:
         "204":
           description: Notification marked as read
         "404":
-          description: Notification not found
+          description: Notification not found or not visible to the caller
 
   /notifications/read-all:
     post:
       operationId: markAllNotificationsRead
-      summary: Mark all visible notifications as read
+      summary: Mark all notifications visible to the calling user as read
+      description: >
+        Scoped to the calling user (personal notifications plus broadcasts),
+        identified by the gateway-injected X-User-Id header.
       tags: [notifications]
       security: []
-      parameters:
-        - name: recipientId
-          in: query
-          required: false
-          description: >
-            Scope to a user: marks their personal notifications plus broadcasts.
-            Omit to mark all notifications.
-          schema:
-            type: string
-            format: uuid
       responses:
         "204":
           description: Notifications marked as read
@@ -1273,7 +1260,7 @@ components:
     NotificationType:
       type: string
       description: Category of a notification, derived from the incident event that produced it.
-      enum: [INCIDENT_CREATED, SEVERITY_ESCALATED, INCIDENT_RESOLVED, COMMENT_ADDED, INCIDENT_ASSIGNED]
+      enum: [INCIDENT_CREATED, SEVERITY_ESCALATED, STATUS_CHANGED, INCIDENT_RESOLVED, COMMENT_ADDED, INCIDENT_ASSIGNED]
 
     Notification:
       type: object
@@ -1327,5 +1314,5 @@ components:
         unreadCount:
           type: integer
           minimum: 0
-          description: Number of unread notifications in the same scope as this query.
+          description: Number of unread notifications for the calling user (independent of pagination).
           example: 2

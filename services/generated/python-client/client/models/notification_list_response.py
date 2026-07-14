@@ -20,7 +20,7 @@ class NotificationListResponse:
         total (int):  Example: 3.
         page (int):
         size (int):  Example: 50.
-        unread_count (int): Number of unread notifications in the same scope as this query. Example: 2.
+        unread_count (int): Number of unread notifications for the calling user (independent of pagination). Example: 2.
     """
 
     items: list[Notification]

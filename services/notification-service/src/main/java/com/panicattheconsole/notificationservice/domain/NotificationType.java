@@ -6,6 +6,7 @@ package com.panicattheconsole.notificationservice.domain;
 public enum NotificationType {
     INCIDENT_CREATED,
     SEVERITY_ESCALATED,
+    STATUS_CHANGED,
     INCIDENT_RESOLVED,
     COMMENT_ADDED,
     INCIDENT_ASSIGNED
