@@ -20,6 +20,15 @@ spec:
   strategy:
     type: Recreate
     rollingUpdate: null
+  {{- else }}
+  # Terminate the old pod before creating the new one. The default surge (+1 pod)
+  # would need spare limits headroom the project ResourceQuota does not have, so a
+  # rolling update would deadlock. Trade-off: a brief per-service gap on each deploy.
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 0
+      maxUnavailable: 1
   {{- end }}
   selector:
     matchLabels:
