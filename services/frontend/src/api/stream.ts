@@ -11,6 +11,8 @@ export const STREAM_URL = `${BASE_URL}/incidents/stream`;
 // on the server, so mounted incident queries refetch. Uses the same wholesale
 // ["incidents"] prefix invalidation the mutations already use; the envelope is
 // just a doorbell, the data itself still comes from the REST endpoints.
+// Notifications are derived from the same incident events, so the doorbell
+// also refreshes the bell badge.
 export function useIncidentStream(): void {
   const queryClient = useQueryClient();
 
@@ -19,7 +21,10 @@ export function useIncidentStream(): void {
     if (MOCK || typeof EventSource === "undefined") return;
 
     const source = new EventSource(STREAM_URL);
-    const invalidate = () => void queryClient.invalidateQueries({ queryKey: ["incidents"] });
+    const invalidate = () => {
+      void queryClient.invalidateQueries({ queryKey: ["incidents"] });
+      void queryClient.invalidateQueries({ queryKey: ["notifications"] });
+    };
 
     source.onmessage = invalidate;
 

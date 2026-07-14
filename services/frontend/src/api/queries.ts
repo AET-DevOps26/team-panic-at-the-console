@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueries, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "./client";
 import type { components } from "@openapi/schema";
 
@@ -19,6 +19,8 @@ export type RegisterRequest = components["schemas"]["RegisterRequest"];
 export type UpdateProfileRequest = components["schemas"]["UpdateProfileRequest"];
 export type ChangePasswordRequest = components["schemas"]["ChangePasswordRequest"];
 export type User = components["schemas"]["User"];
+export type Notification = components["schemas"]["Notification"];
+export type NotificationListResponse = components["schemas"]["NotificationListResponse"];
 
 const MOCK = import.meta.env.VITE_MOCK === "true";
 
@@ -124,25 +126,52 @@ export function useIncidents(params?: { status?: IncidentStatus; severity?: Seve
   });
 }
 
+async function fetchIncident(id: string): Promise<Incident> {
+  if (MOCK) {
+    const found = MOCK_INCIDENTS.find((i) => i.id === id);
+    if (!found) throw new ApiError("Incident not found", 404);
+    return found;
+  }
+  const { data, error, response } = await apiClient.GET("/incidents/{incidentId}", {
+    params: { path: { incidentId: id } },
+  });
+  if (error || !data) throw new ApiError("Failed to fetch incident", response.status);
+  return data;
+}
+
+// A missing or malformed id will not start existing on retry.
+function retryUnlessNotFound(failureCount: number, error: unknown) {
+  return !isNotFound(error) && failureCount < 3;
+}
+
 export function useIncident(id: string) {
   return useQuery({
     queryKey: ["incidents", id],
-    queryFn: async () => {
-      if (MOCK) {
-        const found = MOCK_INCIDENTS.find((i) => i.id === id);
-        if (!found) throw new ApiError("Incident not found", 404);
-        return found;
-      }
-      const { data, error, response } = await apiClient.GET("/incidents/{incidentId}", {
-        params: { path: { incidentId: id } },
-      });
-      if (error || !data) throw new ApiError("Failed to fetch incident", response.status);
-      return data;
-    },
+    queryFn: () => fetchIncident(id),
     enabled: Boolean(id),
-    // A missing or malformed id will not start existing on retry.
-    retry: (failureCount, error) => !isNotFound(error) && failureCount < 3,
+    retry: retryUnlessNotFound,
   });
+}
+
+/**
+ * Incident titles keyed by incident id, resolved from the same per-incident
+ * cache entries as {@link useIncident}. Ids whose incident is still loading or
+ * failed to load are absent from the map, so callers can degrade gracefully.
+ */
+export function useIncidentTitles(ids: string[]): Record<string, string> {
+  const uniqueIds = [...new Set(ids)];
+  const results = useQueries({
+    queries: uniqueIds.map((id) => ({
+      queryKey: ["incidents", id],
+      queryFn: () => fetchIncident(id),
+      retry: retryUnlessNotFound,
+    })),
+  });
+  const titles: Record<string, string> = {};
+  results.forEach((result, index) => {
+    if (result.data) titles[uniqueIds[index]] = result.data.title;
+  });
+  return titles;
 }
 
 export function useCreateIncident() {
@@ -335,6 +364,79 @@ export function useRegeneratePostmortem(incidentId: string) {
       });
       if (error) throw new Error("Regeneration failed");
       return data;
+    },
+  });
+}
+
+// ── Notifications ─────────────────────────────────────────────────────────────
+
+const MOCK_NOTIFICATIONS: NotificationListResponse = {
+  items: [
+    {
+      id: "018e2c5f-1234-7abc-8def-00000000n001",
+      incidentId: "018e2c5f-1234-7abc-8def-000000000001",
+      type: "INCIDENT_ASSIGNED",
+      recipientId: "018e2c5f-1234-7abc-8def-0000000000aa",
+      message: "You were assigned to an incident.",
+      read: false,
+      createdAt: new Date(Date.now() - 20 * 60_000).toISOString(),
+    },
+    {
+      id: "018e2c5f-1234-7abc-8def-00000000n002",
+      incidentId: "018e2c5f-1234-7abc-8def-000000000002",
+      type: "INCIDENT_CREATED",
+      recipientId: null,
+      message: "New incident: Payment service slow response (SEV2)",
+      read: true,
+      createdAt: new Date(Date.now() - 2 * 3600_000).toISOString(),
+    },
+  ],
+  total: 2,
+  page: 0,
+  size: 10,
+  unreadCount: 1,
+};
+
+export function useNotifications(params?: { unreadOnly?: boolean; size?: number }) {
+  return useQuery({
+    queryKey: ["notifications", params],
+    queryFn: async (): Promise<NotificationListResponse> => {
+      if (MOCK) return MOCK_NOTIFICATIONS;
+      const { data, error } = await apiClient.GET("/notifications", {
+        params: { query: params },
+      });
+      if (error || !data) throw new Error("Failed to fetch notifications");
+      return data;
+    },
+  });
+}
+
+export function useMarkNotificationRead() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (notificationId: string) => {
+      if (MOCK) return;
+      const { error } = await apiClient.POST("/notifications/{notificationId}/read", {
+        params: { path: { notificationId } },
+      });
+      if (error) throw new Error("Failed to mark notification read");
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["notifications"] });
+    },
+  });
+}
+
+export function useMarkAllNotificationsRead() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async () => {
+      if (MOCK) return;
+      const { error } = await apiClient.POST("/notifications/read-all");
+      if (error) throw new Error("Failed to mark notifications read");
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["notifications"] });
     },
   });
 }

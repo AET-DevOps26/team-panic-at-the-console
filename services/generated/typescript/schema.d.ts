@@ -395,7 +395,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List notifications, newest first */
+        /**
+         * List notifications for the calling user, newest first
+         * @description Scoped to the calling user (personal notifications plus broadcasts), identified by the gateway-injected X-User-Id header.
+         *
+         */
         get: operations["listNotifications"];
         put?: never;
         post?: never;
@@ -431,7 +435,11 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Mark all visible notifications as read */
+        /**
+         * Mark all notifications visible to the calling user as read
+         * @description Scoped to the calling user (personal notifications plus broadcasts), identified by the gateway-injected X-User-Id header.
+         *
+         */
         post: operations["markAllNotificationsRead"];
         delete?: never;
         options?: never;
@@ -770,7 +778,7 @@ export interface components {
          * @description Category of a notification, derived from the incident event that produced it.
          * @enum {string}
          */
-        NotificationType: "INCIDENT_CREATED" | "SEVERITY_ESCALATED" | "INCIDENT_RESOLVED" | "COMMENT_ADDED" | "INCIDENT_ASSIGNED";
+        NotificationType: "INCIDENT_CREATED" | "SEVERITY_ESCALATED" | "STATUS_CHANGED" | "INCIDENT_RESOLVED" | "COMMENT_ADDED" | "INCIDENT_ASSIGNED";
         /** @description An in-app notification about an incident event. */
         Notification: {
             /** Format: uuid */
@@ -798,7 +806,7 @@ export interface components {
             /** @example 50 */
             size: number;
             /**
-             * @description Number of unread notifications in the same scope as this query.
+             * @description Number of unread notifications for the calling user (independent of pagination).
              * @example 2
              */
             unreadCount: number;
@@ -1630,9 +1638,6 @@ export interface operations {
     listNotifications: {
         parameters: {
             query?: {
-                /** @description Scope to a user: returns their personal notifications plus broadcasts. Omit to return all notifications.
-                 *      */
-                recipientId?: string;
                 /** @description Return only unread notifications. */
                 unreadOnly?: boolean;
                 page?: components["parameters"]["PageParam"];
@@ -1674,7 +1679,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Notification not found */
+            /** @description Notification not found or not visible to the caller */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -1685,11 +1690,7 @@ export interface operations {
     };
     markAllNotificationsRead: {
         parameters: {
-            query?: {
-                /** @description Scope to a user: marks their personal notifications plus broadcasts. Omit to mark all notifications.
-                 *      */
-                recipientId?: string;
-            };
+            query?: never;
             header?: never;
             path?: never;
             cookie?: never;

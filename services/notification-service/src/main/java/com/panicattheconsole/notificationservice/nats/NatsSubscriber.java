@@ -35,7 +35,9 @@ import io.nats.client.Nats;
  * {@code nats.failOnStartup=true} to abort startup instead.
  *
  * <p>Deliberately does not subscribe to {@code incident.updated}, which carries no
- * notification-worthy change for users.
+ * notification-worthy change for users, nor to {@code incident.resolved}: resolution
+ * also arrives as {@code incident.status.changed} with {@code newStatus=resolved},
+ * and consuming both would notify twice.
  */
 @Component
 public class NatsSubscriber {
@@ -44,11 +46,12 @@ public class NatsSubscriber {
 
     private static final String INCIDENT_ASSIGNED = "incident.assigned";
     private static final String SEVERITY_ESCALATED = "incident.severity.escalated";
+    private static final String STATUS_CHANGED = "incident.status.changed";
 
     private static final List<String> SUBJECTS = List.of(
             "incident.created",
             SEVERITY_ESCALATED,
-            "incident.resolved",
+            STATUS_CHANGED,
             "incident.comment.added",
             INCIDENT_ASSIGNED);
 
@@ -142,13 +145,26 @@ public class NatsSubscriber {
                 return;
             }
 
-            IncidentEvent event = new IncidentEvent(
-                    incidentId,
-                    subject,
-                    timestamp,
-                    assignedUserId,
-                    newSeverity,
-                    readUuid(payload, "commentId"));
+            String newStatus = readText(payload, "newStatus");
+
+            if (STATUS_CHANGED.equals(subject) && newStatus == null) {
+                log.warn("Ignoring {} because newStatus is missing", subject);
+                return;
+            }
+
+            IncidentEvent event = new IncidentEvent.Builder(subject)
+                    .incidentId(incidentId)
+                    .timestamp(timestamp)
+                    .assignedUserId(assignedUserId)
+                    .newSeverity(newSeverity)
+                    .commentId(readUuid(payload, "commentId"))
+                    .title(readText(payload, "title"))
+                    .severity(readText(payload, "severity"))
+                    .content(readText(payload, "content"))
+                    .newStatus(newStatus)
+                    .assignedUserIds(readUuidList(payload, "assignedUserIds"))
+                    .actorId(readUuid(payload, "actorId"))
+                    .build();
 
             notificationService.record(event);
 
@@ -184,5 +200,22 @@ public class NatsSubscriber {
     private static String readText(JsonNode payload, String field) {
         JsonNode node = payload.get(field);
         return (node == null || node.isNull()) ? null : node.asText();
+    }
+
+    /** Parses an array of UUIDs; malformed entries are skipped, a missing field yields null. */
+    private static List<UUID> readUuidList(JsonNode payload, String field) {
+        JsonNode node = payload.get(field);
+        if (node == null || !node.isArray()) {
+            return null;
+        }
+        List<UUID> ids = new java.util.ArrayList<>();
+        for (JsonNode item : node) {
+            try {
+                ids.add(UUID.fromString(item.asText()));
+            } catch (IllegalArgumentException e) {
+                log.warn("Skipping malformed uuid in {}: {}", field, item.asText());
+            }
+        }
+        return ids;
     }
 }

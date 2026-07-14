@@ -150,12 +150,12 @@ public class NotificationListResponse {
   }
 
   /**
-   * Number of unread notifications in the same scope as this query.
+   * Number of unread notifications for the calling user (independent of pagination).
    * minimum: 0
    * @return unreadCount
    */
   @NotNull @Min(0)
-  @Schema(name = "unreadCount", example = "2", description = "Number of unread notifications in the same scope as this query.", requiredMode = Schema.RequiredMode.REQUIRED)
+  @Schema(name = "unreadCount", example = "2", description = "Number of unread notifications for the calling user (independent of pagination).", requiredMode = Schema.RequiredMode.REQUIRED)
   @JsonProperty("unreadCount")
   public Integer getUnreadCount() {
     return unreadCount;

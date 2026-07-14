@@ -1,31 +1,17 @@
 from http import HTTPStatus
 from typing import Any
-from uuid import UUID
 
 import httpx
 
 from ... import errors
 from ...client import AuthenticatedClient, Client
-from ...types import UNSET, Response, Unset
+from ...types import Response
 
 
-def _get_kwargs(
-    *,
-    recipient_id: UUID | Unset = UNSET,
-) -> dict[str, Any]:
-    params: dict[str, Any] = {}
-
-    json_recipient_id: str | Unset = UNSET
-    if not isinstance(recipient_id, Unset):
-        json_recipient_id = str(recipient_id)
-    params["recipientId"] = json_recipient_id
-
-    params = {k: v for k, v in params.items() if v is not UNSET and v is not None}
-
+def _get_kwargs() -> dict[str, Any]:
     _kwargs: dict[str, Any] = {
         "method": "post",
         "url": "/notifications/read-all",
-        "params": params,
     }
 
     return _kwargs
@@ -53,12 +39,11 @@ def _build_response(*, client: AuthenticatedClient | Client, response: httpx.Res
 def sync_detailed(
     *,
     client: AuthenticatedClient | Client,
-    recipient_id: UUID | Unset = UNSET,
 ) -> Response[Any]:
-    """Mark all visible notifications as read
+    """Mark all notifications visible to the calling user as read
 
-    Args:
-        recipient_id (UUID | Unset):
+     Scoped to the calling user (personal notifications plus broadcasts), identified by the gateway-
+    injected X-User-Id header.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -68,9 +53,7 @@ def sync_detailed(
         Response[Any]
     """
 
-    kwargs = _get_kwargs(
-        recipient_id=recipient_id,
-    )
+    kwargs = _get_kwargs()
 
     response = client.get_httpx_client().request(
         **kwargs,
@@ -82,12 +65,11 @@ def sync_detailed(
 async def asyncio_detailed(
     *,
     client: AuthenticatedClient | Client,
-    recipient_id: UUID | Unset = UNSET,
 ) -> Response[Any]:
-    """Mark all visible notifications as read
+    """Mark all notifications visible to the calling user as read
 
-    Args:
-        recipient_id (UUID | Unset):
+     Scoped to the calling user (personal notifications plus broadcasts), identified by the gateway-
+    injected X-User-Id header.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -97,9 +79,7 @@ async def asyncio_detailed(
         Response[Any]
     """
 
-    kwargs = _get_kwargs(
-        recipient_id=recipient_id,
-    )
+    kwargs = _get_kwargs()
 
     response = await client.get_async_httpx_client().request(**kwargs)
 

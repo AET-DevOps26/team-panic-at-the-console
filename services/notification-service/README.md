@@ -8,20 +8,24 @@ Port: **8085**
 ## Behavior
 
 Subscribes to five NATS subjects published by `incident-service` (see the subjects
-table in [CONTEXT.md](../../CONTEXT.md)) and stores one notification per event:
+table in [CONTEXT.md](../../CONTEXT.md)):
 
-| Subject                       | Type                 | Recipient                    |
-| ----------------------------- | -------------------- | ---------------------------- |
-| `incident.created`            | `INCIDENT_CREATED`   | broadcast (all users)        |
-| `incident.severity.escalated` | `SEVERITY_ESCALATED` | broadcast (all users)        |
-| `incident.resolved`           | `INCIDENT_RESOLVED`  | broadcast (all users)        |
-| `incident.comment.added`      | `COMMENT_ADDED`      | broadcast (all users)        |
-| `incident.assigned`           | `INCIDENT_ASSIGNED`  | the assigned user (`userId`) |
+| Subject                       | Type                                   | Recipients                         |
+| ----------------------------- | -------------------------------------- | ---------------------------------- |
+| `incident.created`            | `INCIDENT_CREATED`                     | broadcast (all users)              |
+| `incident.severity.escalated` | `SEVERITY_ESCALATED`                   | assignees (`assignedUserIds`)      |
+| `incident.status.changed`     | `STATUS_CHANGED` / `INCIDENT_RESOLVED` | assignees (`assignedUserIds`)      |
+| `incident.comment.added`      | `COMMENT_ADDED`                        | assignees (`assignedUserIds`)      |
+| `incident.assigned`           | `INCIDENT_ASSIGNED`                    | the newly assigned user (`userId`) |
 
-A notification with a null `recipientId` is a broadcast visible to everyone; a
-personal notification (assignment) targets a single user. In line with the thin
-NATS event shape, the service does not call other services: it uses only the fields
-carried on each event. It deliberately does not subscribe to `incident.updated`.
+A notification with a null `recipientId` is a broadcast visible to everyone;
+assignee-targeted events fan out to one personal notification per assignee. The
+acting user (`actorId` on the event) is never notified about their own action:
+fan-outs skip the actor at write time, broadcasts are filtered at read time. In
+line with the thin NATS event shape, the service does not call other services:
+it uses only the fields carried on each event. It deliberately does not subscribe
+to `incident.updated` (no notification-worthy change) or `incident.resolved`
+(resolution already arrives as `incident.status.changed` with `newStatus=resolved`).
 
 If NATS is unreachable at startup the service logs a warning and runs in degraded
 mode: the REST API keeps serving already-stored notifications and no new events are
@@ -29,17 +33,17 @@ consumed. Set `nats.failOnStartup=true` to abort startup instead.
 
 ## Endpoints
 
-| Method | Path                       | Description                                                            |
-| ------ | -------------------------- | ---------------------------------------------------------------------- |
-| `GET`  | `/health`                  | Health check (OpenAPI `healthCheck`)                                   |
-| `GET`  | `/notifications`           | List, newest first. Query: `recipientId`, `unreadOnly`, `page`, `size` |
-| `POST` | `/notifications/{id}/read` | Mark one notification read (`204`, or `404` if unknown)                |
-| `POST` | `/notifications/read-all`  | Mark all read (optional `recipientId`); returns `204`                  |
+| Method | Path                       | Description                                                                  |
+| ------ | -------------------------- | ---------------------------------------------------------------------------- |
+| `GET`  | `/health`                  | Health check (OpenAPI `healthCheck`)                                         |
+| `GET`  | `/notifications`           | List for the calling user, newest first. Query: `unreadOnly`, `page`, `size` |
+| `POST` | `/notifications/{id}/read` | Mark one read (`204`, or `404` if unknown or not visible)                    |
+| `POST` | `/notifications/read-all`  | Mark all visible to the caller read; returns `204`                           |
 
-`GET /notifications` returns items plus `total` and `unreadCount` for the same
-scope, so the frontend can render an unread badge in one request. When `recipientId`
-is supplied the result is scoped to that user's personal notifications plus
-broadcasts; when omitted, all notifications are returned.
+All endpoints are scoped to the calling user, identified by the `X-User-Id`
+header the gateway injects after validating the session (ADR 0007); a missing
+or malformed header is a `400`. `GET /notifications` returns items plus `total`
+and `unreadCount`, so the frontend can render an unread badge in one request.
 
 The endpoints are defined in `api/openapi.yaml` (tag `notifications`) and the
 controller implements the generated `NotificationsApi`, so the spec is the single
@@ -48,9 +52,9 @@ source of truth. The gateway proxies them under `/api/v1/notifications*`
 
 ## Read state
 
-Read/unread is tracked per notification row. Full per-user read tracking depends on
-gateway-injected identity (`X-User-Id`), which is still landing; until then callers
-pass `recipientId` explicitly.
+Read/unread is tracked per user in the `notification_reads` table (one mark per
+notification and reader), so a broadcast marked read by one user stays unread for
+everyone else. Mark-read is idempotent (`ON CONFLICT DO NOTHING`).
 
 ## Local dev
 

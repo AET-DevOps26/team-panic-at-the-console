@@ -209,6 +209,8 @@ services:
     enabled: true
     inheritGlobalEnv: true
     port: 8085
+    probes: true
+    healthPath: /health
     image:
       repository: notification-service
     env:

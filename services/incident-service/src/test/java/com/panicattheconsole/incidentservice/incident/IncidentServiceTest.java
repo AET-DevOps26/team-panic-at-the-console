@@ -239,24 +239,48 @@ class IncidentServiceTest {
         assertThat(captor.getValue().getSubject()).isEqualTo("incident.severity.escalated");
         assertThat(captor.getValue().getPayload())
                 .containsEntry("oldSeverity", "SEV2")
-                .containsEntry("newSeverity", "SEV1");
+                .containsEntry("newSeverity", "SEV1")
+                .containsEntry("assignedUserIds", List.of())
+                .doesNotContainKey("actorId");
+    }
+
+    @Test
+    void escalateSeverity_carriesAssigneesAndActor() {
+        UUID assignee = UUID.randomUUID();
+        UUID actor = UUID.randomUUID();
+        incident.setAssignedUsers(new java.util.HashSet<>(Set.of(assignee)));
+        when(incidentRepository.findById(incidentId)).thenReturn(Optional.of(incident));
+        when(incidentRepository.save(incident)).thenReturn(incident);
+
+        incidentService.escalateSeverity(incidentId, Severity.SEV1, actor);
+
+        ArgumentCaptor<IncidentNatsEvent> captor = ArgumentCaptor.forClass(IncidentNatsEvent.class);
+        verify(applicationEventPublisher).publishEvent(captor.capture());
+        assertThat(captor.getValue().getPayload())
+                .containsEntry("assignedUserIds", List.of(assignee.toString()))
+                .containsEntry("actorId", actor.toString());
     }
 
     @Test
     void addComment_publishesCommentContent() {
         UUID commentId = UUID.randomUUID();
+        UUID authorId = UUID.randomUUID();
+        UUID assignee = UUID.randomUUID();
+        incident.setAssignedUsers(new java.util.HashSet<>(Set.of(assignee)));
         when(incidentRepository.findById(incidentId)).thenReturn(Optional.of(incident));
         when(commentRepository.save(any(Comment.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
-        incidentService.addComment(incidentId, commentId, UUID.randomUUID(), "Rolled back v2.4.1");
+        incidentService.addComment(incidentId, commentId, authorId, "Rolled back v2.4.1");
 
         ArgumentCaptor<IncidentNatsEvent> captor = ArgumentCaptor.forClass(IncidentNatsEvent.class);
         verify(applicationEventPublisher).publishEvent(captor.capture());
         assertThat(captor.getValue().getSubject()).isEqualTo("incident.comment.added");
         assertThat(captor.getValue().getPayload())
                 .containsEntry("commentId", commentId.toString())
-                .containsEntry("content", "Rolled back v2.4.1");
+                .containsEntry("content", "Rolled back v2.4.1")
+                .containsEntry("assignedUserIds", List.of(assignee.toString()))
+                .containsEntry("actorId", authorId.toString());
     }
 
     @Test
@@ -333,11 +357,41 @@ class IncidentServiceTest {
     void updateAssignedUsers_replacesExistingUsers() {
         when(incidentRepository.findById(incidentId)).thenReturn(Optional.of(incident));
         when(incidentRepository.save(incident)).thenReturn(incident);
+        UUID newUser = UUID.randomUUID();
 
-        Incident saved = incidentService.updateAssignedUsers(incidentId, Set.of(UUID.randomUUID()));
+        Incident saved = incidentService.updateAssignedUsers(incidentId, Set.of(newUser), null);
 
-        assertThat(saved.getAssignedUsers()).hasSize(1);
-        verify(applicationEventPublisher).publishEvent(any(IncidentNatsEvent.class));
+        assertThat(saved.getAssignedUsers()).containsExactly(newUser);
+
+        ArgumentCaptor<IncidentNatsEvent> captor = ArgumentCaptor.forClass(IncidentNatsEvent.class);
+        verify(applicationEventPublisher, times(2)).publishEvent(captor.capture());
+        assertThat(captor.getAllValues()).extracting(IncidentNatsEvent::getSubject)
+                .containsExactly("incident.updated", "incident.assigned");
+        assertThat(captor.getAllValues().get(1).getPayload())
+                .containsEntry("userId", newUser.toString())
+                .doesNotContainKey("actorId");
+    }
+
+    @Test
+    void updateAssignedUsers_publishesAssignedOnlyForNewlyAddedUsers() {
+        UUID existingUser = UUID.randomUUID();
+        UUID addedUser = UUID.randomUUID();
+        UUID actor = UUID.randomUUID();
+        incident.setAssignedUsers(new java.util.HashSet<>(Set.of(existingUser)));
+        when(incidentRepository.findById(incidentId)).thenReturn(Optional.of(incident));
+        when(incidentRepository.save(incident)).thenReturn(incident);
+
+        incidentService.updateAssignedUsers(incidentId, Set.of(existingUser, addedUser), actor);
+
+        ArgumentCaptor<IncidentNatsEvent> captor = ArgumentCaptor.forClass(IncidentNatsEvent.class);
+        verify(applicationEventPublisher, times(2)).publishEvent(captor.capture());
+        List<IncidentNatsEvent> assignedEvents = captor.getAllValues().stream()
+                .filter(e -> e.getSubject().equals("incident.assigned"))
+                .toList();
+        assertThat(assignedEvents).hasSize(1);
+        assertThat(assignedEvents.get(0).getPayload())
+                .containsEntry("userId", addedUser.toString())
+                .containsEntry("actorId", actor.toString());
     }
 
     @Test

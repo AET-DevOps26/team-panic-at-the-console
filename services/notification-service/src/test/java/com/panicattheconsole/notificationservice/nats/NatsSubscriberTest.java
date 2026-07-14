@@ -79,6 +79,57 @@ class NatsSubscriberTest {
     }
 
     @Test
+    void incidentCreated_carriesTitleSeverityAndActor() throws Exception {
+        UUID incidentId = UUID.randomUUID();
+        UUID actorId = UUID.randomUUID();
+        invokeHandleMessage("incident.created", """
+                {"incidentId":"%s","title":"Checkout down","severity":"SEV1",
+                 "actorId":"%s","timestamp":"2026-06-12T12:00:00Z"}
+                """.formatted(incidentId, actorId));
+
+        IncidentEvent event = captureRecordedEvent();
+        assertThat(event.title()).isEqualTo("Checkout down");
+        assertThat(event.severity()).isEqualTo("SEV1");
+        assertThat(event.actorId()).isEqualTo(actorId);
+    }
+
+    @Test
+    void commentAdded_carriesContentAndAssignees() throws Exception {
+        UUID incidentId = UUID.randomUUID();
+        UUID assignee = UUID.randomUUID();
+        invokeHandleMessage("incident.comment.added", """
+                {"incidentId":"%s","commentId":"%s","content":"Rolled back v2.4.1",
+                 "assignedUserIds":["%s"],"timestamp":"2026-06-12T12:00:00Z"}
+                """.formatted(incidentId, UUID.randomUUID(), assignee));
+
+        IncidentEvent event = captureRecordedEvent();
+        assertThat(event.content()).isEqualTo("Rolled back v2.4.1");
+        assertThat(event.assignedUserIds()).containsExactly(assignee);
+    }
+
+    @Test
+    void statusChanged_carriesNewStatus() throws Exception {
+        UUID incidentId = UUID.randomUUID();
+        invokeHandleMessage("incident.status.changed", """
+                {"incidentId":"%s","oldStatus":"open","newStatus":"investigating",
+                 "timestamp":"2026-06-12T12:00:00Z"}
+                """.formatted(incidentId));
+
+        IncidentEvent event = captureRecordedEvent();
+        assertThat(event.newStatus()).isEqualTo("investigating");
+    }
+
+    @Test
+    void statusChanged_withoutNewStatus_isIgnored() throws Exception {
+        UUID incidentId = UUID.randomUUID();
+        invokeHandleMessage("incident.status.changed", """
+                {"incidentId":"%s","timestamp":"2026-06-12T12:00:00Z"}
+                """.formatted(incidentId));
+
+        verify(notificationService, never()).record(any());
+    }
+
+    @Test
     void severityEscalated_withoutNewSeverity_isIgnored() throws Exception {
         UUID incidentId = UUID.randomUUID();
         invokeHandleMessage("incident.severity.escalated", """

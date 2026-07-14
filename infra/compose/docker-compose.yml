@@ -118,6 +118,8 @@ services:
         condition: service_healthy
       user-service:
         condition: service_healthy
+      notification-service:
+        condition: service_healthy
     restart: unless-stopped
 
   incident-service:
@@ -218,6 +220,9 @@ services:
       NATS_URL: ${NATS_URL:-nats://nats:4222}
     ports:
       - "8085:8085"
+    healthcheck:
+      <<: *healthcheck-spring
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://127.0.0.1:8085/health || exit 1"]
     depends_on:
       postgres:
         condition: service_healthy

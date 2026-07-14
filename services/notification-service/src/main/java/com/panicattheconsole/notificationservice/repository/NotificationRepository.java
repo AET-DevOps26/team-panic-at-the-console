@@ -5,59 +5,51 @@ import java.util.UUID;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import com.panicattheconsole.notificationservice.domain.Notification;
 
+/**
+ * Visibility rule shared by every query: a user sees their personal
+ * notifications plus broadcasts, but never notifications produced by their
+ * own actions. Read state is per user via {@code NotificationRead} marks.
+ */
 @Repository
 public interface NotificationRepository
         extends JpaRepository<Notification, UUID> {
 
-    /** Notifications visible to a recipient: their personal ones plus broadcasts. */
     @Query("""
             SELECT n FROM Notification n
-            WHERE n.recipientId IS NULL OR n.recipientId = :recipientId
+            WHERE (n.recipientId IS NULL OR n.recipientId = :userId)
+              AND (n.actorId IS NULL OR n.actorId <> :userId)
             """)
     Page<Notification> findVisibleTo(
-            @Param("recipientId") UUID recipientId,
+            @Param("userId") UUID userId,
             Pageable pageable);
 
-    /** Unread subset of {@link #findVisibleTo}. */
+    /** Unread subset of {@link #findVisibleTo}: no read mark by this user. */
     @Query("""
             SELECT n FROM Notification n
-            WHERE (n.recipientId IS NULL OR n.recipientId = :recipientId)
-              AND n.read = false
+            WHERE (n.recipientId IS NULL OR n.recipientId = :userId)
+              AND (n.actorId IS NULL OR n.actorId <> :userId)
+              AND NOT EXISTS (
+                  SELECT 1 FROM NotificationRead r
+                  WHERE r.id.notificationId = n.id AND r.id.userId = :userId)
             """)
     Page<Notification> findVisibleToUnread(
-            @Param("recipientId") UUID recipientId,
+            @Param("userId") UUID userId,
             Pageable pageable);
 
-    /** Unread notifications across all recipients (no recipient filter). */
-    Page<Notification> findByReadFalse(Pageable pageable);
-
-    /** Count of unread notifications visible to a recipient. */
+    /** Count of unread notifications visible to a user. */
     @Query("""
             SELECT COUNT(n) FROM Notification n
-            WHERE (n.recipientId IS NULL OR n.recipientId = :recipientId)
-              AND n.read = false
+            WHERE (n.recipientId IS NULL OR n.recipientId = :userId)
+              AND (n.actorId IS NULL OR n.actorId <> :userId)
+              AND NOT EXISTS (
+                  SELECT 1 FROM NotificationRead r
+                  WHERE r.id.notificationId = n.id AND r.id.userId = :userId)
             """)
-    long countVisibleToUnread(@Param("recipientId") UUID recipientId);
-
-    /** Count of unread notifications across all recipients. */
-    long countByReadFalse();
-
-    /**
-     * Mark unread notifications as read. When {@code recipientId} is null every unread
-     * notification is marked; otherwise only the recipient's personal ones and broadcasts.
-     */
-    @Modifying(clearAutomatically = true)
-    @Query("""
-            UPDATE Notification n SET n.read = true
-            WHERE n.read = false
-              AND (:recipientId IS NULL OR n.recipientId IS NULL OR n.recipientId = :recipientId)
-            """)
-    int markAllReadVisibleTo(@Param("recipientId") UUID recipientId);
+    long countVisibleToUnread(@Param("userId") UUID userId);
 }

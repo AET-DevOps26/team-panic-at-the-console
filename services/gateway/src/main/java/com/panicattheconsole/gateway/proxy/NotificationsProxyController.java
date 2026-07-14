@@ -11,7 +11,9 @@ import org.springframework.web.client.RestClient;
 import org.springframework.web.util.UriComponentsBuilder;
 
 /**
- * Proxies public notification REST routes to notification-service.
+ * Proxies public notification REST routes to notification-service. The caller
+ * is identified downstream by the X-User-Id header the IdentityHeaderRelay
+ * injects from the validated session; no client-supplied scoping params.
  */
 @RestController
 class NotificationsProxyController implements NotificationsApi {
@@ -25,10 +27,10 @@ class NotificationsProxyController implements NotificationsApi {
 
     @Override
     public ResponseEntity<NotificationListResponse> listNotifications(
-            UUID recipientId, Boolean unreadOnly, Integer page, Integer size) {
+            Boolean unreadOnly, Integer page, Integer size) {
         return DownstreamProxy.get(
                 notificationServiceClient,
-                listNotificationsPath(recipientId, unreadOnly, page, size),
+                listNotificationsPath(unreadOnly, page, size),
                 NotificationListResponse.class);
     }
 
@@ -42,17 +44,13 @@ class NotificationsProxyController implements NotificationsApi {
     }
 
     @Override
-    public ResponseEntity<Void> markAllNotificationsRead(UUID recipientId) {
-        UriComponentsBuilder builder = UriComponentsBuilder.fromPath("/notifications/read-all");
-        if (recipientId != null) builder.queryParam("recipientId", recipientId);
+    public ResponseEntity<Void> markAllNotificationsRead() {
         return DownstreamProxy.post(
-                notificationServiceClient, builder.build().toUriString(), Void.class);
+                notificationServiceClient, "/notifications/read-all", Void.class);
     }
 
-    private static String listNotificationsPath(
-            UUID recipientId, Boolean unreadOnly, Integer page, Integer size) {
+    private static String listNotificationsPath(Boolean unreadOnly, Integer page, Integer size) {
         UriComponentsBuilder builder = UriComponentsBuilder.fromPath("/notifications");
-        if (recipientId != null) builder.queryParam("recipientId", recipientId);
         if (unreadOnly != null) builder.queryParam("unreadOnly", unreadOnly);
         if (page != null) builder.queryParam("page", page);
         if (size != null) builder.queryParam("size", size);

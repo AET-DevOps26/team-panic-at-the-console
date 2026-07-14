@@ -45,9 +45,9 @@ public interface NotificationsApi {
     }
 
     /**
-     * GET /notifications : List notifications, newest first
+     * GET /notifications : List notifications for the calling user, newest first
+     * Scoped to the calling user (personal notifications plus broadcasts), identified by the gateway-injected X-User-Id header.
      *
-     * @param recipientId Scope to a user: returns their personal notifications plus broadcasts. Omit to return all notifications.  (optional)
      * @param unreadOnly Return only unread notifications. (optional, default to false)
      * @param page  (optional, default to 0)
      * @param size  (optional, default to 50)
@@ -55,7 +55,8 @@ public interface NotificationsApi {
      */
     @Operation(
         operationId = "listNotifications",
-        summary = "List notifications, newest first",
+        summary = "List notifications for the calling user, newest first",
+        description = "Scoped to the calling user (personal notifications plus broadcasts), identified by the gateway-injected X-User-Id header. ",
         tags = { "notifications" },
         responses = {
             @ApiResponse(responseCode = "200", description = "Page of notifications", content = {
@@ -70,7 +71,6 @@ public interface NotificationsApi {
     )
 
     default ResponseEntity<NotificationListResponse> listNotifications(
-        @Parameter(name = "recipientId", description = "Scope to a user: returns their personal notifications plus broadcasts. Omit to return all notifications. ", in = ParameterIn.QUERY) @Valid @RequestParam(value = "recipientId", required = false) @Nullable UUID recipientId,
         @Parameter(name = "unreadOnly", description = "Return only unread notifications.", in = ParameterIn.QUERY) @Valid @RequestParam(value = "unreadOnly", required = false, defaultValue = "false") Boolean unreadOnly,
         @Min(0) @Parameter(name = "page", description = "", in = ParameterIn.QUERY) @Valid @RequestParam(value = "page", required = false, defaultValue = "0") Integer page,
         @Min(1) @Max(100) @Parameter(name = "size", description = "", in = ParameterIn.QUERY) @Valid @RequestParam(value = "size", required = false, defaultValue = "50") Integer size
@@ -90,14 +90,15 @@ public interface NotificationsApi {
 
 
     /**
-     * POST /notifications/read-all : Mark all visible notifications as read
+     * POST /notifications/read-all : Mark all notifications visible to the calling user as read
+     * Scoped to the calling user (personal notifications plus broadcasts), identified by the gateway-injected X-User-Id header.
      *
-     * @param recipientId Scope to a user: marks their personal notifications plus broadcasts. Omit to mark all notifications.  (optional)
      * @return Notifications marked as read (status code 204)
      */
     @Operation(
         operationId = "markAllNotificationsRead",
-        summary = "Mark all visible notifications as read",
+        summary = "Mark all notifications visible to the calling user as read",
+        description = "Scoped to the calling user (personal notifications plus broadcasts), identified by the gateway-injected X-User-Id header. ",
         tags = { "notifications" },
         responses = {
             @ApiResponse(responseCode = "204", description = "Notifications marked as read")
@@ -109,7 +110,7 @@ public interface NotificationsApi {
     )
 
     default ResponseEntity<Void> markAllNotificationsRead(
-        @Parameter(name = "recipientId", description = "Scope to a user: marks their personal notifications plus broadcasts. Omit to mark all notifications. ", in = ParameterIn.QUERY) @Valid @RequestParam(value = "recipientId", required = false) @Nullable UUID recipientId
+
     ) {
         return new ResponseEntity<>(HttpStatus.NOT_IMPLEMENTED);
 
@@ -121,7 +122,7 @@ public interface NotificationsApi {
      *
      * @param notificationId UUID of the target notification. (required)
      * @return Notification marked as read (status code 204)
-     *         or Notification not found (status code 404)
+     *         or Notification not found or not visible to the caller (status code 404)
      */
     @Operation(
         operationId = "markNotificationRead",
@@ -129,7 +130,7 @@ public interface NotificationsApi {
         tags = { "notifications" },
         responses = {
             @ApiResponse(responseCode = "204", description = "Notification marked as read"),
-            @ApiResponse(responseCode = "404", description = "Notification not found")
+            @ApiResponse(responseCode = "404", description = "Notification not found or not visible to the caller")
         }
     )
     @RequestMapping(

@@ -15,6 +15,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import com.panicattheconsole.gateway.GatewayApplication;
 import com.panicattheconsole.gateway.auth.TestSessions;
 
+import static org.springframework.test.web.client.match.MockRestRequestMatchers.header;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.method;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withStatus;
@@ -29,7 +30,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class NotificationsProxyControllerTest {
 
     private static final String NOTIFICATION_ID = "018e2c5f-1234-7abc-8def-0000000000bb";
-    private static final String RECIPIENT_ID = "018e2c5f-1234-7abc-8def-0000000000cc";
 
     private static final String LIST_JSON = """
             {
@@ -61,18 +61,17 @@ class NotificationsProxyControllerTest {
     }
 
     @Test
-    void listNotifications_proxiesWithFiltersAndPagination() throws Exception {
+    void listNotifications_proxiesWithFiltersAndIdentityHeader() throws Exception {
         notificationServer
-                .expect(requestTo("http://localhost:8085/notifications?recipientId=" + RECIPIENT_ID
-                        + "&unreadOnly=true&page=0&size=50"))
+                .expect(requestTo("http://localhost:8085/notifications?unreadOnly=true&page=0&size=50"))
                 .andExpect(method(HttpMethod.GET))
+                .andExpect(header("X-User-Id", TestSessions.USER_ID))
                 .andRespond(
                         withStatus(HttpStatus.OK)
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .body(LIST_JSON));
 
         mvc.perform(get("/notifications")
-                        .queryParam("recipientId", RECIPIENT_ID)
                         .queryParam("unreadOnly", "true")
                         .cookie(TestSessions.sessionCookie()))
                 .andExpect(status().isOk())
@@ -88,6 +87,7 @@ class NotificationsProxyControllerTest {
         notificationServer
                 .expect(requestTo("http://localhost:8085/notifications/" + NOTIFICATION_ID + "/read"))
                 .andExpect(method(HttpMethod.POST))
+                .andExpect(header("X-User-Id", TestSessions.USER_ID))
                 .andRespond(withStatus(HttpStatus.NO_CONTENT));
 
         mvc.perform(post("/notifications/{id}/read", NOTIFICATION_ID).cookie(TestSessions.sessionCookie()))
@@ -110,15 +110,14 @@ class NotificationsProxyControllerTest {
     }
 
     @Test
-    void markAllNotificationsRead_proxiesWithRecipientScope() throws Exception {
+    void markAllNotificationsRead_proxiesWithIdentityHeader() throws Exception {
         notificationServer
-                .expect(requestTo("http://localhost:8085/notifications/read-all?recipientId=" + RECIPIENT_ID))
+                .expect(requestTo("http://localhost:8085/notifications/read-all"))
                 .andExpect(method(HttpMethod.POST))
+                .andExpect(header("X-User-Id", TestSessions.USER_ID))
                 .andRespond(withStatus(HttpStatus.NO_CONTENT));
 
-        mvc.perform(post("/notifications/read-all")
-                        .queryParam("recipientId", RECIPIENT_ID)
-                        .cookie(TestSessions.sessionCookie()))
+        mvc.perform(post("/notifications/read-all").cookie(TestSessions.sessionCookie()))
                 .andExpect(status().isNoContent());
 
         notificationServer.verify();
