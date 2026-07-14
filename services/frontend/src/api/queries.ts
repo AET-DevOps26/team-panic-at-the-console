@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueries, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "./client";
 import type { components } from "@openapi/schema";
 
@@ -126,25 +126,52 @@ export function useIncidents(params?: { status?: IncidentStatus; severity?: Seve
   });
 }
 
+async function fetchIncident(id: string): Promise<Incident> {
+  if (MOCK) {
+    const found = MOCK_INCIDENTS.find((i) => i.id === id);
+    if (!found) throw new ApiError("Incident not found", 404);
+    return found;
+  }
+  const { data, error, response } = await apiClient.GET("/incidents/{incidentId}", {
+    params: { path: { incidentId: id } },
+  });
+  if (error || !data) throw new ApiError("Failed to fetch incident", response.status);
+  return data;
+}
+
+// A missing or malformed id will not start existing on retry.
+function retryUnlessNotFound(failureCount: number, error: unknown) {
+  return !isNotFound(error) && failureCount < 3;
+}
+
 export function useIncident(id: string) {
   return useQuery({
     queryKey: ["incidents", id],
-    queryFn: async () => {
-      if (MOCK) {
-        const found = MOCK_INCIDENTS.find((i) => i.id === id);
-        if (!found) throw new ApiError("Incident not found", 404);
-        return found;
-      }
-      const { data, error, response } = await apiClient.GET("/incidents/{incidentId}", {
-        params: { path: { incidentId: id } },
-      });
-      if (error || !data) throw new ApiError("Failed to fetch incident", response.status);
-      return data;
-    },
+    queryFn: () => fetchIncident(id),
     enabled: Boolean(id),
-    // A missing or malformed id will not start existing on retry.
-    retry: (failureCount, error) => !isNotFound(error) && failureCount < 3,
+    retry: retryUnlessNotFound,
   });
+}
+
+/**
+ * Incident titles keyed by incident id, resolved from the same per-incident
+ * cache entries as {@link useIncident}. Ids whose incident is still loading or
+ * failed to load are absent from the map, so callers can degrade gracefully.
+ */
+export function useIncidentTitles(ids: string[]): Record<string, string> {
+  const uniqueIds = [...new Set(ids)];
+  const results = useQueries({
+    queries: uniqueIds.map((id) => ({
+      queryKey: ["incidents", id],
+      queryFn: () => fetchIncident(id),
+      retry: retryUnlessNotFound,
+    })),
+  });
+  const titles: Record<string, string> = {};
+  results.forEach((result, index) => {
+    if (result.data) titles[uniqueIds[index]] = result.data.title;
+  });
+  return titles;
 }
 
 export function useCreateIncident() {

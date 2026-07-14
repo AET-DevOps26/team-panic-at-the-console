@@ -11,6 +11,13 @@ vi.mock("@/api/client", () => ({
 
 import { apiClient } from "@/api/client";
 
+const ASSIGNED_INCIDENT = {
+  id: "018e2c5f-1234-7abc-8def-000000000001",
+  title: "Checkout latency spike",
+  status: "open",
+  severity: "SEV2",
+};
+
 const LIST_RESPONSE = {
   items: [
     {
@@ -52,7 +59,11 @@ function renderBell() {
 describe("NotificationBell", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(apiClient.GET).mockResolvedValue({ data: LIST_RESPONSE, error: undefined } as never);
+    vi.mocked(apiClient.GET).mockImplementation(async (path: unknown) =>
+      path === "/incidents/{incidentId}"
+        ? ({ data: ASSIGNED_INCIDENT, error: undefined } as never)
+        : ({ data: LIST_RESPONSE, error: undefined } as never),
+    );
     vi.mocked(apiClient.POST).mockResolvedValue({ data: undefined, error: undefined } as never);
   });
 
@@ -94,6 +105,37 @@ describe("NotificationBell", () => {
     await user.click(await screen.findByText("New incident: Payment service slow response (SEV2)"));
 
     expect(apiClient.POST).not.toHaveBeenCalled();
+  });
+
+  it("shows the incident title below a notification", async () => {
+    const user = userEvent.setup();
+    renderBell();
+
+    await user.click(await screen.findByLabelText("Notifications (1 unread)"));
+
+    expect(await screen.findByText("Checkout latency spike")).toBeInTheDocument();
+    expect(apiClient.GET).toHaveBeenCalledWith("/incidents/{incidentId}", {
+      params: { path: { incidentId: "018e2c5f-1234-7abc-8def-000000000001" } },
+    });
+    // INCIDENT_CREATED messages already carry the title; no lookup for them.
+    expect(apiClient.GET).not.toHaveBeenCalledWith("/incidents/{incidentId}", {
+      params: { path: { incidentId: "018e2c5f-1234-7abc-8def-000000000002" } },
+    });
+  });
+
+  it("renders the notification without a title when the incident lookup fails", async () => {
+    vi.mocked(apiClient.GET).mockImplementation(async (path: unknown) =>
+      path === "/incidents/{incidentId}"
+        ? ({ data: undefined, error: { message: "gone" }, response: { status: 404 } } as never)
+        : ({ data: LIST_RESPONSE, error: undefined } as never),
+    );
+    const user = userEvent.setup();
+    renderBell();
+
+    await user.click(await screen.findByLabelText("Notifications (1 unread)"));
+
+    expect(await screen.findByText("You were assigned to an incident.")).toBeInTheDocument();
+    expect(screen.queryByText("Checkout latency spike")).not.toBeInTheDocument();
   });
 
   it("marks all notifications read", async () => {

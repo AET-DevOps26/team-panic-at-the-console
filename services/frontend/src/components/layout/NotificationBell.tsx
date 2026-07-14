@@ -1,6 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import { Bell } from "lucide-react";
-import { useMarkAllNotificationsRead, useMarkNotificationRead, useNotifications } from "@/api/queries";
+import { useIncidentTitles, useMarkAllNotificationsRead, useMarkNotificationRead, useNotifications } from "@/api/queries";
 import { formatRelativeTime } from "@/lib/utils";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import type { Notification } from "@/api/queries";
@@ -15,6 +15,11 @@ export function NotificationBell() {
 
   const unreadCount = data?.unreadCount ?? 0;
   const items = data?.items ?? [];
+
+  // INCIDENT_CREATED messages already contain the title, so no lookup needed.
+  const incidentTitles = useIncidentTitles(
+    items.filter((n) => n.type !== "INCIDENT_CREATED").map((n) => n.incidentId),
+  );
 
   function openNotification(notification: Notification) {
     // Fire-and-forget: navigation should not wait on the read mark.
@@ -58,8 +63,11 @@ export function NotificationBell() {
                 aria-hidden
                 className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${notification.read ? "bg-transparent" : "bg-red-600"}`}
               />
-              <span className="flex-1 space-y-0.5">
+              <span className="min-w-0 flex-1 space-y-0.5">
                 <span className={`block text-sm leading-snug ${notification.read ? "text-muted-foreground" : "font-medium"}`}>{notification.message}</span>
+                {incidentTitles[notification.incidentId] && (
+                  <span className="block truncate text-xs text-muted-foreground">{incidentTitles[notification.incidentId]}</span>
+                )}
                 <span className="block text-xs text-muted-foreground">{formatRelativeTime(notification.createdAt)}</span>
               </span>
             </DropdownMenuItem>

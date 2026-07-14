@@ -65,7 +65,7 @@ public class NotificationService {
             case "incident.severity.escalated" -> fanOutToAssignees(
                     event,
                     NotificationType.SEVERITY_ESCALATED,
-                    "Incident severity escalated to " + event.newSeverity() + ".");
+                    "Incident severity changed to " + event.newSeverity() + ".");
 
             case "incident.status.changed" -> "resolved".equals(event.newStatus())
                     ? fanOutToAssignees(
