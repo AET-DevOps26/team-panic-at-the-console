@@ -58,7 +58,7 @@ jobs:
     # Boot via the canonical flag-free `docker compose`, so CI runs what users run.
     # Ollama pulls a multi-GB model on first boot; we cache the volume across runs.
     env:
-      SMOKE_SERVICES: "postgres nats ollama ollama-init gateway incident-service event-service rule-engine user-service notification-service webhook-service genai-service edge swagger-ui prometheus grafana"
+      SMOKE_SERVICES: "postgres postgres-init nats ollama ollama-init gateway incident-service event-service rule-engine user-service notification-service webhook-service genai-service edge swagger-ui prometheus grafana"
       # frontend is WIP (served on :3000, not via edge). The coverage guard below
       # fails if any service is in neither list, so none can escape unnoticed.
       EXCLUDED_SERVICES: "frontend"
@@ -113,25 +113,29 @@ jobs:
           read -ra services <<< "${SMOKE_SERVICES}"
           docker compose -p "${COMPOSE_PROJECT}" up -d --build "${services[@]}"
 
-      - name: Wait for ollama-init to complete model pull
-        id: ollama-init
+      - name: Wait for one-shot init services to complete
+        id: one-shots
         run: |
           set -euo pipefail
-          # ollama-init is one-shot; docker wait its exit code (-a: may already be gone).
-          cid=$(docker compose -p "${COMPOSE_PROJECT}" ps -aq ollama-init)
-          if [ -z "${cid}" ]; then
-            echo "::error::ollama-init container not found"
-            exit 1
-          fi
-          exit_code=$(docker wait "${cid}")
-          echo "ollama-init (${cid}) exited with code ${exit_code}"
-          test "${exit_code}" = "0"
+          # postgres-init and ollama-init are one-shot; docker wait their exit
+          # codes (-a: the container may already be gone).
+          for svc in postgres-init ollama-init; do
+            cid=$(docker compose -p "${COMPOSE_PROJECT}" ps -aq "${svc}")
+            if [ -z "${cid}" ]; then
+              echo "::error::${svc} container not found"
+              exit 1
+            fi
+            exit_code=$(docker wait "${cid}")
+            echo "${svc} (${cid}) exited with code ${exit_code}"
+            test "${exit_code}" = "0"
+          done
 
       - name: Wait for long-running services to be healthy
         id: wait
         run: |
           set -euo pipefail
-          # ollama-init excluded (already exited 0; --wait would call that a failure).
+          # postgres-init and ollama-init excluded (already exited 0; --wait
+          # would call that a failure).
           docker compose \
             -p "${COMPOSE_PROJECT}" \
             up -d --no-recreate --wait --wait-timeout 600 \
@@ -201,7 +205,7 @@ jobs:
             alpine sh -c "cp -a /src/. /dest/ && chmod -R a+rX /dest/"
 
       - name: Dump container status and logs on failure
-        if: failure() && (steps.boot.outcome == 'failure' || steps.ollama-init.outcome == 'failure' || steps.wait.outcome == 'failure' || steps.probe.outcome == 'failure' || steps.probe-observability.outcome == 'failure')
+        if: failure() && (steps.boot.outcome == 'failure' || steps.one-shots.outcome == 'failure' || steps.wait.outcome == 'failure' || steps.probe.outcome == 'failure' || steps.probe-observability.outcome == 'failure')
         run: |
           set -euo pipefail
           read -ra services <<< "${SMOKE_SERVICES}"
