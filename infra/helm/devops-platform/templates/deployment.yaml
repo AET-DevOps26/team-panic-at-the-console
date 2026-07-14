@@ -8,6 +8,8 @@ metadata:
     app.kubernetes.io/name: {{ $name }}
 spec:
   replicas: 1
+  # Keep few old ReplicaSets; repeated deploys otherwise pile up ~10 stale RS each.
+  revisionHistoryLimit: 2
   {{- with $svc.progressDeadlineSeconds }}
   progressDeadlineSeconds: {{ . }}
   {{- end }}
