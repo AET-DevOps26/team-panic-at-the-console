@@ -64,7 +64,7 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "expr": "sum by (job) (rate(http_server_requests_seconds_count{job=~\"incident-service|event-service|user-service|gateway\"}[1m]))",
+          "expr": "sum by (job) (rate(http_server_requests_seconds_count{job=~\"incident-service|event-service|user-service|gateway|rule-engine|notification-service|webhook-service\"}[1m]))",
           "legendFormat": "{{job}}",
           "refId": "A"
         }
@@ -120,7 +120,7 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "expr": "sum by (job) (rate(http_server_requests_seconds_count{job=~\"incident-service|event-service|user-service|gateway\",outcome!=\"SUCCESS\"}[1m])) / sum by (job) (rate(http_server_requests_seconds_count{job=~\"incident-service|event-service|user-service|gateway\"}[1m]))",
+          "expr": "sum by (job) (rate(http_server_requests_seconds_count{job=~\"incident-service|event-service|user-service|gateway|rule-engine|notification-service|webhook-service\",outcome!=\"SUCCESS\"}[1m])) / sum by (job) (rate(http_server_requests_seconds_count{job=~\"incident-service|event-service|user-service|gateway|rule-engine|notification-service|webhook-service\"}[1m]))",
           "legendFormat": "{{job}}",
           "refId": "A"
         }
@@ -176,13 +176,13 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "expr": "sum by (job) (rate(http_server_requests_seconds_sum{job=~\"incident-service|event-service|user-service|gateway\"}[5m])) / sum by (job) (rate(http_server_requests_seconds_count{job=~\"incident-service|event-service|user-service|gateway\"}[5m]))",
+          "expr": "sum by (job) (rate(http_server_requests_seconds_sum{job=~\"incident-service|event-service|user-service|gateway|rule-engine|notification-service|webhook-service\"}[5m])) / sum by (job) (rate(http_server_requests_seconds_count{job=~\"incident-service|event-service|user-service|gateway|rule-engine|notification-service|webhook-service\"}[5m]))",
           "legendFormat": "{{job}} avg",
           "refId": "A"
         },
         {
           "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "expr": "histogram_quantile(0.95, sum by (le, job) (rate(http_server_requests_seconds_bucket{job=~\"incident-service|event-service|user-service|gateway\"}[5m])))",
+          "expr": "histogram_quantile(0.95, sum by (le, job) (rate(http_server_requests_seconds_bucket{job=~\"incident-service|event-service|user-service|gateway|rule-engine|notification-service|webhook-service\"}[5m])))",
           "legendFormat": "{{job}} p95",
           "refId": "B"
         }
@@ -237,13 +237,13 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "expr": "sum by (job) (rate(http_server_requests_seconds_count{job=~\"incident-service|event-service|user-service|gateway\",status=~\"5..\"}[5m]))",
+          "expr": "sum by (job) (rate(http_server_requests_seconds_count{job=~\"incident-service|event-service|user-service|gateway|rule-engine|notification-service|webhook-service\",status=~\"5..\"}[5m]))",
           "legendFormat": "{{job}} 5xx",
           "refId": "A"
         },
         {
           "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "expr": "sum by (job) (rate(http_server_requests_seconds_count{job=~\"incident-service|event-service|user-service|gateway\",status=~\"4..\"}[5m]))",
+          "expr": "sum by (job) (rate(http_server_requests_seconds_count{job=~\"incident-service|event-service|user-service|gateway|rule-engine|notification-service|webhook-service\",status=~\"4..\"}[5m]))",
           "legendFormat": "{{job}} 4xx",
           "refId": "B"
         }
@@ -301,7 +301,7 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "expr": "100 * sum by (job) (jvm_memory_used_bytes{area=\"heap\",job=~\"incident-service|event-service|user-service|gateway\"}) / sum by (job) (jvm_memory_max_bytes{area=\"heap\",job=~\"incident-service|event-service|user-service|gateway\"})",
+          "expr": "100 * sum by (job) (jvm_memory_used_bytes{area=\"heap\",job=~\"incident-service|event-service|user-service|gateway|rule-engine|notification-service|webhook-service\"}) / sum by (job) (jvm_memory_max_bytes{area=\"heap\",job=~\"incident-service|event-service|user-service|gateway|rule-engine|notification-service|webhook-service\"})",
           "legendFormat": "{{job}}",
           "refId": "A"
         }
@@ -353,13 +353,13 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "expr": "sum by (job) (jvm_memory_used_bytes{area=\"heap\",job=~\"incident-service|event-service|user-service|gateway\"})",
+          "expr": "sum by (job) (jvm_memory_used_bytes{area=\"heap\",job=~\"incident-service|event-service|user-service|gateway|rule-engine|notification-service|webhook-service\"})",
           "legendFormat": "{{job}} heap",
           "refId": "A"
         },
         {
           "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "expr": "sum by (job) (jvm_memory_used_bytes{area=\"nonheap\",job=~\"incident-service|event-service|user-service|gateway\"})",
+          "expr": "sum by (job) (jvm_memory_used_bytes{area=\"nonheap\",job=~\"incident-service|event-service|user-service|gateway|rule-engine|notification-service|webhook-service\"})",
           "legendFormat": "{{job}} non-heap",
           "refId": "B"
         }
@@ -377,5 +377,5 @@
   "timezone": "browser",
   "title": "Spring Services",
   "uid": "spring-services-devops",
-  "version": 3
+  "version": 4
 }
