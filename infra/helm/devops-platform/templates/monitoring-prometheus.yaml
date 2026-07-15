@@ -41,6 +41,24 @@ data:
         static_configs:
           - targets: ["gateway:{{ (index .Values.services "gateway").metricsPort | default (index .Values.services "gateway").port }}"]
       {{- end }}
+      {{- if (index .Values.services "rule-engine").enabled }}
+      - job_name: rule-engine
+        metrics_path: /actuator/prometheus
+        static_configs:
+          - targets: ["rule-engine:{{ (index .Values.services "rule-engine").port }}"]
+      {{- end }}
+      {{- if (index .Values.services "notification-service").enabled }}
+      - job_name: notification-service
+        metrics_path: /actuator/prometheus
+        static_configs:
+          - targets: ["notification-service:{{ (index .Values.services "notification-service").port }}"]
+      {{- end }}
+      {{- if (index .Values.services "webhook-service").enabled }}
+      - job_name: webhook-service
+        metrics_path: /actuator/prometheus
+        static_configs:
+          - targets: ["webhook-service:{{ (index .Values.services "webhook-service").port }}"]
+      {{- end }}
       {{- if (index .Values.services "genai-service").enabled }}
       - job_name: genai-service
         metrics_path: /metrics
@@ -52,7 +70,7 @@ data:
       - name: spring-services
         rules:
           - alert: SpringServiceDown
-            expr: up{job=~"incident-service|event-service|user-service|gateway"} == 0
+            expr: up{job=~"incident-service|event-service|user-service|gateway|rule-engine|notification-service|webhook-service"} == 0
             for: 1m
             labels:
               severity: critical
