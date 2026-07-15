@@ -8,6 +8,8 @@ metadata:
     app.kubernetes.io/name: {{ $name }}
 spec:
   replicas: 1
+  # Keep few old ReplicaSets; repeated deploys otherwise pile up ~10 stale RS each.
+  revisionHistoryLimit: 2
   {{- with $svc.progressDeadlineSeconds }}
   progressDeadlineSeconds: {{ . }}
   {{- end }}
@@ -20,6 +22,15 @@ spec:
   strategy:
     type: Recreate
     rollingUpdate: null
+  {{- else }}
+  # Terminate the old pod before creating the new one. The default surge (+1 pod)
+  # would need spare limits headroom the project ResourceQuota does not have, so a
+  # rolling update would deadlock. Trade-off: a brief per-service gap on each deploy.
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 0
+      maxUnavailable: 1
   {{- end }}
   selector:
     matchLabels:
@@ -50,7 +61,7 @@ spec:
           env:
             - name: OLLAMA_MODEL
               value: {{ $.Values.global.ollamaModel | default "qwen2.5:3b" | quote }}
-          {{- with $svc.resources }}
+          {{- with (default $.Values.global.defaultResources $svc.resources) }}
           resources:
             {{- toYaml . | nindent 12 }}
           {{- end }}
@@ -79,7 +90,7 @@ spec:
           {{- else if $svc.ollamaProbes }}
           {{- include "devops-platform.ollamaProbes" (dict "port" $svc.port "model" ($.Values.global.ollamaModel | default "qwen2.5:3b")) | nindent 10 }}
           {{- end }}
-          {{- with $svc.resources }}
+          {{- with (default $.Values.global.defaultResources $svc.resources) }}
           resources:
             {{- toYaml . | nindent 12 }}
           {{- end }}

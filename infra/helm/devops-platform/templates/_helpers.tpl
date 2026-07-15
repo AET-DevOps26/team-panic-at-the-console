@@ -28,6 +28,15 @@ HTTP liveness/readiness for Spring Boot and genai-service (process up only; no d
 {{- define "devops-platform.httpProbes" -}}
 {{- $path := required "healthPath is required when probes are enabled" .healthPath -}}
 {{- $port := required "port is required when probes are enabled" .port -}}
+# Under tight cpu limits JVM startup can take >60s; the startupProbe holds off
+# liveness/readiness until the app is up (up to 300s) so a slow boot is not killed.
+startupProbe:
+  httpGet:
+    path: {{ $path }}
+    port: {{ $port }}
+  periodSeconds: 5
+  timeoutSeconds: 3
+  failureThreshold: 60
 livenessProbe:
   httpGet:
     path: {{ $path }}
