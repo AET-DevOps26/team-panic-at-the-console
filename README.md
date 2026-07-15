@@ -69,6 +69,7 @@ pixi run pre-commit-install
 │   ├── helm/                   # Helm chart + SOPS-encrypted deploy values
 │   └── compose/                # Local docker-compose stack
 ├── docs/
+│   ├── schema.md               # Persistence schema snapshot
 │   └── submissions/
 ├── tests/
 └── scripts/
