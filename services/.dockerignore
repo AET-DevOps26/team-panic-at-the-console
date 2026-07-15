@@ -8,6 +8,7 @@
 !notification-service/
 !genai-service/
 !user-service/
+!webhook-service/
 !generated/
 
 # Within the allowed dirs, prune dev artifacts

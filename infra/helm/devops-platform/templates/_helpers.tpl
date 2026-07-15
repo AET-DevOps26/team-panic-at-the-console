@@ -18,6 +18,10 @@ postgres-credentials
 auth-credentials
 {{- end -}}
 
+{{- define "devops-platform.webhookSecretName" -}}
+webhook-credentials
+{{- end -}}
+
 {{/*
 Rollout policy for this chart's singleton (replicas: 1) Deployments.
 

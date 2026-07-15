@@ -118,6 +118,12 @@ spec:
                 secretKeyRef:
                   name: {{ include "devops-platform.authSecretName" $ }}
                   key: inviteCode
+            {{- else if eq .name "WEBHOOK_SECRETS_GITHUB" }}
+            - name: WEBHOOK_SECRETS_GITHUB
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "devops-platform.webhookSecretName" $ }}
+                  key: githubSecret
             {{- else }}
             - name: {{ .name }}
               {{- if .value }}

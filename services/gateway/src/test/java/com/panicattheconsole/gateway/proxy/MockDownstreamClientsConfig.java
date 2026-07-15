@@ -89,5 +89,22 @@ public class MockDownstreamClientsConfig {
         return notificationClientPair.server();
     }
 
+    @Bean
+    ClientPair webhookClientPair(RestClient.Builder restClientBuilder) {
+        RestClient.Builder builder = restClientBuilder.clone().baseUrl("http://localhost:8086");
+        MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
+        return new ClientPair(builder.build(), server);
+    }
+
+    @Bean
+    RestClient webhookServiceClient(ClientPair webhookClientPair) {
+        return webhookClientPair.client();
+    }
+
+    @Bean
+    MockRestServiceServer webhookServer(ClientPair webhookClientPair) {
+        return webhookClientPair.server();
+    }
+
     private record ClientPair(RestClient client, MockRestServiceServer server) {}
 }

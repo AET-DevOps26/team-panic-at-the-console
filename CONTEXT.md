@@ -140,7 +140,7 @@ The enabled workloads total ~5.6Gi / 3.45 cpu of limits, which leaves no room fo
 | `rule_evaluations_total` | counter | `matched=true\|false` |
 | `webhooks_received_total` | counter | `source_type` |
 
-**DB ownership**: one shared Postgres pod, one database per stateful service (`init-dbs.sh` creates them).
+**DB ownership**: one shared Postgres pod, one database per stateful service. `init-dbs.sh` creates them idempotently and runs on every deploy (compose `postgres-init` one-shot, Helm pre-upgrade job), not just on first boot, so databases added to the list also appear on environments with existing Postgres volumes.
 | Service | Database | Stateful? |
 |---|---|---|
 | `incident-service` | `incidents` | yes |
@@ -148,8 +148,8 @@ The enabled workloads total ~5.6Gi / 3.45 cpu of limits, which leaves no room fo
 | `user-service` | `users` | yes |
 | `notification-service` | `notifications` | yes |
 | `rule-engine` | `rules` | yes |
+| `webhook-service` | `webhooks` | yes |
 | `gateway` | — | no |
-| `webhook-service` | — | no |
 | `genai-service` | — | no |
 
 **OpenAPI spec**: one combined `api/openapi.yaml` covering all services. Existing hook auto-regenerates clients on spec change.

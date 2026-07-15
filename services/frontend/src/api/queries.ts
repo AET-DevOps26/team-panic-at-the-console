@@ -21,6 +21,12 @@ export type ChangePasswordRequest = components["schemas"]["ChangePasswordRequest
 export type User = components["schemas"]["User"];
 export type Notification = components["schemas"]["Notification"];
 export type NotificationListResponse = components["schemas"]["NotificationListResponse"];
+export type WebhookSource = components["schemas"]["WebhookSource"];
+export type WebhookSourceWithSecret = components["schemas"]["WebhookSourceWithSecret"];
+export type CreateWebhookSourceRequest = components["schemas"]["CreateWebhookSourceRequest"];
+export type ExternalEventSummary = components["schemas"]["ExternalEventSummary"];
+export type ExternalEventDetail = components["schemas"]["ExternalEventDetail"];
+export type ExternalEventListResponse = components["schemas"]["ExternalEventListResponse"];
 
 const MOCK = import.meta.env.VITE_MOCK === "true";
 
@@ -438,6 +444,139 @@ export function useMarkAllNotificationsRead() {
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["notifications"] });
     },
+  });
+}
+
+// ── Webhook sources & external events ─────────────────────────────────────────
+
+const MOCK_WEBHOOK_SOURCES: WebhookSource[] = [
+  {
+    slug: "github",
+    createdAt: new Date(Date.now() - 14 * 24 * 3600_000).toISOString(),
+    lastEventAt: new Date(Date.now() - 25 * 60_000).toISOString(),
+  },
+  {
+    slug: "grafana",
+    createdAt: new Date(Date.now() - 2 * 24 * 3600_000).toISOString(),
+    secretRotatedAt: new Date(Date.now() - 1 * 24 * 3600_000).toISOString(),
+  },
+];
+
+const MOCK_EXTERNAL_EVENTS: ExternalEventListResponse = {
+  items: [
+    {
+      id: "018e2c5f-1234-7abc-8def-0000000000e1",
+      source: "github",
+      eventType: "ci_failure",
+      deliveryId: "d1f9c1a0-mock",
+      receivedAt: new Date(Date.now() - 25 * 60_000).toISOString(),
+      publishedAt: new Date(Date.now() - 25 * 60_000 + 300).toISOString(),
+    },
+    {
+      id: "018e2c5f-1234-7abc-8def-0000000000e2",
+      source: "github",
+      eventType: "ci_success",
+      receivedAt: new Date(Date.now() - 3 * 3600_000).toISOString(),
+      publishedAt: new Date(Date.now() - 3 * 3600_000 + 300).toISOString(),
+    },
+  ],
+  total: 2,
+  page: 0,
+  size: 25,
+};
+
+export function useWebhookSources() {
+  return useQuery({
+    queryKey: ["webhook-sources"],
+    queryFn: async (): Promise<WebhookSource[]> => {
+      if (MOCK) return MOCK_WEBHOOK_SOURCES;
+      const { data, error } = await apiClient.GET("/webhook-sources");
+      if (error || !data) throw new Error("Failed to fetch webhook sources");
+      return data.items;
+    },
+  });
+}
+
+export function useCreateWebhookSource() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (body: CreateWebhookSourceRequest): Promise<WebhookSourceWithSecret> => {
+      if (MOCK) return { slug: body.slug, secret: "f".repeat(64), createdAt: new Date().toISOString() };
+      const { data, error, response } = await apiClient.POST("/webhook-sources", { body });
+      if (error || !data) throw new ApiError("Failed to register source", response?.status);
+      return data;
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["webhook-sources"] });
+    },
+  });
+}
+
+export function useRotateWebhookSourceSecret() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (slug: string): Promise<WebhookSourceWithSecret> => {
+      if (MOCK) return { slug, secret: "e".repeat(64), createdAt: new Date().toISOString(), secretRotatedAt: new Date().toISOString() };
+      const { data, error, response } = await apiClient.POST("/webhook-sources/{source}/rotate-secret", {
+        params: { path: { source: slug } },
+      });
+      if (error || !data) throw new ApiError("Failed to rotate secret", response?.status);
+      return data;
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["webhook-sources"] });
+    },
+  });
+}
+
+export function useDeleteWebhookSource() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (slug: string): Promise<void> => {
+      if (MOCK) return;
+      const { error, response } = await apiClient.DELETE("/webhook-sources/{source}", {
+        params: { path: { source: slug } },
+      });
+      if (error) throw new ApiError("Failed to delete source", response?.status);
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["webhook-sources"] });
+    },
+  });
+}
+
+export function useExternalEvents(params?: { source?: string; eventType?: string; page?: number; size?: number }) {
+  return useQuery({
+    queryKey: ["external-events", params],
+    queryFn: async (): Promise<ExternalEventListResponse> => {
+      if (MOCK) return MOCK_EXTERNAL_EVENTS;
+      const { data, error } = await apiClient.GET("/external-events", {
+        params: { query: params },
+      });
+      if (error || !data) throw new Error("Failed to fetch external events");
+      return data;
+    },
+    // Keep the previous page on screen while filters/pages change, and poll so
+    // a freshly configured webhook shows up without a manual refresh.
+    placeholderData: (previous) => previous,
+    refetchInterval: 15_000,
+  });
+}
+
+export function useExternalEvent(id: string | null) {
+  return useQuery({
+    queryKey: ["external-events", "detail", id],
+    queryFn: async (): Promise<ExternalEventDetail> => {
+      if (MOCK) {
+        return { ...MOCK_EXTERNAL_EVENTS.items[0], rawPayload: { action: "completed", workflow_run: { name: "CI", conclusion: "failure" } } };
+      }
+      const { data, error, response } = await apiClient.GET("/external-events/{externalEventId}", {
+        params: { path: { externalEventId: id as string } },
+      });
+      if (error || !data) throw new ApiError("Failed to fetch event", response?.status);
+      return data;
+    },
+    enabled: Boolean(id),
   });
 }
 

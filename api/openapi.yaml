@@ -26,6 +26,20 @@ tags:
       `X-User-Id` / `X-User-Role`; OpenAPI marks operations `security: []` for codegen only.
   - name: notifications
     description: In-app notifications for incident events (notification-service).
+  - name: webhooks
+    description: |
+      Machine-facing webhook ingest (webhook-service). Served at `/webhooks` on the host root by the
+      ingress / compose edge — NOT under `/api/v1` (see the path-level `servers` override). Senders
+      authenticate per source with an HMAC signature over the raw body instead of a session.
+  - name: external-events
+    description: Audit trail of received external events (webhook-service, proxied by the gateway).
+  - name: webhook-sources
+    description: |
+      Self-service management of webhook sources and their HMAC secrets (webhook-service, proxied by
+      the gateway). Creating a source generates its secret server-side; the secret is returned once in
+      the create/rotate response and kept only for signature verification. Deliveries for a registered
+      source must be signed. Env-configured secrets (`WEBHOOK_SECRETS_<SOURCE>`) remain a
+      deployment-level fallback for slugs that are not registered.
 
 servers:
   - url: http://localhost:4010
@@ -682,6 +696,233 @@ paths:
         "204":
           description: Notifications marked as read
 
+  /webhooks/{source}:
+    post:
+      operationId: receiveWebhook
+      summary: Ingest a webhook from an external system
+      description: >-
+        Persists the payload verbatim as an External Event (ADR 0008) and publishes
+        `external.event.received` to NATS for the rule engine. Sources with a configured
+        secret must sign the raw request body (`X-Hub-Signature-256`, GitHub convention);
+        with `WEBHOOK_REQUIRE_SIGNATURE=true` sources without a secret are rejected.
+        Redeliveries carrying an already-seen delivery id are acknowledged with the
+        original event id (`duplicate: true`) and not re-published.
+      tags: [webhooks]
+      security: []
+      servers:
+        - url: /
+          description: Host root via ingress / compose edge (not /api/v1)
+        - url: http://localhost:8086
+          description: webhook-service directly (local compose)
+      parameters:
+        - $ref: "#/components/parameters/WebhookSourceParam"
+        - name: X-Hub-Signature-256
+          in: header
+          required: false
+          description: >-
+            `sha256=<hex HMAC-SHA256 of the raw body>`, keyed with the secret configured
+            for the source. Required when the source has a secret.
+          schema:
+            type: string
+        - name: X-GitHub-Event
+          in: header
+          required: false
+          description: GitHub event name; used to derive the normalised eventType.
+          schema:
+            type: string
+        - name: X-GitHub-Delivery
+          in: header
+          required: false
+          description: GitHub delivery id; used for redelivery dedup.
+          schema:
+            type: string
+        - name: X-Event-Type
+          in: header
+          required: false
+          description: Explicit normalised event type for non-GitHub senders.
+          schema:
+            type: string
+        - name: X-Delivery-Id
+          in: header
+          required: false
+          description: Delivery id for non-GitHub senders; used for redelivery dedup.
+          schema:
+            type: string
+      requestBody:
+        required: true
+        description: Raw webhook payload; persisted verbatim.
+        content:
+          application/json:
+            schema:
+              type: object
+              description: Raw webhook payload; persisted verbatim.
+              additionalProperties: true
+      responses:
+        "202":
+          description: Event ingested (or redelivery acknowledged)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookReceipt"
+        "400":
+          description: Invalid source slug or non-object JSON body
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Missing or invalid signature
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /webhook-sources:
+    get:
+      operationId: listWebhookSources
+      summary: List registered webhook sources
+      tags: [webhook-sources]
+      security: []
+      responses:
+        "200":
+          description: Registered sources, oldest first
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookSourceListResponse"
+        "401":
+          description: Not authenticated
+    post:
+      operationId: createWebhookSource
+      summary: Register a webhook source and generate its HMAC secret
+      description: >-
+        The generated secret is returned only in this response; configure it on the sending
+        system (e.g. as the GitHub webhook secret). Deliveries for a registered source must
+        be signed with it (`X-Hub-Signature-256`).
+      tags: [webhook-sources]
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateWebhookSourceRequest"
+      responses:
+        "201":
+          description: Source registered; the response carries the only copy of the secret
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookSourceWithSecret"
+        "400":
+          description: Invalid slug
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Not authenticated
+        "409":
+          description: A source with this slug is already registered
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /webhook-sources/{source}:
+    delete:
+      operationId: deleteWebhookSource
+      summary: Delete a registered source
+      description: >-
+        Deliveries for the slug are afterwards treated like any unregistered source (env
+        fallback secret or the require-signature policy). Already-ingested external events
+        are kept: the audit trail is immutable (ADR 0008).
+      tags: [webhook-sources]
+      security: []
+      parameters:
+        - $ref: "#/components/parameters/WebhookSourceParam"
+      responses:
+        "204":
+          description: Source deleted; its external events remain
+        "401":
+          description: Not authenticated
+        "404":
+          description: No source is registered under this slug
+
+  /webhook-sources/{source}/rotate-secret:
+    post:
+      operationId: rotateWebhookSourceSecret
+      summary: Replace the source's secret with a newly generated one
+      description: >-
+        The old secret stops working immediately; update the sending system with the returned
+        secret, which is shown only in this response.
+      tags: [webhook-sources]
+      security: []
+      parameters:
+        - $ref: "#/components/parameters/WebhookSourceParam"
+      responses:
+        "200":
+          description: Secret rotated; the response carries the only copy of the new secret
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookSourceWithSecret"
+        "401":
+          description: Not authenticated
+        "404":
+          description: No source is registered under this slug
+
+  /external-events:
+    get:
+      operationId: listExternalEvents
+      summary: List persisted external events, newest first
+      tags: [external-events]
+      security: []
+      parameters:
+        - name: source
+          in: query
+          required: false
+          description: Filter by source slug.
+          schema:
+            type: string
+        - name: eventType
+          in: query
+          required: false
+          description: Filter by normalised event type.
+          schema:
+            type: string
+        - $ref: "#/components/parameters/PageParam"
+        - $ref: "#/components/parameters/SizeParam"
+      responses:
+        "200":
+          description: Page of external events
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExternalEventListResponse"
+        "401":
+          description: Not authenticated
+
+  /external-events/{externalEventId}:
+    get:
+      operationId: getExternalEvent
+      summary: Fetch a single external event including its raw payload
+      tags: [external-events]
+      security: []
+      parameters:
+        - $ref: "#/components/parameters/ExternalEventIdParam"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExternalEventDetail"
+        "401":
+          description: Not authenticated
+        "404":
+          description: No external event exists with the given ID
+
 components:
   parameters:
     UserListLimitParam:
@@ -743,6 +984,26 @@ components:
         type: string
         format: uuid
         example: 018e2c5f-1234-7abc-8def-0000000000c1
+
+    WebhookSourceParam:
+      name: source
+      in: path
+      required: true
+      description: Operator-chosen slug identifying the sending system.
+      schema:
+        type: string
+        pattern: "^[a-z0-9][a-z0-9_-]{0,63}$"
+        example: github
+
+    ExternalEventIdParam:
+      name: externalEventId
+      in: path
+      required: true
+      description: UUID of the external event (the `sourceId` carried on NATS events).
+      schema:
+        type: string
+        format: uuid
+        example: 018e2c5f-1234-7abc-8def-0000000000e1
 
   responses:
     RegenAccepted:
@@ -1316,3 +1577,179 @@ components:
           minimum: 0
           description: Number of unread notifications for the calling user (independent of pagination).
           example: 2
+
+    WebhookReceipt:
+      type: object
+      description: Acknowledgement returned by the webhook ingest endpoint.
+      required: [id, source, eventType, receivedAt, duplicate]
+      additionalProperties: false
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: External Event id; the `sourceId` on the resulting NATS event.
+          example: 018e2c5f-1234-7abc-8def-0000000000e1
+        source:
+          type: string
+          example: github
+        eventType:
+          type: string
+          description: Normalised event type Rules are evaluated against.
+          example: ci_failure
+        receivedAt:
+          type: string
+          format: date-time
+        duplicate:
+          type: boolean
+          description: True when a redelivery matched an already-stored event (not re-published).
+          example: false
+
+    ExternalEventSummary:
+      type: object
+      description: External event list entry (without the raw payload).
+      required: [id, source, eventType, receivedAt]
+      additionalProperties: false
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: 018e2c5f-1234-7abc-8def-0000000000e1
+        source:
+          type: string
+          example: github
+        eventType:
+          type: string
+          example: ci_failure
+        deliveryId:
+          type: string
+          description: Sender-supplied delivery id (e.g. X-GitHub-Delivery), used for dedup.
+        receivedAt:
+          type: string
+          format: date-time
+        publishedAt:
+          type: string
+          format: date-time
+          description: Set once the NATS publish succeeded; absent while the publish is pending.
+
+    ExternalEventDetail:
+      type: object
+      description: Single external event including the verbatim raw payload.
+      required: [id, source, eventType, receivedAt, rawPayload]
+      additionalProperties: false
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: 018e2c5f-1234-7abc-8def-0000000000e1
+        source:
+          type: string
+          example: github
+        eventType:
+          type: string
+          example: ci_failure
+        deliveryId:
+          type: string
+          description: Sender-supplied delivery id (e.g. X-GitHub-Delivery), used for dedup.
+        receivedAt:
+          type: string
+          format: date-time
+        publishedAt:
+          type: string
+          format: date-time
+          description: Set once the NATS publish succeeded; absent while the publish is pending.
+        rawPayload:
+          type: object
+          description: The original webhook payload, preserved verbatim.
+          additionalProperties: true
+
+    ExternalEventListResponse:
+      type: object
+      description: Page of external events, newest first.
+      required: [items, total, page, size]
+      additionalProperties: false
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/ExternalEventSummary"
+        total:
+          type: integer
+          minimum: 0
+          example: 1
+        page:
+          type: integer
+          minimum: 0
+          example: 0
+        size:
+          type: integer
+          minimum: 1
+          maximum: 100
+          example: 50
+
+    WebhookSource:
+      type: object
+      description: A registered webhook source; the secret is never included.
+      required: [slug, createdAt]
+      additionalProperties: false
+      properties:
+        slug:
+          type: string
+          pattern: "^[a-z0-9][a-z0-9_-]{0,63}$"
+          description: Path segment senders deliver to (`POST /webhooks/{slug}`).
+          example: github
+        createdAt:
+          type: string
+          format: date-time
+        secretRotatedAt:
+          type: string
+          format: date-time
+          description: Set once the secret has been rotated after creation.
+        lastEventAt:
+          type: string
+          format: date-time
+          description: Receipt time of the newest external event for this slug; absent if none arrived yet.
+
+    WebhookSourceListResponse:
+      type: object
+      description: Registered webhook sources, oldest first.
+      required: [items]
+      additionalProperties: false
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/WebhookSource"
+
+    CreateWebhookSourceRequest:
+      type: object
+      required: [slug]
+      additionalProperties: false
+      properties:
+        slug:
+          type: string
+          pattern: "^[a-z0-9][a-z0-9_-]{0,63}$"
+          description: Lowercase slug identifying the sending system; becomes the `/webhooks/{slug}` path segment.
+          example: grafana
+
+    WebhookSourceWithSecret:
+      type: object
+      description: >-
+        Create/rotate response carrying the generated HMAC secret. The secret is not retrievable
+        afterwards; the server keeps it only for signature verification.
+      required: [slug, secret, createdAt]
+      additionalProperties: false
+      properties:
+        slug:
+          type: string
+          example: grafana
+        secret:
+          type: string
+          description: Hex-encoded 256-bit secret for HMAC-SHA256 signing (`X-Hub-Signature-256`).
+          example: 6bc1bee22e409f96e93d7e117393172aad4c8f10b0e6371b2b647a2f45c7c463
+        createdAt:
+          type: string
+          format: date-time
+        secretRotatedAt:
+          type: string
+          format: date-time
+          description: Set when this response comes from a rotation.

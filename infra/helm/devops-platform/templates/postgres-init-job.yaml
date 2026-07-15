@@ -1,0 +1,55 @@
+# Creates any per-service databases missing from the running Postgres before
+# new pods roll out. The postgres-init ConfigMap only executes on an empty
+# data directory, so on an existing PVC a database added to init-dbs.sh would
+# otherwise never be created. Pre-upgrade only: fresh installs are covered by
+# the initdb ConfigMap, and on upgrades the previous release's Postgres is
+# already running to serve this job.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: postgres-init-dbs
+  labels:
+    app.kubernetes.io/name: postgres-init-dbs
+  annotations:
+    "helm.sh/hook": pre-upgrade
+    # Keep the finished job around for log inspection; the next upgrade
+    # replaces it.
+    "helm.sh/hook-delete-policy": before-hook-creation
+spec:
+  backoffLimit: 6
+  activeDeadlineSeconds: 300
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: postgres-init-dbs
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: init-dbs
+          image: {{ .Values.postgres.image }}
+          imagePullPolicy: IfNotPresent
+          # The script is inlined: at pre-upgrade time the postgres-init
+          # ConfigMap still holds the previous release's version, so mounting
+          # it here would run the old database list.
+          command:
+            - /bin/bash
+            - -c
+            - |
+              until pg_isready -q; do sleep 2; done
+{{ .Files.Get "files/init-dbs.sh" | indent 14 }}
+          env:
+            - name: PGHOST
+              value: postgres
+            - name: PGPORT
+              value: {{ .Values.postgres.port | quote }}
+            - name: POSTGRES_USER
+              value: {{ .Values.postgres.user | quote }}
+            - name: POSTGRES_DB
+              value: {{ .Values.postgres.database | quote }}
+            - name: PGPASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "devops-platform.postgresSecretName" . }}
+                  key: password
+          resources:
+            {{- toYaml .Values.postgres.resources | nindent 12 }}

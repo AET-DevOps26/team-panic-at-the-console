@@ -54,6 +54,9 @@ jobs:
           - service: user-service
             build_context: ./services
             build_dockerfile: ./services/user-service/Dockerfile
+          - service: webhook-service
+            build_context: ./services
+            build_dockerfile: ./services/webhook-service/Dockerfile
           - service: genai-service
             build_context: ./services
             build_dockerfile: ./services/genai-service/Dockerfile

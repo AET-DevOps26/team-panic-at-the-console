@@ -35,6 +35,13 @@ secrets:
   jwtSecret: ""
   # Registration invitation code. Empty => falls back to auth.inviteCode.
   inviteCode: ""
+  # Optional env fallback HMAC secret for an unregistered `github` webhook
+  # source (X-Hub-Signature-256). Sources are normally registered self-service
+  # on the frontend Sources page (secret stored in the webhooks DB), which
+  # takes precedence over this value for the same slug. With
+  # WEBHOOK_REQUIRE_SIGNATURE=true, slugs without either secret are rejected
+  # (the safe default for a public endpoint).
+  webhookGithubSecret: ""
 
 auth:
   # Dev default for the session JWT secret shared by gateway and user-service
@@ -86,6 +93,9 @@ ingress:
     swagger: /swagger
     grafana: /grafana
     prometheus: /prometheus
+    # Machine-facing webhook ingest (HMAC-authenticated), routed directly to
+    # webhook-service; only /webhooks/* is exposed, not its read/audit API.
+    webhooks: /webhooks
 
 # Observability mirrors team-password123's namespace-local setup: plain
 # Prometheus + Grafana resources, no kube-prometheus-stack, no CRDs, no
@@ -166,6 +176,8 @@ services:
         value: "http://user-service:8084"
       - name: GATEWAY_NOTIFICATION_SERVICE_URL
         value: "http://notification-service:8085"
+      - name: GATEWAY_WEBHOOK_SERVICE_URL
+        value: "http://webhook-service:8086"
       # Session JWT secret shared with user-service; resolved from the
       # auth-credentials secret in deployment.yaml.
       - name: AUTH_JWT_SECRET
@@ -252,8 +264,22 @@ services:
     enabled: true
     inheritGlobalEnv: true
     port: 8086
+    probes: true
+    healthPath: /health
     image:
       repository: webhook-service
+    env:
+      - name: SPRING_DATASOURCE_URL
+        value: "jdbc:postgresql://postgres:5432/webhooks"
+      - name: SPRING_DATASOURCE_USERNAME
+        value: devops
+      - name: SPRING_DATASOURCE_PASSWORD
+      # /webhooks is exposed on the public ingress, so unsigned sources are
+      # rejected. Resolved from the webhook-credentials secret in
+      # deployment.yaml; set secrets.webhookGithubSecret via SOPS values.
+      - name: WEBHOOK_SECRETS_GITHUB
+      - name: WEBHOOK_REQUIRE_SIGNATURE
+        value: "true"
 
   genai-service:
     enabled: true

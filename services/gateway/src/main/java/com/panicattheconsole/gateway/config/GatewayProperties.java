@@ -21,6 +21,9 @@ public class GatewayProperties {
     @NotBlank
     private String notificationServiceUrl;
 
+    @NotBlank
+    private String webhookServiceUrl;
+
     public String getIncidentServiceUrl() {
         return incidentServiceUrl;
     }
@@ -51,5 +54,13 @@ public class GatewayProperties {
 
     public void setNotificationServiceUrl(String notificationServiceUrl) {
         this.notificationServiceUrl = notificationServiceUrl;
+    }
+
+    public String getWebhookServiceUrl() {
+        return webhookServiceUrl;
+    }
+
+    public void setWebhookServiceUrl(String webhookServiceUrl) {
+        this.webhookServiceUrl = webhookServiceUrl;
     }
 }

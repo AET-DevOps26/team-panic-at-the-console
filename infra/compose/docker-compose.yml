@@ -26,6 +26,24 @@ services:
       retries: 10
     restart: unless-stopped
 
+  # Re-runs init-dbs.sh on every `up`: postgres only executes
+  # /docker-entrypoint-initdb.d on a fresh volume, so this one-shot is what
+  # creates databases added to the script after the volume was initialized.
+  postgres-init:
+    image: postgres:16-alpine
+    entrypoint: ["/bin/bash", "/init-dbs.sh"]
+    environment:
+      PGHOST: postgres
+      PGPASSWORD: ${POSTGRES_PASSWORD:-devops}
+      POSTGRES_USER: ${POSTGRES_USER:-devops}
+      POSTGRES_DB: postgres
+    volumes:
+      - ./infra/helm/devops-platform/files/init-dbs.sh:/init-dbs.sh:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: on-failure
+
   nats:
     image: nats:2.10-alpine
     command: ["--jetstream", "--http_port", "8222"]
@@ -76,6 +94,9 @@ services:
         condition: service_healthy
       swagger-ui:
         condition: service_started
+      # nginx resolves proxy_pass hostnames at startup; webhook-service must exist.
+      webhook-service:
+        condition: service_started
     restart: unless-stopped
 
   frontend:
@@ -105,6 +126,7 @@ services:
       GATEWAY_EVENT_SERVICE_URL: http://event-service:8082
       GATEWAY_USER_SERVICE_URL: http://user-service:8084
       GATEWAY_NOTIFICATION_SERVICE_URL: http://notification-service:8085
+      GATEWAY_WEBHOOK_SERVICE_URL: http://webhook-service:8086
       NATS_URL: ${NATS_URL:-nats://nats:4222}
       # Session JWT secret shared with user-service (ADR 0007).
       AUTH_JWT_SECRET: ${JWT_SECRET:-local-dev-only-jwt-secret-0123456789abcdef}
@@ -138,8 +160,8 @@ services:
       <<: *healthcheck-spring
       test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://127.0.0.1:8081/health || exit 1"]
     depends_on:
-      postgres:
-        condition: service_healthy
+      postgres-init:
+        condition: service_completed_successfully
       nats:
         condition: service_started
     restart: unless-stopped
@@ -160,8 +182,8 @@ services:
       <<: *healthcheck-spring
       test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://127.0.0.1:8082/health || exit 1"]
     depends_on:
-      postgres:
-        condition: service_healthy
+      postgres-init:
+        condition: service_completed_successfully
       nats:
         condition: service_started
     restart: unless-stopped
@@ -179,8 +201,8 @@ services:
     ports:
       - "8083:8083"
     depends_on:
-      postgres:
-        condition: service_healthy
+      postgres-init:
+        condition: service_completed_successfully
       nats:
         condition: service_started
     restart: unless-stopped
@@ -204,8 +226,8 @@ services:
       <<: *healthcheck-spring
       test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://127.0.0.1:8084/health || exit 1"]
     depends_on:
-      postgres:
-        condition: service_healthy
+      postgres-init:
+        condition: service_completed_successfully
     restart: unless-stopped
 
   notification-service:
@@ -224,8 +246,8 @@ services:
       <<: *healthcheck-spring
       test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://127.0.0.1:8085/health || exit 1"]
     depends_on:
-      postgres:
-        condition: service_healthy
+      postgres-init:
+        condition: service_completed_successfully
       nats:
         condition: service_started
     restart: unless-stopped
@@ -233,13 +255,23 @@ services:
   webhook-service:
     image: ghcr.io/aet-devops26/team-panic-at-the-console/webhook-service:${IMAGE_TAG:-latest}
     build:
-      context: ./services/webhook-service
-      dockerfile: Dockerfile
+      context: ./services
+      dockerfile: webhook-service/Dockerfile
     environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/webhooks
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-devops}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-devops}
       NATS_URL: ${NATS_URL:-nats://nats:4222}
+      # Optional per-source HMAC secrets: WEBHOOK_SECRETS_<SOURCE>=<secret>.
+      WEBHOOK_REQUIRE_SIGNATURE: ${WEBHOOK_REQUIRE_SIGNATURE:-false}
     ports:
       - "8086:8086"
+    healthcheck:
+      <<: *healthcheck-spring
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://127.0.0.1:8086/health || exit 1"]
     depends_on:
+      postgres-init:
+        condition: service_completed_successfully
       nats:
         condition: service_started
     restart: unless-stopped

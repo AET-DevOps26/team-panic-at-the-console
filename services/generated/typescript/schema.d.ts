@@ -447,6 +447,121 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/webhooks/{source}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Ingest a webhook from an external system
+         * @description Persists the payload verbatim as an External Event (ADR 0008) and publishes `external.event.received` to NATS for the rule engine. Sources with a configured secret must sign the raw request body (`X-Hub-Signature-256`, GitHub convention); with `WEBHOOK_REQUIRE_SIGNATURE=true` sources without a secret are rejected. Redeliveries carrying an already-seen delivery id are acknowledged with the original event id (`duplicate: true`) and not re-published.
+         */
+        post: operations["receiveWebhook"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/webhook-sources": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List registered webhook sources */
+        get: operations["listWebhookSources"];
+        put?: never;
+        /**
+         * Register a webhook source and generate its HMAC secret
+         * @description The generated secret is returned only in this response; configure it on the sending system (e.g. as the GitHub webhook secret). Deliveries for a registered source must be signed with it (`X-Hub-Signature-256`).
+         */
+        post: operations["createWebhookSource"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/webhook-sources/{source}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Delete a registered source
+         * @description Deliveries for the slug are afterwards treated like any unregistered source (env fallback secret or the require-signature policy). Already-ingested external events are kept: the audit trail is immutable (ADR 0008).
+         */
+        delete: operations["deleteWebhookSource"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/webhook-sources/{source}/rotate-secret": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Replace the source's secret with a newly generated one
+         * @description The old secret stops working immediately; update the sending system with the returned secret, which is shown only in this response.
+         */
+        post: operations["rotateWebhookSourceSecret"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/external-events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List persisted external events, newest first */
+        get: operations["listExternalEvents"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/external-events/{externalEventId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Fetch a single external event including its raw payload */
+        get: operations["getExternalEvent"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -811,6 +926,133 @@ export interface components {
              */
             unreadCount: number;
         };
+        /** @description Acknowledgement returned by the webhook ingest endpoint. */
+        WebhookReceipt: {
+            /**
+             * Format: uuid
+             * @description External Event id; the `sourceId` on the resulting NATS event.
+             * @example 018e2c5f-1234-7abc-8def-0000000000e1
+             */
+            id: string;
+            /** @example github */
+            source: string;
+            /**
+             * @description Normalised event type Rules are evaluated against.
+             * @example ci_failure
+             */
+            eventType: string;
+            /** Format: date-time */
+            receivedAt: string;
+            /**
+             * @description True when a redelivery matched an already-stored event (not re-published).
+             * @example false
+             */
+            duplicate: boolean;
+        };
+        /** @description External event list entry (without the raw payload). */
+        ExternalEventSummary: {
+            /**
+             * Format: uuid
+             * @example 018e2c5f-1234-7abc-8def-0000000000e1
+             */
+            id: string;
+            /** @example github */
+            source: string;
+            /** @example ci_failure */
+            eventType: string;
+            /** @description Sender-supplied delivery id (e.g. X-GitHub-Delivery), used for dedup. */
+            deliveryId?: string;
+            /** Format: date-time */
+            receivedAt: string;
+            /**
+             * Format: date-time
+             * @description Set once the NATS publish succeeded; absent while the publish is pending.
+             */
+            publishedAt?: string;
+        };
+        /** @description Single external event including the verbatim raw payload. */
+        ExternalEventDetail: {
+            /**
+             * Format: uuid
+             * @example 018e2c5f-1234-7abc-8def-0000000000e1
+             */
+            id: string;
+            /** @example github */
+            source: string;
+            /** @example ci_failure */
+            eventType: string;
+            /** @description Sender-supplied delivery id (e.g. X-GitHub-Delivery), used for dedup. */
+            deliveryId?: string;
+            /** Format: date-time */
+            receivedAt: string;
+            /**
+             * Format: date-time
+             * @description Set once the NATS publish succeeded; absent while the publish is pending.
+             */
+            publishedAt?: string;
+            /** @description The original webhook payload, preserved verbatim. */
+            rawPayload: {
+                [key: string]: unknown;
+            };
+        };
+        /** @description Page of external events, newest first. */
+        ExternalEventListResponse: {
+            items: components["schemas"]["ExternalEventSummary"][];
+            /** @example 1 */
+            total: number;
+            /** @example 0 */
+            page: number;
+            /** @example 50 */
+            size: number;
+        };
+        /** @description A registered webhook source; the secret is never included. */
+        WebhookSource: {
+            /**
+             * @description Path segment senders deliver to (`POST /webhooks/{slug}`).
+             * @example github
+             */
+            slug: string;
+            /** Format: date-time */
+            createdAt: string;
+            /**
+             * Format: date-time
+             * @description Set once the secret has been rotated after creation.
+             */
+            secretRotatedAt?: string;
+            /**
+             * Format: date-time
+             * @description Receipt time of the newest external event for this slug; absent if none arrived yet.
+             */
+            lastEventAt?: string;
+        };
+        /** @description Registered webhook sources, oldest first. */
+        WebhookSourceListResponse: {
+            items: components["schemas"]["WebhookSource"][];
+        };
+        CreateWebhookSourceRequest: {
+            /**
+             * @description Lowercase slug identifying the sending system; becomes the `/webhooks/{slug}` path segment.
+             * @example grafana
+             */
+            slug: string;
+        };
+        /** @description Create/rotate response carrying the generated HMAC secret. The secret is not retrievable afterwards; the server keeps it only for signature verification. */
+        WebhookSourceWithSecret: {
+            /** @example grafana */
+            slug: string;
+            /**
+             * @description Hex-encoded 256-bit secret for HMAC-SHA256 signing (`X-Hub-Signature-256`).
+             * @example 6bc1bee22e409f96e93d7e117393172aad4c8f10b0e6371b2b647a2f45c7c463
+             */
+            secret: string;
+            /** Format: date-time */
+            createdAt: string;
+            /**
+             * Format: date-time
+             * @description Set when this response comes from a rotation.
+             */
+            secretRotatedAt?: string;
+        };
     };
     responses: {
         /** @description Regeneration task accepted for async processing */
@@ -848,6 +1090,10 @@ export interface components {
         IncidentIdParam: string;
         /** @description UUID of the target notification. */
         NotificationIdParam: string;
+        /** @description Operator-chosen slug identifying the sending system. */
+        WebhookSourceParam: string;
+        /** @description UUID of the external event (the `sourceId` carried on NATS events). */
+        ExternalEventIdParam: string;
     };
     requestBodies: never;
     headers: never;
@@ -1699,6 +1945,284 @@ export interface operations {
         responses: {
             /** @description Notifications marked as read */
             204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    receiveWebhook: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description `sha256=<hex HMAC-SHA256 of the raw body>`, keyed with the secret configured for the source. Required when the source has a secret. */
+                "X-Hub-Signature-256"?: string;
+                /** @description GitHub event name; used to derive the normalised eventType. */
+                "X-GitHub-Event"?: string;
+                /** @description GitHub delivery id; used for redelivery dedup. */
+                "X-GitHub-Delivery"?: string;
+                /** @description Explicit normalised event type for non-GitHub senders. */
+                "X-Event-Type"?: string;
+                /** @description Delivery id for non-GitHub senders; used for redelivery dedup. */
+                "X-Delivery-Id"?: string;
+            };
+            path: {
+                /** @description Operator-chosen slug identifying the sending system. */
+                source: components["parameters"]["WebhookSourceParam"];
+            };
+            cookie?: never;
+        };
+        /** @description Raw webhook payload; persisted verbatim. */
+        requestBody: {
+            content: {
+                "application/json": {
+                    [key: string]: unknown;
+                };
+            };
+        };
+        responses: {
+            /** @description Event ingested (or redelivery acknowledged) */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WebhookReceipt"];
+                };
+            };
+            /** @description Invalid source slug or non-object JSON body */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Missing or invalid signature */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    listWebhookSources: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Registered sources, oldest first */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WebhookSourceListResponse"];
+                };
+            };
+            /** @description Not authenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    createWebhookSource: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateWebhookSourceRequest"];
+            };
+        };
+        responses: {
+            /** @description Source registered; the response carries the only copy of the secret */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WebhookSourceWithSecret"];
+                };
+            };
+            /** @description Invalid slug */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not authenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description A source with this slug is already registered */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    deleteWebhookSource: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Operator-chosen slug identifying the sending system. */
+                source: components["parameters"]["WebhookSourceParam"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Source deleted; its external events remain */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not authenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No source is registered under this slug */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    rotateWebhookSourceSecret: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Operator-chosen slug identifying the sending system. */
+                source: components["parameters"]["WebhookSourceParam"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Secret rotated; the response carries the only copy of the new secret */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WebhookSourceWithSecret"];
+                };
+            };
+            /** @description Not authenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No source is registered under this slug */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    listExternalEvents: {
+        parameters: {
+            query?: {
+                /** @description Filter by source slug. */
+                source?: string;
+                /** @description Filter by normalised event type. */
+                eventType?: string;
+                page?: components["parameters"]["PageParam"];
+                size?: components["parameters"]["SizeParam"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Page of external events */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExternalEventListResponse"];
+                };
+            };
+            /** @description Not authenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getExternalEvent: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description UUID of the external event (the `sourceId` carried on NATS events). */
+                externalEventId: components["parameters"]["ExternalEventIdParam"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExternalEventDetail"];
+                };
+            };
+            /** @description Not authenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No external event exists with the given ID */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
