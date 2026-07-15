@@ -8,29 +8,16 @@ metadata:
     app.kubernetes.io/name: {{ $name }}
 spec:
   replicas: 1
-  # Keep few old ReplicaSets; repeated deploys otherwise pile up ~10 stale RS each.
-  revisionHistoryLimit: 2
   {{- with $svc.progressDeadlineSeconds }}
   progressDeadlineSeconds: {{ . }}
   {{- end }}
   {{- if $svc.strategy }}
+  # Keep few old ReplicaSets; repeated deploys otherwise pile up ~10 stale RS each.
+  revisionHistoryLimit: 2
   strategy:
     {{- toYaml $svc.strategy | nindent 4 }}
-  {{- else if $svc.persistence }}
-  # RWO volumes cannot mount on two pods during a rolling update.
-  # rollingUpdate: null clears the field when switching from RollingUpdate (Helm merge).
-  strategy:
-    type: Recreate
-    rollingUpdate: null
   {{- else }}
-  # Terminate the old pod before creating the new one. The default surge (+1 pod)
-  # would need spare limits headroom the project ResourceQuota does not have, so a
-  # rolling update would deadlock. Trade-off: a brief per-service gap on each deploy.
-  strategy:
-    type: RollingUpdate
-    rollingUpdate:
-      maxSurge: 0
-      maxUnavailable: 1
+  {{- include "devops-platform.rolloutStrategy" (dict "recreate" $svc.persistence) | nindent 2 }}
   {{- end }}
   selector:
     matchLabels:

@@ -164,6 +164,7 @@ metadata:
     app.kubernetes.io/name: prometheus
 spec:
   replicas: 1
+  {{- include "devops-platform.rolloutStrategy" (dict "recreate" .Values.monitoring.prometheus.persistence.enabled) | nindent 2 }}
   selector:
     matchLabels:
       app.kubernetes.io/name: prometheus
