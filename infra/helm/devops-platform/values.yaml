@@ -97,6 +97,9 @@ monitoring:
     scrapeInterval: 15s
     retention: 7d
     persistence:
+      # Off by default: the TSDB is an emptyDir, so history resets on each pod
+      # restart and `retention` above is only an upper bound. Enabling this also
+      # switches the rollout to Recreate (an RWO volume cannot mount on two pods).
       enabled: false
       storageClass: ""
       size: 2Gi

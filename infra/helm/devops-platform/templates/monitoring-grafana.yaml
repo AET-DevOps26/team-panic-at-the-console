@@ -58,6 +58,8 @@ metadata:
     app.kubernetes.io/name: grafana
 spec:
   replicas: 1
+  {{- /* Config comes from ConfigMaps only (no PVC), so a zero-surge rolling update is enough. */}}
+  {{- include "devops-platform.rolloutStrategy" (dict "recreate" false) | nindent 2 }}
   selector:
     matchLabels:
       app.kubernetes.io/name: grafana

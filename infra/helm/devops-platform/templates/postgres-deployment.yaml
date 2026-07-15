@@ -6,9 +6,7 @@ metadata:
     app.kubernetes.io/name: postgres
 spec:
   replicas: 1
-  strategy:
-    type: Recreate
-    rollingUpdate: null
+  {{- include "devops-platform.rolloutStrategy" (dict "recreate" true) | nindent 2 }}
   selector:
     matchLabels:
       app.kubernetes.io/name: postgres
