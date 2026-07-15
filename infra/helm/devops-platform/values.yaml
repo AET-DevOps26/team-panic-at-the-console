@@ -6,6 +6,16 @@ global:
   namespace: default
   # Shared Ollama model tag: genai-service, init pull, and readiness probe.
   ollamaModel: &ollamaModel qwen2.5:3b
+  # Fallback resources for any service without its own `resources` block.
+  # The stud cluster project quota rejects pods that omit cpu/memory limits and
+  # caps the namespace at 4 cpu / 6Gi of limits, so keep the totals under that.
+  defaultResources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 250m
+      memory: 512Mi
   env:
     - name: NATS_URL
       value: nats://nats:4222
@@ -121,6 +131,14 @@ services:
     port: 3000
     image:
       repository: frontend
+    # Static nginx; a fraction of the default is plenty and saves quota budget.
+    resources:
+      requests:
+        cpu: 25m
+        memory: 32Mi
+      limits:
+        cpu: 100m
+        memory: 128Mi
     # Sidebar footer link to the namespace-local Grafana. Prometheus is also
     # exposed under /prometheus for demonstration.
     env:
@@ -249,11 +267,12 @@ services:
     image:
       repository: genai-service
     env:
-      # Cluster is on the TUM network, so Logos is reachable; Ollama stays as fallback.
+      # In-cluster Ollama is disabled under the 6Gi project quota, so Logos is the
+      # only provider here and the Ollama fallback is off (nothing to fall back to).
       - name: LLM_PROVIDER
         value: logos
       - name: LLM_FALLBACK_ENABLED
-        value: "true"
+        value: "false"
       - name: OLLAMA_URL
         value: http://ollama:11434
       - name: OLLAMA_MODEL
@@ -276,6 +295,13 @@ services:
     image:
       override: swaggerapi/swagger-ui:v5.32.6
     openapiConfigMap: true
+    resources:
+      requests:
+        cpu: 25m
+        memory: 32Mi
+      limits:
+        cpu: 100m
+        memory: 128Mi
     env:
       - name: SWAGGER_JSON
         value: /openapi.yaml
@@ -283,7 +309,10 @@ services:
         value: /swagger
 
   ollama:
-    enabled: true
+    # Disabled on the stud cluster: the project quota (6Gi) cannot fit a 3B model
+    # (~4Gi) alongside the rest of the stack. genai-service uses TUM Logos instead.
+    # Re-enable only where the namespace has enough quota headroom.
+    enabled: false
     port: 11434
     # Model pull can exceed the default 10m Deployment progress deadline on first deploy.
     progressDeadlineSeconds: 1800
@@ -298,8 +327,10 @@ services:
         value: *ollamaModel
     resources:
       requests:
+        cpu: 250m
         memory: 3Gi
       limits:
+        cpu: "2"
         memory: 4Gi
     persistence:
       size: 10Gi
