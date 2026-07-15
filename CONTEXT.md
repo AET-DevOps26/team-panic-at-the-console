@@ -95,7 +95,7 @@ An enumeration of what the `PromptBuilder` is asked to produce: `SUMMARY`, `SEVE
 - Backend services: Java Spring Boot (latest)
 - GenAI service: Python (FastAPI + nats.py + ollama client)
 
-**LLM provider**: Ollama (`qwen2.5:3b`), both local dev (docker-compose) and production (K8s). Ollama runs as a separate deployment. genai-service calls `http://ollama:11434`. No cloud LLM dependency.
+**LLM provider**: no paid provider (see ADR-0003). Local dev (docker-compose) defaults to Ollama (`qwen2.5:3b`) as a separate container; genai-service calls `http://ollama:11434`. In K8s the in-cluster Ollama deployment is disabled (`services.ollama.enabled: false`): the project quota cannot fit the model, so genai-service uses TUM Logos (`openai/gpt-oss-120b`) with the Ollama fallback off. Logos is only reachable from the TUM network (eduVPN).
 
 **Comments**: Immutable. No edit or delete. Consistent with the append-only Event Log.
 
@@ -103,14 +103,18 @@ An enumeration of what the `PromptBuilder` is asked to produce: `SUMMARY`, `SEVE
 
 **Helm chart structure**: flat chart (one chart, all services as templates). No subcharts.
 
-**K8s resource defaults** (tune to cluster once node specs known):
+**K8s resources**: the stud cluster's project quota caps the namespace at **4 cpu / 6Gi of limits** and rejects any pod that declares none, so every workload sets both. Anything without its own block inherits `global.defaultResources`.
 | Workload | Memory req/limit | CPU req/limit |
 |---|---|---|
-| Ollama | 4Gi / 6Gi | 2 / 4 |
-| Spring Boot services (×7) | 256Mi / 512Mi | 100m / 500m |
-| genai-service (Python) | 128Mi / 256Mi | 50m / 200m |
+| Spring Boot services (×7) + genai-service | 256Mi / 512Mi | 100m / 250m |
+| frontend, swagger-ui | 32Mi / 128Mi | 25m / 100m |
 | Postgres | 256Mi / 512Mi | 100m / 500m |
 | NATS | 64Mi / 128Mi | 50m / 200m |
+| Prometheus | 256Mi / 512Mi | 50m / 300m |
+| Grafana | 128Mi / 256Mi | 50m / 250m |
+| Ollama (disabled in K8s, see ADR-0003) | 3Gi / 4Gi | 250m / 2 |
+
+The enabled workloads total ~5.6Gi / 3.45 cpu of limits, which leaves no room for a surge pod. Every Deployment therefore rolls without one (`maxSurge: 0`, or `Recreate` for RWO volumes and stateful singletons); the shared `devops-platform.rolloutStrategy` helper renders this. The Deployment default of `maxSurge: 25%` rounds up to +1 pod at `replicas: 1`, and that pod's limits would breach the quota, so the rollout would deadlock instead of finishing. The trade-off is a brief gap per workload on each deploy.
 
 **Alerting**: the self-hosted Prometheus evaluates alert rules directly from its config (no Alertmanager, no external routing); alerts surface in the Prometheus and Grafana UIs. In `operatorCrds` compatibility mode the same rules ship as a `PrometheusRule` CR for the shared cluster operator instead. Full alert set:
 | Alert | Condition | Severity |
