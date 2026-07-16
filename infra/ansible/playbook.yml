@@ -102,6 +102,9 @@
         src: "{{ local_repo_root }}/infra/compose/nginx.conf"
         dest: "{{ app_dir }}/infra/compose/nginx.conf"
         mode: "0644"
+      # The config is a bind mount: compose does not recreate the edge
+      # container when the file changes, so nginx must be restarted to load it.
+      notify: Restart edge proxy
 
     - name: Copy init-dbs.sh
       ansible.builtin.copy:
@@ -165,3 +168,13 @@
     - name: Print container status
       ansible.builtin.debug:
         msg: "{{ ps_result.stdout_lines }}"
+
+  # Handlers run after the deploy tasks, so the stack is already up.
+  handlers:
+    - name: Restart edge proxy
+      ansible.builtin.shell: |
+        docker compose \
+          --project-directory {{ app_dir }} \
+          -f {{ compose_file }} \
+          --env-file {{ app_dir }}/.env \
+          restart edge

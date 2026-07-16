@@ -162,11 +162,13 @@ services:
       limits:
         cpu: 100m
         memory: 128Mi
-    # Sidebar footer link to the namespace-local Grafana. Prometheus is also
-    # exposed under /prometheus for demonstration.
+    # Sidebar footer links to the namespace-local Grafana and Prometheus,
+    # both routed via the ingress.
     env:
       - name: GRAFANA_URL
         value: /grafana
+      - name: PROMETHEUS_URL
+        value: /prometheus
 
   gateway:
     enabled: true
