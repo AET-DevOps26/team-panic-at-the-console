@@ -203,7 +203,7 @@ export SOPS_AGE_KEY_FILE=~/.config/sops/age/keys.txt
 **Option B (new key):** Generate a key with `pixi run -e deploy age-keygen -o ~/.config/sops/age/keys.txt`, send the `# public key: age1...` line to someone who can already decrypt. They add your public key to `.sops.yaml` and re-encrypt:
 
 ```bash
-sops updatekeys infra/helm/secrets/values.prod.enc.yaml
+pixi run -e deploy sops updatekeys infra/helm/secrets/values.prod.enc.yaml
 ```
 
 Then commit the updated `.sops.yaml` and `values.prod.enc.yaml`.
@@ -375,7 +375,7 @@ Spin up a local HTTP mock server driven by `api/openapi.yaml` using [Prism](http
 pixi run mock-api
 ```
 
-Prism reads the spec and serves auto-generated responses on `http://localhost:4010`. The spec declares `servers: /api/v1`, so endpoints are available under `http://localhost:4010/api/v1` (e.g. `http://localhost:4010/api/v1/health`). No services need to be running — useful for frontend development and API exploration before backends exist.
+Prism reads the spec and serves auto-generated responses on `http://localhost:4010` (for example, `http://localhost:4010/health`). No services need to be running — useful for frontend development and API exploration before backends exist.
 
 ## Student Responsibilities
 
