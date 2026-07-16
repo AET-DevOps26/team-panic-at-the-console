@@ -4,6 +4,8 @@ Lightweight incident management system - detect, track, and resolve incidents wi
 
 > TUM DevOps Project - Spring 2026 · Team Panic! At the Console
 
+<img width="1445" height="832" alt="Incident management dashboard" src="https://github.com/user-attachments/assets/5bd97923-fe16-438e-aded-9ff14bdd7a10" />
+
 ## Quick Start
 
 ```bash
@@ -13,14 +15,6 @@ pixi run pre-commit-install
 
 # run the same checks as CI
 pixi run lint
-```
-
-Equivalent Pixi tasks:
-
-```bash
-pixi run compose-up
-pixi run compose-down
-pixi run compose-validate
 ```
 
 ## Installation
@@ -36,12 +30,6 @@ Install Pixi on macOS:
 brew install pixi
 ```
 
-Use a VS Code Dev Container (optional):
-
-```bash
-# in VS Code: Dev Containers: Reopen in Container
-```
-
 Install project tooling and Git hooks:
 
 ```bash
@@ -53,14 +41,15 @@ pixi run pre-commit-install
 
 ```text
 .
-├── api/                        # OpenAPI specs
+├── api/                        # OpenAPI contract and generated-client tooling
+│   ├── openapi.yaml
 │   └── specs/
 ├── services/
 │   ├── frontend/               # Web dashboard (Client subsystem)
 │   ├── gateway/                # API gateway - single entry point
-│   ├── incident-service/       # Core incident CRUD + lifecycle
+│   ├── incident-service/       # Core incident CRUD, lifecycle, and external-event handling
 │   ├── event-service/          # Append-only event log / timeline
-│   ├── rule-engine/            # Evaluates external signals → incident decisions
+│   ├── rule-engine/            # Legacy placeholder container
 │   ├── user-service/           # Auth + role management
 │   ├── notification-service/   # Notifies users on incident events
 │   ├── webhook-service/        # Receives CI/CD webhook events
@@ -70,8 +59,9 @@ pixi run pre-commit-install
 │   └── compose/                # Local docker-compose stack
 ├── docs/
 │   ├── schema.md               # Persistence schema snapshot
+│   ├── deliverables/           # UML diagrams and project deliverables
 │   └── submissions/
-├── tests/
+├── tests/                      # Contract and end-to-end tests
 └── scripts/
 ```
 
@@ -79,13 +69,19 @@ pixi run pre-commit-install
 
 See [.github/workflows/](.github/workflows/).
 
-| Workflow                          | Trigger                                               | Uses SOPS?                               |
-| --------------------------------- | ----------------------------------------------------- | ---------------------------------------- |
-| `ci.yml` / `compose-validate.yml` | PR, merge queue                                       | No (lint/compose only)                   |
-| `container-ci.yml`                | PR, merge queue                                       | No (builds only, no push)                |
-| `release.yml`                     | GitHub Release                                        | Orchestrates build + push + both deploys |
-| `deploy-k8s.yml`                  | Called by `release.yml`, manual (`workflow_dispatch`) | Yes: deploy to Kubernetes                |
-| `deploy-azure-vm.yml`             | Called by `release.yml`, manual (`workflow_dispatch`) | No (uses OIDC + Ansible)                 |
+| Workflow | Trigger | Purpose |
+| --- | --- | --- |
+| `ci.yml` | PR, merge queue | Lint and lockfile consistency |
+| `java-tests.yml` | Push, PR, merge queue | Java service unit tests |
+| `frontend-tests.yml` | Push, PR, merge queue | Frontend tests |
+| `python-tests.yml` | Push, PR, merge queue | GenAI type check and tests |
+| `openapi-lint.yml` | Push, PR, merge queue | OpenAPI lint and code-generation validation |
+| `compose-validate.yml` | Push, PR, merge queue | Compose validation and full-stack smoke test |
+| `container-ci.yml` | PR, merge queue | Container build validation without pushing images |
+| `deploy-on-merge.yml` | Push to `main` | Build, push, and deploy to Kubernetes |
+| `release.yml` | GitHub Release | Build, push, and deploy to Kubernetes and Azure |
+| `deploy-k8s.yml` | Called by `release.yml`, manual dispatch | Kubernetes deployment; decrypts SOPS values |
+| `deploy-azure-vm.yml` | Called by `release.yml`, manual dispatch | Azure deployment via OIDC and Ansible |
 
 **PR CI does not decrypt SOPS or deploy to the cluster** (no cluster credentials on PRs). Deploy workflows gate on the `kubernetes` and `azure` GitHub Environments; credentials live in repository Actions secrets (below).
 
@@ -221,10 +217,12 @@ Optional: `VALUES_FILE=path/to/other.enc.yaml` when running `helm-deploy`.
 | `/` | Frontend |
 | `/api` | Gateway (`/api/v1/...`) |
 | `/swagger` | Swagger UI (OpenAPI) |
+| `/grafana` | Grafana (dashboards) |
+| `/prometheus` | Prometheus UI |
 
-Ingress uses cert-manager (`letsencrypt-prod`) and TLS secret `devops-platform-tls`. Metrics are not self-hosted on the cluster: the release ships a PodMonitor, PrometheusRule, and a Grafana dashboard ConfigMap that the shared cluster prometheus-operator and Grafana consume.
+Ingress uses cert-manager (`letsencrypt-prod`) and TLS secret `devops-platform-tls`. Observability is self-hosted in the namespace: the chart deploys its own Prometheus and Grafana (plain Deployments, no operator or CRDs), provisioned with the exported dashboards and alert rules, and exposes them under `/grafana` and `/prometheus`.
 
-**Local compose** (via `docker compose up` or `pixi run compose-up`):
+**Local compose** (via `pixi run compose-up`):
 
 | URL | Service |
 | --- | ------- |
@@ -239,7 +237,7 @@ Grafana talks to Prometheus at `http://prometheus:9090` inside Docker; use `loca
 
 Populate Grafana panels after boot: `pixi run compose-smoke-genai-metrics`.
 
-**On Kubernetes**, the chart does not self-host Grafana or Prometheus. It ships namespaced CRs (PodMonitor, PrometheusRule) and a Grafana dashboard ConfigMap that the shared cluster prometheus-operator scrapes and the shared Grafana renders. View metrics and the GenAI dashboard in the cluster's Grafana.
+**On Kubernetes**, the chart self-hosts a namespace-local Prometheus and Grafana as plain Deployments (no kube-prometheus-stack, no CRDs, no cluster-scoped RBAC). Prometheus scrapes every service via static config and loads the alert rules directly; Grafana is auto-provisioned with the Prometheus datasource and the exported dashboards (Spring services + GenAI). Both are reachable through the ingress at `/grafana` and `/prometheus`. For clusters that already run prometheus-operator, set `monitoring.operatorCrds.enabled=true` to switch to PodMonitor + PrometheusRule CRs consumed by the shared operator instead.
 
 #### Debug the cluster
 
@@ -255,31 +253,34 @@ Use a kubeconfig/context that points at the stud cluster (`kubectl config curren
 # Lint (all services, same as CI)
 pixi run lint
 
-# Java service unit tests
-pixi run --manifest-path services/incident-service/pixi.toml test
-pixi run --manifest-path services/user-service/pixi.toml test
+# Frontend
+(cd services/frontend && pixi run test)
+
+# Java services with test tasks
+(cd services/incident-service && pixi run test)
+(cd services/event-service && pixi run test)
+(cd services/gateway && pixi run test)
+(cd services/notification-service && pixi run test)
+(cd services/user-service && pixi run test)
+(cd services/webhook-service && pixi run test)
 
 # genai-service (Python)
-pixi run test-genai
+(cd services/genai-service && pixi run test)
 ```
+
+`rule-engine` is a legacy placeholder and has no test task. Incident creation from external events is handled by `incident-service`.
 
 ## Local Runtime
 
-A single command from the repository root, no extra tooling required:
+A single command from the repository root starts the full stack. Docker Desktop must be running:
 
 ```bash
-docker compose up
+pixi run compose-up
 ```
 
 Starts all services plus shared infrastructure (Postgres, NATS). Service env vars (`DATABASE_URL`, `NATS_URL`) are pre-wired, and every variable has a baked-in default, so no `.env` is required for a default boot.
 
 The root `compose.yaml` is the entry point Docker discovers automatically (it points at `infra/compose/docker-compose.yml`, where the stack is defined).
-
-For local development, the Pixi wrapper builds from source and loads `.env.example`:
-
-```bash
-pixi run compose-up
-```
 
 #### URLs and routes
 
