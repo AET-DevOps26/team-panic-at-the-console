@@ -313,3 +313,23 @@ Prism reads the spec and serves auto-generated responses on `http://localhost:40
 - **Frontend** (`/services/frontend`): @LeonSpoerl
 - **Backend** (`/services/gateway`, `incident-service`, `event-service`, `rule-engine`, `user-service`, `notification-service`, `webhook-service`): @florian-pesco
 - **GenAI** (`/services/genai-service`): @manuellerchner
+
+
+## Development Memes
+
+Every major milestone was accompanied by at least one meme. The collection below chronicles the highs, the lows, and the occasional "why does this suddenly work?" moments of the project.
+
+<table>
+  <tr>
+    <td><img src="https://github.com/user-attachments/assets/7220bfcc-0e79-429a-bee0-287c4175f666" width="220"></td>
+    <td><img src="https://github.com/user-attachments/assets/d90e124c-5d67-4d7e-be51-c3aea53bea3b" width="220"></td>
+    <td><img src="https://github.com/user-attachments/assets/2da68fb4-dbeb-4f81-8c2c-914fb86caed8" width="220"></td>
+    <td><img src="https://github.com/user-attachments/assets/9ebd11dc-b73a-42dc-85d2-2e5342fb9d82" width="220"></td>
+  </tr>
+  <tr>
+    <td><img src="https://github.com/user-attachments/assets/72bea533-8c28-4222-a302-aad935cbf8de" width="220"></td>
+    <td><img src="https://github.com/user-attachments/assets/add404e0-7b0d-435a-9ced-b619dd60f810" width="220"></td>
+    <td><img src="https://github.com/user-attachments/assets/e8090894-b8c8-482d-b2c1-230fb8cab7ee" width="220"></td>
+    <td><img src="https://github.com/user-attachments/assets/00fb037d-81cd-4d0c-b316-088115d97423" width="220"></td>
+  </tr>
+</table>
