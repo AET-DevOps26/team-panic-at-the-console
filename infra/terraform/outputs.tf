@@ -19,11 +19,13 @@ output "ssh_command" {
 }
 
 output "service_urls" {
-  description = "Application endpoints once the stack is deployed"
+  description = "Application endpoints once the stack is deployed (all via the edge proxy)"
   value = {
-    frontend   = "http://${azurerm_public_ip.main.ip_address}:3000"
-    gateway    = "http://${azurerm_public_ip.main.ip_address}:8080"
-    swagger_ui = "http://${azurerm_public_ip.main.ip_address}:8090"
-    webhook    = "http://${azurerm_public_ip.main.ip_address}:8086"
+    frontend   = "http://${azurerm_public_ip.main.ip_address}:8080"
+    api        = "http://${azurerm_public_ip.main.ip_address}:8080/api/v1"
+    swagger_ui = "http://${azurerm_public_ip.main.ip_address}:8080/swagger"
+    webhooks   = "http://${azurerm_public_ip.main.ip_address}:8080/webhooks"
+    grafana    = "http://${azurerm_public_ip.main.ip_address}:8080/grafana"
+    prometheus = "http://${azurerm_public_ip.main.ip_address}:8080/prometheus"
   }
 }

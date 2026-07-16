@@ -188,8 +188,13 @@ jobs:
             echo "::error::GET ${url} -> ${code:-no response} (expected ${want})"
             return 1
           }
-          probe http://localhost:9090/-/ready 200
+          # Direct ports (local dev); Prometheus serves under its route-prefix.
+          probe http://localhost:9090/prometheus/-/ready 200
           probe http://localhost:3030/api/health 200
+          # Via the edge proxy, like the Helm ingress (and the Azure VM, where
+          # only :8080 is open).
+          probe http://localhost:8080/prometheus/-/ready 200
+          probe http://localhost:8080/grafana/api/health 200
 
       - name: Save Ollama model cache
         if: success() && steps.ollama-cache.outputs.cache-hit != 'true'
