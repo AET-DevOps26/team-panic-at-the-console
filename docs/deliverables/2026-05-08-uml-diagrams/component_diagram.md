@@ -21,11 +21,13 @@ flowchart LR
     users --> usersDb[("users DB")]
     notifications --> notificationsDb[("notifications DB")]
 
-    incident -->|incident.* events| nats
-    nats -->|incident.* events| events
-    nats -->|incident.* events| notifications
-    nats -->|incident.created, resolved,<br/>regen.requested| genai["genai-service<br/>FastAPI"]
-    nats -->|incident.* events| gateway
+    incident -->|publishes: incident.created, incident.updated,<br/>incident.status.changed, incident.resolved, incident.assigned,<br/>incident.comment.added, incident.severity.escalated,<br/>incident.regen.requested| nats
+    nats -->|incident.created, incident.updated, incident.status.changed,<br/>incident.resolved, incident.assigned, incident.comment.added,<br/>incident.severity.escalated, incident.regen.requested| events
+    nats -->|incident.created, incident.updated, incident.status.changed,<br/>incident.resolved, incident.assigned, incident.comment.added,<br/>incident.severity.escalated, incident.regen.requested| notifications
+    nats -->|incident.created, incident.resolved,<br/>incident.regen.requested| genai["genai-service<br/>FastAPI"]
+    genai -->|publishes: incident.genai.summary.generated,<br/>incident.genai.severity.generated, incident.genai.solutions.generated,<br/>incident.genai.postmortem.generated| nats
+    nats -->|incident.genai.summary.generated, incident.genai.severity.generated,<br/>incident.genai.solutions.generated, incident.genai.postmortem.generated| incident
+    nats -->|incident.created, incident.updated, incident.status.changed,<br/>incident.resolved, incident.assigned, incident.comment.added,<br/>incident.severity.escalated, incident.regen.requested| gateway
     gateway -->|SSE fan-out| frontend
 
     genai -->|GET/PATCH incident data| incident

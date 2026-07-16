@@ -6,7 +6,7 @@ classDiagram
         +UUID id
         +IncidentStatus status
         +Severity severity
-        +UUID sourceId
+        +UUID externalEventId
         +String title
         +String description
         +String summary
@@ -52,8 +52,9 @@ classDiagram
 
     class ExternalEvent {
         +UUID id
-        +UUID sourceId
+        +String source
         +String eventType
+        +String deliveryId
         +Json rawPayload
         +Instant receivedAt
         +Instant publishedAt
@@ -61,7 +62,7 @@ classDiagram
 
     class ProcessedExternalEvent {
         +UUID id
-        +String externalEventId
+        +UUID externalEventId
         +Instant processedAt
     }
 
@@ -94,6 +95,16 @@ classDiagram
         COMMANDER
     }
 
+    class NotificationType {
+        <<enumeration>>
+        INCIDENT_CREATED
+        SEVERITY_ESCALATED
+        STATUS_CHANGED
+        INCIDENT_RESOLVED
+        COMMENT_ADDED
+        INCIDENT_ASSIGNED
+    }
+
     Incident "1" *-- "0..*" Comment : has
     Incident "1" --> "0..*" TimelineEvent : produces
     Incident "0..*" --> "0..*" UserAccount : assigned users
@@ -101,11 +112,12 @@ classDiagram
     Comment "*" --> "1" UserAccount : author
     Notification "*" --> "0..1" UserAccount : recipient
     WebhookSource "1" --> "0..*" ExternalEvent : receives
-    ExternalEvent "0..1" --> "0..1" Incident : source of
-    ProcessedExternalEvent --> ExternalEvent : deduplicates
+    ExternalEvent "0..1" --> "0..1" Incident : triggers
+    ProcessedExternalEvent --> ExternalEvent : deduplicates by externalEventId
     Incident --> IncidentStatus
     Incident --> Severity
     UserAccount --> UserRole
+    Notification --> NotificationType
 ```
 
-`incident-service` owns Incident, Comment, and ProcessedExternalEvent. `ProcessedExternalEvent` prevents duplicate webhook deliveries from creating multiple incidents. `event-service`, `user-service`, `notification-service`, and `webhook-service` own their respective models. The diagram shows domain relationships; services exchange identifiers and events instead of sharing a database.
+`ExternalEvent.id` is the canonical `externalEventId`: it links an auto-created Incident and is recorded by `ProcessedExternalEvent` to prevent duplicate webhook deliveries from creating multiple incidents. `incident-service` owns Incident, Comment, and ProcessedExternalEvent. `event-service`, `user-service`, `notification-service`, and `webhook-service` own their respective models. The diagram shows domain relationships; services exchange identifiers and events instead of sharing a database.

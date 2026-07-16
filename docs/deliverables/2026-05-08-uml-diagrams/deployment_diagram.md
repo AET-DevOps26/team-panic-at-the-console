@@ -23,7 +23,13 @@ flowchart TB
         end
 
         subgraph infrastructure["Namespace-local infrastructure"]
-            postgres[("PostgreSQL<br/>one DB per stateful service")]
+            subgraph postgres["PostgreSQL :5432 (shared instance, isolated databases)"]
+                incidentsDb[("incidents DB")]
+                eventsDb[("events DB")]
+                usersDb[("users DB")]
+                notificationsDb[("notifications DB")]
+                webhooksDb[("webhooks DB")]
+            end
             nats["NATS JetStream :4222"]
             prometheus
             grafana
@@ -34,11 +40,11 @@ flowchart TB
         gateway --> users
         gateway --> notifications
         gateway --> webhooks
-        incident --> postgres
-        events --> postgres
-        users --> postgres
-        notifications --> postgres
-        webhooks --> postgres
+        incident --> incidentsDb
+        events --> eventsDb
+        users --> usersDb
+        notifications --> notificationsDb
+        webhooks --> webhooksDb
         incident <--> nats
         events <--> nats
         notifications <--> nats

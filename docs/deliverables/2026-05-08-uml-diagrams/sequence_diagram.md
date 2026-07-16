@@ -35,7 +35,7 @@ sequenceDiagram
             IS-->>GS: Incident data
             GS->>LLM: Generate summary, severity suggestion, solutions
             LLM-->>GS: Structured result
-            GS->>NATS: Publish incident.genai.*.generated
+            GS->>NATS: Publish incident.genai.summary.generated,<br/>incident.genai.severity.generated, or<br/>incident.genai.solutions.generated
             NATS->>IS: Generated AI result
             IS->>DB: Store generated fields
             IS->>NATS: Publish incident.updated
@@ -47,6 +47,8 @@ sequenceDiagram
         IS->>DB: Record processed event or skip duplicate
         Note over IS: No incident is created
     end
+
+    Note over GS,NATS: On resolution, GS publishes<br/>incident.genai.postmortem.generated
 ```
 
 The embedded rule is deliberately small: it detects failure-like event types or payload values and creates a `SEV2` incident. It is not yet a configurable rule-policy engine.
