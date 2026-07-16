@@ -65,12 +65,6 @@ data:
         static_configs:
           - targets: ["genai-service:{{ (index .Values.services "genai-service").port }}"]
       {{- end }}
-      {{- if (index .Values.services "webhook-service").enabled }}
-      - job_name: webhook-service
-        metrics_path: /actuator/prometheus
-        static_configs:
-          - targets: ["webhook-service:{{ (index .Values.services "webhook-service").port }}"]
-      {{- end }}
   alerts.yml: |
     groups:
       - name: spring-services
