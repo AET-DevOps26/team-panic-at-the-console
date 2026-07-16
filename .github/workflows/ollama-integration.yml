@@ -43,7 +43,13 @@ jobs:
           key: ollama-models-${{ env.OLLAMA_VERSION }}-${{ env.OLLAMA_INTEGRATION_MODEL }}-v2
 
       - name: Install Ollama
-        run: curl -fsSL "https://github.com/ollama/ollama/releases/download/${OLLAMA_VERSION}/install.sh" | sh
+        run: |
+          curl -fsSL \
+            "https://github.com/ollama/ollama/releases/download/${OLLAMA_VERSION}/ollama-linux-amd64.tar.zst" \
+            -o /tmp/ollama-linux-amd64.tar.zst
+          zstd -d /tmp/ollama-linux-amd64.tar.zst -c | sudo tar -xf - -C /usr/local
+          sudo ln -sf /usr/local/ollama /usr/local/bin/ollama
+          ollama --version
 
       - name: Start Ollama
         run: |
