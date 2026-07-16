@@ -52,4 +52,4 @@ spec:
                   name: {{ include "devops-platform.postgresSecretName" . }}
                   key: password
           resources:
-            {{- toYaml .Values.postgres.resources | nindent 12 }}
+            {{- toYaml .Values.postgres.initJobResources | nindent 12 }}

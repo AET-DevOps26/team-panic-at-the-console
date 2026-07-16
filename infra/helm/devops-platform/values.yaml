@@ -80,6 +80,16 @@ postgres:
     limits:
       memory: 512Mi
       cpu: 500m
+  # The pre-upgrade init-dbs Job just loops psql against the already-running
+  # server; it doesn't need (and, given quota headroom, can't afford) a full
+  # postgres-server-sized allocation on top of the postgres pod that's still up.
+  initJobResources:
+    requests:
+      cpu: 25m
+      memory: 32Mi
+    limits:
+      cpu: 100m
+      memory: 128Mi
 
 ingress:
   className: nginx
