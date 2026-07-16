@@ -41,7 +41,7 @@ pixi run --manifest-path services/gateway/pixi.toml test
 pixi run --manifest-path services/gateway/pixi.toml start
 ```
 
-With compose (`pixi run compose-up`), use the `edge` proxy on port **8080** (`/api/v1/...` for API, `/swagger/` for docs). Downstream URLs are set via environment variables.
+With Compose (`docker compose up`), use the `edge` proxy on port **8080** (`/api/v1/...` for API, `/swagger/` for docs). Downstream URLs are set via environment variables.
 
 `pixi run start` on this module binds **8080** directly (API only, no `/swagger/`).
 

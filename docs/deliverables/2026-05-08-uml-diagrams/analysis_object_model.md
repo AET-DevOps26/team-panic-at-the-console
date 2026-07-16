@@ -59,6 +59,12 @@ classDiagram
         +Instant publishedAt
     }
 
+    class ProcessedExternalEvent {
+        +UUID id
+        +String externalEventId
+        +Instant processedAt
+    }
+
     class WebhookSource {
         +UUID id
         +String name
@@ -96,9 +102,10 @@ classDiagram
     Notification "*" --> "0..1" UserAccount : recipient
     WebhookSource "1" --> "0..*" ExternalEvent : receives
     ExternalEvent "0..1" --> "0..1" Incident : source of
+    ProcessedExternalEvent --> ExternalEvent : deduplicates
     Incident --> IncidentStatus
     Incident --> Severity
     UserAccount --> UserRole
 ```
 
-`incident-service` owns Incident and Comment. `event-service`, `user-service`, `notification-service`, and `webhook-service` own their respective models. The diagram shows domain relationships; services exchange identifiers and events instead of sharing a database.
+`incident-service` owns Incident, Comment, and ProcessedExternalEvent. `ProcessedExternalEvent` prevents duplicate webhook deliveries from creating multiple incidents. `event-service`, `user-service`, `notification-service`, and `webhook-service` own their respective models. The diagram shows domain relationships; services exchange identifiers and events instead of sharing a database.

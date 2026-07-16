@@ -2,7 +2,7 @@
 
 ```mermaid
 stateDiagram-v2
-    [*] --> OPEN: manual creation or NATS create request
+    [*] --> OPEN: manual creation or failure-like external event
 
     OPEN --> INVESTIGATING: responder updates status
     OPEN --> RESOLVED: responder resolves
@@ -26,4 +26,4 @@ stateDiagram-v2
     end note
 ```
 
-Severity is independent of lifecycle state. Responders can set it manually; each change publishes `incident.severity.escalated` and creates a timeline event and notification.
+Severity is independent of lifecycle state. Failure-like external events create a `SEV2` incident through the embedded `incident-service` rule. Responders can later set severity manually; each change publishes `incident.severity.escalated` and creates a timeline event and notification.

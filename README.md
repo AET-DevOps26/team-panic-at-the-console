@@ -49,7 +49,6 @@ pixi run pre-commit-install
 │   ├── gateway/                # API gateway - single entry point
 │   ├── incident-service/       # Core incident CRUD, lifecycle, and external-event handling
 │   ├── event-service/          # Append-only event log / timeline
-│   ├── rule-engine/            # Legacy placeholder container
 │   ├── user-service/           # Auth + role management
 │   ├── notification-service/   # Notifies users on incident events
 │   ├── webhook-service/        # Receives CI/CD webhook events
@@ -76,7 +75,7 @@ flowchart LR
     user["Users"] --> frontend["Frontend"]
     frontend -->|REST and SSE| gateway["Gateway"]
 
-    gateway -->|REST| incident["incident-service"]
+    gateway -->|REST| incident["incident-service<br/>including webhook rules"]
     gateway -->|REST| events["event-service"]
     gateway -->|REST| users["user-service"]
     gateway -->|REST| notifications["notification-service"]
@@ -84,6 +83,7 @@ flowchart LR
 
     external["External systems"] -->|Webhook| webhooks
     webhooks -->|external.event.received| nats["NATS JetStream"]
+    nats -->|external.event.received| incident
     incident -->|incident.*| nats
 
     nats -->|incident.*| events
@@ -93,15 +93,10 @@ flowchart LR
     genai -->|GET/PATCH incident data| incident
     genai -->|Generation| llm["Ollama locally / TUM Logos in Kubernetes"]
 
-    ruleEngine["rule-engine<br/>legacy placeholder"]
-    nats -.->|external.event.received<br/>currently unconsumed| ruleEngine
-
     classDef app fill:#e3f2fd,stroke:#1565c0,color:#000
     classDef bus fill:#e8f5e9,stroke:#2e7d32,color:#000
-    classDef legacy fill:#ffebee,stroke:#c62828,color:#000
     class frontend,gateway,incident,events,users,notifications,webhooks,genai app
     class nats bus
-    class ruleEngine legacy
 ```
 
 - [Subsystem decomposition](docs/deliverables/2026-05-08-uml-diagrams/component_diagram.md)
@@ -116,7 +111,7 @@ flowchart LR
 
 Users create and manage incidents through the dashboard. `incident-service` persists the current state, then publishes lifecycle events to NATS. `event-service` writes the immutable timeline, `notification-service` stores in-app notifications, `genai-service` creates analysis, and the gateway forwards changes to connected browsers through Server-Sent Events.
 
-`webhook-service` persists signed external events and publishes `external.event.received` to NATS. The current `rule-engine` container is a legacy placeholder, so automatic incident creation from external events is not active.
+`webhook-service` persists signed external events and publishes `external.event.received` to NATS. `incident-service` consumes that event and applies an embedded, failure-like rule: it creates one `SEV2` incident for a new event whose type or payload contains failure indicators. Processed event IDs prevent duplicate incident creation.
 
 ### GenAI
 
@@ -283,7 +278,7 @@ Optional: `VALUES_FILE=path/to/other.enc.yaml` when running `helm-deploy`.
 
 Ingress uses cert-manager (`letsencrypt-prod`) and TLS secret `devops-platform-tls`. Observability is self-hosted in the namespace: the chart deploys its own Prometheus and Grafana (plain Deployments, no operator or CRDs), provisioned with the exported dashboards and alert rules, and exposes them under `/grafana` and `/prometheus`.
 
-**Local compose** (via `pixi run compose-up`):
+**Local compose** (via `docker compose up`):
 
 | URL | Service |
 | --- | ------- |
@@ -329,14 +324,12 @@ pixi run lint
 (cd services/genai-service && pixi run test)
 ```
 
-`rule-engine` is a legacy placeholder and has no test task. Incident creation from external events is handled by `incident-service`.
-
 ## Local Runtime
 
 A single command from the repository root starts the full stack. Docker Desktop must be running:
 
 ```bash
-pixi run compose-up
+docker compose up
 ```
 
 Starts all services plus shared infrastructure (Postgres, NATS). Service env vars (`DATABASE_URL`, `NATS_URL`) are pre-wired, and every variable has a baked-in default, so no `.env` is required for a default boot.
@@ -358,20 +351,20 @@ Same path layout as the stud-cluster ingress for app routes (`/api`, `/swagger`)
 
 Shared non-secret defaults (for example `NATS_URL`) are defined once in `.env.example` and referenced from service-specific environment sections.
 
-- Override the image tag: `IMAGE_TAG=v0.0.1 pixi run compose-up`
+- Override the image tag: `IMAGE_TAG=v0.0.1 docker compose up`
 
 ## Troubleshooting
 
 | Symptom | Resolution |
 | --- | --- |
-| Compose cannot start | Start Docker Desktop, then rerun `pixi run compose-up`. |
-| A local port is already in use | Stop the process using the port or run `pixi run compose-down` to remove the local stack. |
+| Compose cannot start | Start Docker Desktop, then rerun `docker compose up`. |
+| A local port is already in use | Stop the process using the port or run `docker compose down` to remove the local stack. |
 | Grafana panels are empty after startup | Run `pixi run compose-smoke-genai-metrics` to generate sample GenAI metrics. |
 | Kubernetes deployment cannot decrypt values | Configure `SOPS_AGE_KEY` as described in [New team member access](#new-team-member-access). |
 
 ## Known Limitations
 
-- `rule-engine` is a legacy placeholder. It does not evaluate `external.event.received`, so webhook events do not yet create incidents automatically.
+- Webhook rules are intentionally lightweight: failure-like events create `SEV2` incidents, but rules are not yet configurable through a policy engine or UI.
 - Webhook-service unit tests exist but are not part of the Java CI matrix yet.
 
 ## Mock API Server
@@ -387,5 +380,5 @@ Prism reads the spec and serves auto-generated responses on `http://localhost:40
 ## Student Responsibilities
 
 - **Frontend** (`services/frontend`): [@LeonSpoerl](https://github.com/LeonSpoerl)
-- **Backend** (`services/gateway`, `services/incident-service`, `services/event-service`, `services/rule-engine`, `services/user-service`, `services/notification-service`, `services/webhook-service`): [@florian-pesco](https://github.com/florian-pesco)
+- **Backend** (`services/gateway`, `services/incident-service`, `services/event-service`, `services/user-service`, `services/notification-service`, `services/webhook-service`): [@florian-pesco](https://github.com/florian-pesco)
 - **GenAI** (`services/genai-service`): [@ManuelLerchner](https://github.com/ManuelLerchner)

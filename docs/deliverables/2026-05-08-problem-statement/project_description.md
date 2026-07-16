@@ -45,7 +45,7 @@ The system will provide:
 
 ### Scenario 1: CI Failure → Auto Incident
 
-A GitHub Actions pipeline fails → the system receives the webhook → a rule engine evaluates severity → an incident is automatically created and users are notified.
+A GitHub Actions pipeline fails → the system receives the webhook → incident-service evaluates the event → an incident is automatically created and users are notified.
 
 ### Scenario 2: Manual Incident
 
@@ -102,7 +102,7 @@ The focus is on **system structure, integration, and operational visibility**, n
 
 ### First-draft solution and next steps
 
-- Proposal (MVP): three core services — `incident-service` (CRUD + lifecycle), `event-service` (append-only audit), and a minimal `frontend` — plus a small `genai-service` that returns structured summaries. Use webhooks → rule engine → incident flow and PostgreSQL for state.
+- Proposal (MVP): three core services — `incident-service` (CRUD, lifecycle, and webhook evaluation), `event-service` (append-only audit), and a minimal `frontend` — plus a small `genai-service` that returns structured summaries. Use webhooks → NATS → incident flow and PostgreSQL for state.
 
 - Next steps (first draft):
   1.  Finalize scope with the tutor.

@@ -14,13 +14,12 @@ flowchart TB
         subgraph applications["Application Deployments"]
             frontend
             gateway
-            incident["incident-service :8081"]
+            incident["incident-service :8081<br/>including webhook rules"]
             events["event-service :8082"]
             users["user-service :8084"]
             notifications["notification-service :8085"]
             webhooks["webhook-service :8086"]
             genai["genai-service :8087"]
-            legacy["rule-engine :8083<br/>legacy placeholder"]
         end
 
         subgraph infrastructure["Namespace-local infrastructure"]
@@ -52,8 +51,6 @@ flowchart TB
 
     genai --> logos["TUM Logos<br/>Kubernetes LLM provider"]
 
-    classDef legacy fill:#ffebee,stroke:#c62828,color:#000
-    class legacy legacy
 ```
 
-The Helm chart self-hosts Prometheus and Grafana as namespace-local plain Deployments. Ollama runs with the local Compose stack; the Kubernetes deployment uses TUM Logos because the cluster quota cannot accommodate an in-cluster model.
+The Helm chart self-hosts Prometheus and Grafana as namespace-local plain Deployments. Ollama runs with the local Compose stack; the Kubernetes deployment uses TUM Logos because the cluster quota cannot accommodate an in-cluster model. `incident-service` includes webhook-rule evaluation.
