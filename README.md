@@ -65,6 +65,67 @@ pixi run pre-commit-install
 └── scripts/
 ```
 
+## Architecture
+
+The frontend uses REST through the gateway for request/response operations. `incident-service` owns incident state and publishes lifecycle events to NATS JetStream. The event log, notifications, GenAI processing, and live UI updates react asynchronously to those events. Each stateful service owns its data in a separate PostgreSQL database.
+
+### Service communication
+
+```mermaid
+flowchart LR
+    user["Users"] --> frontend["Frontend"]
+    frontend -->|REST and SSE| gateway["Gateway"]
+
+    gateway -->|REST| incident["incident-service"]
+    gateway -->|REST| events["event-service"]
+    gateway -->|REST| users["user-service"]
+    gateway -->|REST| notifications["notification-service"]
+    gateway -->|REST| webhooks["webhook-service"]
+
+    external["External systems"] -->|Webhook| webhooks
+    webhooks -->|external.event.received| nats["NATS JetStream"]
+    incident -->|incident.*| nats
+
+    nats -->|incident.*| events
+    nats -->|incident.*| notifications
+    nats -->|incident.created, resolved,<br/>regen.requested| genai["genai-service"]
+    nats -->|incident.*| gateway
+    genai -->|GET/PATCH incident data| incident
+    genai -->|Generation| llm["Ollama locally / TUM Logos in Kubernetes"]
+
+    ruleEngine["rule-engine<br/>legacy placeholder"]
+    nats -.->|external.event.received<br/>currently unconsumed| ruleEngine
+
+    classDef app fill:#e3f2fd,stroke:#1565c0,color:#000
+    classDef bus fill:#e8f5e9,stroke:#2e7d32,color:#000
+    classDef legacy fill:#ffebee,stroke:#c62828,color:#000
+    class frontend,gateway,incident,events,users,notifications,webhooks,genai app
+    class nats bus
+    class ruleEngine legacy
+```
+
+- [Subsystem decomposition](docs/deliverables/2026-05-08-uml-diagrams/component_diagram.md)
+- [Deployment layout](docs/deliverables/2026-05-08-uml-diagrams/deployment_diagram.md)
+- [Incident processing sequence](docs/deliverables/2026-05-08-uml-diagrams/sequence_diagram.md)
+- [Incident lifecycle](docs/deliverables/2026-05-08-uml-diagrams/state_diagram.md)
+- [Analysis object model](docs/deliverables/2026-05-08-uml-diagrams/analysis_object_model.md)
+- [Use cases](docs/deliverables/2026-05-08-uml-diagrams/use_case_diagram.md)
+- [Persistence schema](docs/schema.md)
+
+### Incident workflow
+
+Users create and manage incidents through the dashboard. `incident-service` persists the current state, then publishes lifecycle events to NATS. `event-service` writes the immutable timeline, `notification-service` stores in-app notifications, `genai-service` creates analysis, and the gateway forwards changes to connected browsers through Server-Sent Events.
+
+`webhook-service` persists signed external events and publishes `external.event.received` to NATS. The current `rule-engine` container is a legacy placeholder, so automatic incident creation from external events is not active.
+
+### GenAI
+
+`genai-service` is a separate, stateless FastAPI service. It consumes incident lifecycle events from NATS, fetches incident context from `incident-service`, generates summaries, severity suggestions, solution suggestions, and postmortems, then publishes the results back through NATS. It uses Ollama (`qwen2.5:3b`) in local Compose and TUM Logos in Kubernetes.
+
+### API
+
+The combined [OpenAPI contract](api/openapi.yaml) defines the public API. Run the stack and open [Swagger UI](http://localhost:8080/swagger) to explore and invoke endpoints locally. `pixi run openapi-lint` validates the contract; `pixi run mock-api` starts a Prism mock server for frontend development.
+
 ## CI/CD
 
 See [.github/workflows/](.github/workflows/).
@@ -299,6 +360,20 @@ Shared non-secret defaults (for example `NATS_URL`) are defined once in `.env.ex
 
 - Override the image tag: `IMAGE_TAG=v0.0.1 pixi run compose-up`
 
+## Troubleshooting
+
+| Symptom | Resolution |
+| --- | --- |
+| Compose cannot start | Start Docker Desktop, then rerun `pixi run compose-up`. |
+| A local port is already in use | Stop the process using the port or run `pixi run compose-down` to remove the local stack. |
+| Grafana panels are empty after startup | Run `pixi run compose-smoke-genai-metrics` to generate sample GenAI metrics. |
+| Kubernetes deployment cannot decrypt values | Configure `SOPS_AGE_KEY` as described in [New team member access](#new-team-member-access). |
+
+## Known Limitations
+
+- `rule-engine` is a legacy placeholder. It does not evaluate `external.event.received`, so webhook events do not yet create incidents automatically.
+- Webhook-service unit tests exist but are not part of the Java CI matrix yet.
+
 ## Mock API Server
 
 Spin up a local HTTP mock server driven by `api/openapi.yaml` using [Prism](https://stoplight.io/open-source/prism):
@@ -311,6 +386,6 @@ Prism reads the spec and serves auto-generated responses on `http://localhost:40
 
 ## Student Responsibilities
 
-- **Frontend** (`/services/frontend`): @LeonSpoerl
-- **Backend** (`/services/gateway`, `incident-service`, `event-service`, `rule-engine`, `user-service`, `notification-service`, `webhook-service`): @florian-pesco
-- **GenAI** (`/services/genai-service`): @manuellerchner
+- **Frontend** (`services/frontend`): [@LeonSpoerl](https://github.com/LeonSpoerl)
+- **Backend** (`services/gateway`, `services/incident-service`, `services/event-service`, `services/rule-engine`, `services/user-service`, `services/notification-service`, `services/webhook-service`): [@florian-pesco](https://github.com/florian-pesco)
+- **GenAI** (`services/genai-service`): [@ManuelLerchner](https://github.com/ManuelLerchner)

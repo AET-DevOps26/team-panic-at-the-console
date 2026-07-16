@@ -1,54 +1,46 @@
-## Incident Management System - CI Failure Auto-Incident Sequence
-
-Shows the full NATS-driven flow when a CI pipeline failure auto-creates an incident and fans out to all subscribers.
+## Incident Management System - Incident Creation and Asynchronous Processing
 
 ```mermaid
 sequenceDiagram
-    participant GH as GitHub Actions
-    participant WH as webhook-service
-    participant NATS as NATS JetStream
-    participant RE as rule-engine
-    participant IS as incident-service
-    participant ES as event-service
-    participant GS as genai-service
-    participant Ollama as Ollama (qwen2.5:3b)
-    participant NS as notification-service
-    participant GW as gateway (SSE)
+    actor User
     participant FE as Frontend
+    participant GW as Gateway
+    participant IS as incident-service
+    participant DB as incidents DB
+    participant NATS as NATS JetStream
+    participant ES as event-service
+    participant NS as notification-service
+    participant GS as genai-service
+    participant LLM as Ollama or TUM Logos
 
-    GH->>WH: POST /webhooks/{sourceId} (ci_failure payload)
-    WH->>NATS: publish external.event.received {sourceId, type, payload}
+    User->>FE: Create incident
+    FE->>GW: POST /api/v1/incidents
+    GW->>IS: Proxied REST request with identity headers
+    IS->>DB: Persist incident
+    IS->>NATS: Publish incident.created
+    IS-->>GW: 201 Created
+    GW-->>FE: Incident response
 
-    NATS->>RE: external.event.received
-    RE->>RE: evaluate rules against event fields
-    note right of RE: condition match: type=ci_failure, branch=main
-    RE->>NATS: publish incident.create.requested {sourceId, severity: SEV2}
-
-    NATS->>IS: incident.create.requested
-    IS->>IS: create Incident in DB (status: OPEN)
-    IS->>NATS: publish incident.created {incidentId, timestamp}
-
-    par NATS fan-out on incident.created
+    par Event log
         NATS->>ES: incident.created
-        ES->>ES: append INCIDENT_CREATED event to log
-    and
-        NATS->>GS: incident.created
-        GS->>IS: GET /incidents/{incidentId}
-        IS-->>GS: incident data
-        GS->>Ollama: generate summary + severity suggestion + solutions
-        Ollama-->>GS: structured JSON result
-        GS->>IS: PATCH /incidents/{incidentId}/ai-results
-        IS->>IS: store Summary + Solutions in DB
-        IS->>NATS: publish incident.updated {incidentId, timestamp}
-    and
+        ES->>ES: Append immutable timeline event
+    and Notifications
         NATS->>NS: incident.created
-        NS->>NS: store in-app notification for assigned users
-    and
-        NATS->>GW: incident.created
-        GW->>FE: SSE push: incident.created {incidentId}
-        note right of FE: frontend fetches full incident via REST
+        NS->>NS: Store in-app notification
+    and AI analysis
+        NATS->>GS: incident.created
+        GS->>IS: GET incident and timeline context
+        IS-->>GS: Incident data
+        GS->>LLM: Generate summary, severity suggestion, solutions
+        LLM-->>GS: Structured result
+        GS->>NATS: Publish incident.genai.*.generated
+        NATS->>IS: Generated AI result
+        IS->>DB: Store generated fields
+        IS->>NATS: Publish incident.updated
+    and Live UI update
+        NATS->>GW: incident.created and incident.updated
+        GW-->>FE: Server-Sent Event
     end
-
-    NATS->>GW: incident.updated (AI results ready)
-    GW->>FE: SSE push: incident.updated {incidentId}
 ```
+
+Webhook ingestion follows a separate path: `webhook-service` persists an external event and publishes `external.event.received`. The event is retained for audit; automatic rule evaluation is not active while the legacy `rule-engine` placeholder remains.

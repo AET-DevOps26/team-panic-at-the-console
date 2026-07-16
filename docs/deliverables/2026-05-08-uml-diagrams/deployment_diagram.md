@@ -1,49 +1,59 @@
 ## Incident Management System - Deployment Diagram
 
-Shows the Kubernetes deployment layout, Helm chart structure, and observability stack.
-
 ```mermaid
-C4Deployment
+flowchart TB
+    user["Browser"] --> ingress["Kubernetes Ingress<br/>TLS"]
 
-  Deployment_Node(k8s, "Kubernetes Cluster", "Helm: devops-platform") {
+    subgraph namespace["Kubernetes namespace: devops-platform Helm release"]
+        ingress --> frontend["frontend<br/>React + Vite"]
+        ingress --> gateway["gateway<br/>Spring Boot :8080"]
+        ingress --> swagger["swagger-ui"]
+        ingress --> grafana["Grafana"]
+        ingress --> prometheus["Prometheus"]
 
-    Deployment_Node(app, "Application Services") {
-      Container(frontend, "frontend", "React + Vite", "Web dashboard (port 3000)")
-      Container(gateway, "gateway", "Spring Boot", "API entry point + SSE fan-out (port 8080)")
-      Container(incident_svc, "incident-service", "Spring Boot", "Incident CRUD + AI results (port 8081)")
-      Container(event_svc, "event-service", "Spring Boot", "Append-only event log (port 8082)")
-      Container(rule_engine, "rule-engine", "Spring Boot", "Rule evaluation + escalation (port 8083)")
-      Container(user_svc, "user-service", "Spring Boot", "Auth + JWT issuance (port 8084)")
-      Container(notif_svc, "notification-service", "Spring Boot", "In-app notifications (port 8085)")
-      Container(webhook_svc, "webhook-service", "Spring Boot", "Webhook receiver (port 8086)")
-      Container(genai_svc, "genai-service", "Python FastAPI", "Stateless AI generator (port 8087)")
-      Container(ollama, "ollama", "Ollama qwen2.5:3b", "Local LLM inference (port 11434)")
-    }
+        subgraph applications["Application Deployments"]
+            frontend
+            gateway
+            incident["incident-service :8081"]
+            events["event-service :8082"]
+            users["user-service :8084"]
+            notifications["notification-service :8085"]
+            webhooks["webhook-service :8086"]
+            genai["genai-service :8087"]
+            legacy["rule-engine :8083<br/>legacy placeholder"]
+        end
 
-    Deployment_Node(infra, "Infrastructure") {
-      ContainerDb(postgres, "postgres", "PostgreSQL", "Shared instance: databases incidents, events, users, notifications, rules (port 5432)")
-      Container(nats, "nats", "NATS JetStream", "Event bus (port 4222, monitor 8222)")
-    }
+        subgraph infrastructure["Namespace-local infrastructure"]
+            postgres[("PostgreSQL<br/>one DB per stateful service")]
+            nats["NATS JetStream :4222"]
+            prometheus
+            grafana
+        end
 
-    Deployment_Node(obs, "Observability (kube-prometheus-stack + loki-stack)") {
-      Container(prometheus, "prometheus", "Prometheus", "Scrapes /metrics from all services")
-      Container(grafana, "grafana", "Grafana", "Dashboards + Alertmanager UI")
-      Container(alertmanager, "alertmanager", "Alertmanager", "Alert routing (Grafana UI only)")
-      Container(loki, "loki", "Loki", "Log aggregation")
-      Container(promtail, "promtail", "Promtail DaemonSet", "Scrapes pod stdout, ships to Loki")
-    }
-  }
+        gateway --> incident
+        gateway --> events
+        gateway --> users
+        gateway --> notifications
+        gateway --> webhooks
+        incident --> postgres
+        events --> postgres
+        users --> postgres
+        notifications --> postgres
+        webhooks --> postgres
+        incident <--> nats
+        events <--> nats
+        notifications <--> nats
+        webhooks --> nats
+        genai <--> nats
+        gateway <--> nats
+        prometheus -->|scrapes /metrics| applications
+        grafana -->|PromQL| prometheus
+    end
 
-  Deployment_Node(external, "External") {
-    Person(users, "Users", "Incident Responders, Commanders, Team Members")
-    System_Ext(ci, "GitHub Actions", "Sends CI failure webhooks")
-  }
+    genai --> logos["TUM Logos<br/>Kubernetes LLM provider"]
 
-  Rel(users, frontend, "HTTPS", "httpOnly JWT cookie")
-  Rel(frontend, gateway, "HTTP + SSE", "internal JWT (from cookie)")
-  Rel(ci, webhook_svc, "POST /webhooks/{sourceId}", "JSON/HTTPS")
-  Rel(prometheus, grafana, "PromQL queries", "HTTP")
-  Rel(alertmanager, grafana, "Alert state", "HTTP")
-  Rel(promtail, loki, "Log streams", "HTTP")
-  Rel(grafana, loki, "LogQL queries", "HTTP")
+    classDef legacy fill:#ffebee,stroke:#c62828,color:#000
+    class legacy legacy
 ```
+
+The Helm chart self-hosts Prometheus and Grafana as namespace-local plain Deployments. Ollama runs with the local Compose stack; the Kubernetes deployment uses TUM Logos because the cluster quota cannot accommodate an in-cluster model.
