@@ -116,16 +116,16 @@ Source: [services/webhook-service/src/main/java/com/panicattheconsole/webhookser
 
 ### ExternalEvent
 
-| Field           | Type    | Notes                                                           |
-| --------------- | ------- | --------------------------------------------------------------- |
-| id              | UUID    | Primary key                                                     |
-| source          | String  | Source system identifier (e.g. GitHub)                          |
-| eventType       | String  | Type of the received external event                             |
-| deliveryId      | String  | Sender-provided delivery identifier used for deduplication      |
-| receivedAt      | Instant | Timestamp when the webhook was received                         |
-| rawPayload      | JSON    | Original webhook payload, persisted verbatim as `jsonb`         |
-| publishedAt     | Instant | Timestamp when the event was successfully published to NATS     |
-| publishAttempts | int     | Number of failed publish attempts before successful publication |
+| Field           | Type    | Notes                                                                                                              |
+| --------------- | ------- | ------------------------------------------------------------------------------------------------------------------ |
+| id              | UUID    | Primary key                                                                                                        |
+| source          | String  | Source system identifier (e.g. GitHub)                                                                             |
+| eventType       | String  | Type of the received external event                                                                                |
+| deliveryId      | String  | Optional/nullable sender-provided delivery identifier; deduplication is applied only when a delivery ID is present |
+| receivedAt      | Instant | Timestamp when the webhook was received                                                                            |
+| rawPayload      | String  | Original webhook payload in the application model; persisted as JSONB in the database                              |
+| publishedAt     | Instant | Timestamp when the event was successfully published to NATS                                                        |
+| publishAttempts | int     | Number of failed publication attempts recorded for the event                                                       |
 
 The `external_events` table stores immutable webhook payloads received from external systems. It provides an auditable record of incoming events and tracks publication to the event bus.
 
