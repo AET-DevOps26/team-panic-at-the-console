@@ -92,7 +92,6 @@ See `CONTEXT.md` for full architectural decisions and `docs/adr/` for key trade-
 | `gateway`              | 8080                  | Single API entry point                                    |
 | `incident-service`     | 8081                  | Core incident CRUD + lifecycle                            |
 | `event-service`        | 8082                  | Append-only event log                                     |
-| `rule-engine`          | 8083                  | Evaluates signals → incident decisions                    |
 | `user-service`         | 8084                  | Auth + role management                                    |
 | `notification-service` | 8085                  | Notifies users on incident events                         |
 | `webhook-service`      | 8086                  | Receives CI/CD webhook events                             |

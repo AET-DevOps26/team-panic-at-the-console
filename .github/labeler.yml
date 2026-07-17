@@ -38,11 +38,6 @@ event-service:
       - any-glob-to-any-file:
           - "services/event-service/**"
 
-rule-engine:
-  - changed-files:
-      - any-glob-to-any-file:
-          - "services/rule-engine/**"
-
 user-service:
   - changed-files:
       - any-glob-to-any-file:

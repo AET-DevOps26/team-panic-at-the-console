@@ -15,6 +15,12 @@ Port: **8081**
 
 All regen endpoints return `202 Accepted` and publish `incident.regen.requested` with a `task` field (`SUMMARY`, `SEVERITY_SUGGESTION`, `SOLUTION_SUGGESTIONS`, or `POSTMORTEM`). Postmortem regen requires the incident to be resolved (`409` otherwise). Internal read/write-back paths used by genai-service are not routed through the gateway.
 
+## Webhook-driven incident creation
+
+The incident service also listens for `external.event.received` messages published by the webhook service. For a simple MVP rule set, it evaluates incoming events and creates a `SEV2` incident when the event type or payload looks failure-like (for example `ci_failure`, `failure`, `error`, or a payload containing `conclusion: failure`). Duplicate deliveries are ignored to avoid duplicate incidents.
+
+This is intentionally lightweight and easy to trial; it is not yet a full rule engine with configurable policies or a UI.
+
 ## Local dev
 
 ```bash
