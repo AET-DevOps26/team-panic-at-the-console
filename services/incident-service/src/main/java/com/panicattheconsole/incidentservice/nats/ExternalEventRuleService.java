@@ -74,43 +74,11 @@ public class ExternalEventRuleService {
 
         try {
             JsonNode node = objectMapper.readTree(payload);
-            return containsFailureLikeValue(node.get("rawPayload")) || containsFailureLikeValue(node);
+            return node.get("rawPayload") != null;
         } catch (JsonProcessingException e) {
             log.warn("Could not parse external event payload for failure matching", e);
             return false;
         }
-    }
-
-    private boolean containsFailureLikeValue(JsonNode node) {
-        if (node == null || node.isNull()) {
-            return false;
-        }
-
-        if (node.isTextual()) {
-            String value = node.asText().toLowerCase(Locale.ROOT);
-            return value.contains("failure") || value.contains("error") || value.contains("failing")
-                    || value.contains("failed");
-        }
-
-        if (node.isObject()) {
-            for (JsonNode child : node) {
-                if (containsFailureLikeValue(child)) {
-                    return true;
-                }
-            }
-            return false;
-        }
-
-        if (node.isArray()) {
-            for (JsonNode child : node) {
-                if (containsFailureLikeValue(child)) {
-                    return true;
-                }
-            }
-            return false;
-        }
-
-        return false;
     }
 
     private String extractExternalEventId(String payload) {
