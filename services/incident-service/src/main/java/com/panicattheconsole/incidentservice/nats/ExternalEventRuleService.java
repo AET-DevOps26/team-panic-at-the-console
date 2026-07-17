@@ -67,8 +67,7 @@ public class ExternalEventRuleService {
 
     private boolean matchesFailureRule(String eventType, String payload) {
         String normalizedEventType = eventType == null ? "" : eventType.toLowerCase(Locale.ROOT);
-        if (normalizedEventType.contains("failure") || normalizedEventType.contains("error")
-                || normalizedEventType.contains("failing") || "ci_failure".equals(normalizedEventType)) {
+        if ("ci_failure".equals(normalizedEventType)) {
             return true;
         }
 
