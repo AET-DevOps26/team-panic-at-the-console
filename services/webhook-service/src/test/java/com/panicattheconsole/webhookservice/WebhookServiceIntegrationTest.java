@@ -139,8 +139,10 @@ class WebhookServiceIntegrationTest {
         ArgumentCaptor<byte[]> messageCaptor = ArgumentCaptor.forClass(byte[].class);
         verify(connection).publish(eq(ExternalEventPublisher.SUBJECT), messageCaptor.capture());
         JsonNode message = objectMapper.readTree(messageCaptor.getValue());
-        assertThat(fieldNames(message)).containsExactlyInAnyOrder("sourceId", "eventType", "timestamp", "rawPayload");
+        assertThat(fieldNames(message))
+                .containsExactlyInAnyOrder("sourceId", "source", "eventType", "timestamp", "rawPayload");
         assertThat(message.path("sourceId").asText()).isEqualTo(id.toString());
+        assertThat(message.path("source").asText()).isEqualTo("github");
         assertThat(message.path("eventType").asText()).isEqualTo("ci_failure");
         assertThat(Instant.parse(message.path("timestamp").asText())).isNotNull();
         assertThat(message.path("rawPayload")).isEqualTo(objectMapper.readTree(WORKFLOW_FAILURE_PAYLOAD));

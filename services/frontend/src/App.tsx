@@ -7,6 +7,7 @@ import LoginPage from "@/pages/LoginPage";
 import RegisterPage from "@/pages/RegisterPage";
 import SettingsPage from "@/pages/SettingsPage";
 import SourcesPage from "@/pages/SourcesPage";
+import RulesPage from "@/pages/RulesPage";
 import NotFoundPage from "@/pages/NotFoundPage";
 
 export default function App() {
@@ -21,6 +22,7 @@ export default function App() {
             <Route path="/incidents" element={<IncidentListPage />} />
             <Route path="/incidents/:id" element={<IncidentDetailPage />} />
             <Route path="/sources" element={<SourcesPage />} />
+            <Route path="/rules" element={<RulesPage />} />
             <Route path="/settings" element={<SettingsPage />} />
           </Route>
         </Route>

@@ -2,16 +2,20 @@
   "$schema": "https://json-schema.org/draft-07/schema",
   "$id": "https://github.com/aet-devops26/team-panic-at-the-console/api/specs/nats/external.event.received.schema.json",
   "type": "object",
-  "required": ["sourceId", "eventType", "timestamp", "rawPayload"],
+  "required": ["sourceId", "source", "eventType", "timestamp", "rawPayload"],
   "additionalProperties": false,
   "properties": {
     "sourceId": {
       "type": "string",
       "format": "uuid"
     },
+    "source": {
+      "type": "string",
+      "description": "Slug of the webhook source the event was delivered to (e.g. github). Rules can match on this to scope by source."
+    },
     "eventType": {
       "type": "string",
-      "description": "Normalised event type string, e.g. ci_failure, alert_fired. The incident service uses this value for a lightweight failure-like rule match."
+      "description": "Normalised event type string, e.g. ci_failure, alert_fired. Rules can match on this and on any field of rawPayload."
     },
     "timestamp": {
       "type": "string",

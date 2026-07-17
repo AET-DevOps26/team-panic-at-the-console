@@ -5,7 +5,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
-import com.panicattheconsole.incidentservice.nats.ExternalEventRuleService;
+import com.panicattheconsole.incidentservice.rule.RuleEvaluator;
 
 import java.lang.reflect.Method;
 import java.nio.charset.StandardCharsets;
@@ -34,7 +34,7 @@ class NatsSubscriberTest {
         private IncidentService incidentService;
 
         @Mock
-        private ExternalEventRuleService externalEventRuleService;
+        private RuleEvaluator ruleEvaluator;
 
         @Mock
         private Message message;
@@ -49,7 +49,7 @@ class NatsSubscriberTest {
                                 natsConnection,
                                 objectMapper,
                                 incidentService,
-                                externalEventRuleService);
+                                ruleEvaluator);
         }
 
         @Test
@@ -75,12 +75,13 @@ class NatsSubscriberTest {
         }
 
         @Test
-        void externalEventReceived_ciFailure_createsIncident() throws Exception {
+        void externalEventReceived_delegatesRawMessageToEvaluator() throws Exception {
                 UUID externalEventId = UUID.randomUUID();
 
                 String payload = """
                                 {
                                   "sourceId":"%s",
+                                  "source":"github",
                                   "eventType":"ci_failure",
                                   "timestamp":"2026-07-15T10:00:00Z",
                                   "rawPayload":{
@@ -90,36 +91,9 @@ class NatsSubscriberTest {
                                 }
                                 """.formatted(externalEventId);
 
-                org.mockito.Mockito.when(externalEventRuleService.shouldCreateIncident("ci_failure", payload))
-                                .thenReturn(true);
-
                 invokeHandleMessage("external.event.received", payload);
 
-                verify(externalEventRuleService).shouldCreateIncident("ci_failure", payload);
-        }
-
-        @Test
-        void externalEventReceived_nonMatchingEvent_isIgnored() throws Exception {
-                UUID externalEventId = UUID.randomUUID();
-
-                String payload = """
-                                {
-                                  "sourceId":"%s",
-                                  "eventType":"ci_success",
-                                  "timestamp":"2026-07-15T10:00:00Z",
-                                  "rawPayload":{
-                                    "repository":"demo/repo",
-                                    "workflow":"build"
-                                  }
-                                }
-                                """.formatted(externalEventId);
-
-                org.mockito.Mockito.when(externalEventRuleService.shouldCreateIncident("ci_success", payload))
-                                .thenReturn(false);
-
-                invokeHandleMessage("external.event.received", payload);
-
-                verify(externalEventRuleService).shouldCreateIncident("ci_success", payload);
+                verify(ruleEvaluator).evaluate(payload);
         }
 
         @Test

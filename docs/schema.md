@@ -142,16 +142,54 @@ Source: [services/webhook-service/src/main/java/com/panicattheconsole/webhookser
 
 The `webhook_sources` table stores registered webhook endpoints and their associated HMAC secrets used to authenticate incoming webhook requests.
 
-## Event Processing
+## Rules
 
-Source: [services/incident-service/src/main/java/com/panicattheconsole/incidentservice/nats/ProcessedExternalEvent.java](../services/incident-service/src/main/java/com/panicattheconsole/incidentservice/nats/ProcessedExternalEvent.java)
+Source: [services/incident-service/src/main/java/com/panicattheconsole/incidentservice/rule/Rule.java](../services/incident-service/src/main/java/com/panicattheconsole/incidentservice/rule/Rule.java)
 
-### ProcessedExternalEvent
+Rules decide which `external.event.received` messages become incidents. They are evaluated in ascending `priority` order and the first enabled rule whose `source` and every condition match creates the incident (first-match-wins). Field paths and templates use dotted notation rooted at an object exposing `source`, `eventType`, and `payload` (the raw webhook body), e.g. `payload.workflow_run.conclusion`.
 
-| Field           | Type    | Notes                                             |
-| --------------- | ------- | ------------------------------------------------- |
-| id              | UUID    | Primary key (generated)                           |
-| externalEventId | String  | Unique identifier of the processed external event |
-| processedAt     | Instant | Timestamp when the event was processed            |
+### Rule
 
-The `processed_external_events` table records external events that have already been processed by the incident service. The unique constraint on `externalEventId` provides idempotency by preventing duplicate processing of the same event.
+| Field               | Type                      | Notes                                                               |
+| ------------------- | ------------------------- | ------------------------------------------------------------------- |
+| id                  | UUID                      | Primary key                                                         |
+| name                | String                    | Human-readable rule name                                            |
+| enabled             | boolean                   | Disabled rules are skipped during evaluation                        |
+| priority            | int                       | Lower runs first; the first matching enabled rule wins              |
+| source              | String                    | Source slug to scope to; null/blank matches any source              |
+| severity            | Severity                  | Severity of incidents this rule creates (SEV1-SEV4)                 |
+| titleTemplate       | String                    | Incident title; supports `{{dotted.path}}` placeholders             |
+| descriptionTemplate | String                    | Optional leading description (Markdown) with placeholders           |
+| dedupKeyTemplate    | String                    | Optional placeholder template; at most one incident per (rule, key) |
+| conditions          | List\<RuleCondition\>     | AND-ed match conditions (`rule_conditions` element collection)      |
+| metadataFields      | List\<RuleMetadataField\> | Fields rendered into the description (`rule_metadata_fields`)       |
+| createdAt           | Instant                   | Creation timestamp                                                  |
+| updatedAt           | Instant                   | Last-modified timestamp                                             |
+
+### RuleCondition (embedded in `rule_conditions`)
+
+| Field     | Type              | Notes                                                                          |
+| --------- | ----------------- | ------------------------------------------------------------------------------ |
+| fieldPath | String            | Dotted path into the event                                                     |
+| operator  | ConditionOperator | equals, not_equals, contains, not_contains, matches, in, exists, not_exists    |
+| value     | String            | Comparison value (comma-separated list for `in`; ignored by exists/not_exists) |
+
+### RuleMetadataField (embedded in `rule_metadata_fields`)
+
+| Field     | Type   | Notes                                     |
+| --------- | ------ | ----------------------------------------- |
+| label     | String | Display label in the incident description |
+| fieldPath | String | Dotted path into the event                |
+
+### RuleMatchDedup
+
+Source: [services/incident-service/src/main/java/com/panicattheconsole/incidentservice/rule/RuleMatchDedup.java](../services/incident-service/src/main/java/com/panicattheconsole/incidentservice/rule/RuleMatchDedup.java)
+
+| Field     | Type    | Notes                                           |
+| --------- | ------- | ----------------------------------------------- |
+| id        | UUID    | Primary key (generated)                         |
+| ruleId    | UUID    | Rule that produced the incident                 |
+| dedupKey  | String  | Rendered dedup key (falls back to the event id) |
+| createdAt | Instant | Timestamp when the incident was created         |
+
+The `rule_match_dedup` table enforces at most one incident per `(rule_id, dedup_key)` via a unique constraint. This is what collapses a whole pipeline run (many deliveries sharing e.g. `payload.workflow_run.id`) into a single incident, and provides idempotency against redelivered events.

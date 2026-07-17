@@ -391,7 +391,7 @@ curl -X POST ${payloadUrl("<source>")} \\
         <CardTitle className="text-lg">Connecting a sender</CardTitle>
         <CardDescription>
           Anything that can send an HTTP POST with a JSON body can be a source. Incidents are created when a Rule
-          matches the event’s type.
+          matches an event; configure those on the Rules page.
         </CardDescription>
       </CardHeader>
       <CardContent>

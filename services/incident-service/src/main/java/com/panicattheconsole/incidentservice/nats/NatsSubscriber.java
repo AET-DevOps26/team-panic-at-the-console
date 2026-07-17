@@ -13,10 +13,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.panicattheconsole.incidentservice.incident.IncidentService;
 import com.panicattheconsole.incidentservice.incident.Severity;
+import com.panicattheconsole.incidentservice.rule.RuleEvaluator;
 import com.panicattheconsole.incidentservice.nats.dto.GenaiPostmortemGeneratedEvent;
 import com.panicattheconsole.incidentservice.nats.dto.GenaiSeverityGeneratedEvent;
 import com.panicattheconsole.incidentservice.nats.dto.GenaiSolutionsGeneratedEvent;
@@ -36,17 +36,17 @@ public class NatsSubscriber {
     private final Connection natsConnection;
     private final ObjectMapper objectMapper;
     private final IncidentService incidentService;
-    private final ExternalEventRuleService externalEventRuleService;
+    private final RuleEvaluator ruleEvaluator;
 
     private Dispatcher dispatcher;
     private final ExecutorService executor = Executors.newFixedThreadPool(2);
 
     public NatsSubscriber(Connection natsConnection, ObjectMapper objectMapper, IncidentService incidentService,
-            ExternalEventRuleService externalEventRuleService) {
+            RuleEvaluator ruleEvaluator) {
         this.natsConnection = natsConnection;
         this.objectMapper = objectMapper;
         this.incidentService = incidentService;
-        this.externalEventRuleService = externalEventRuleService;
+        this.ruleEvaluator = ruleEvaluator;
     }
 
     @PostConstruct
@@ -175,14 +175,9 @@ public class NatsSubscriber {
         }
     }
 
-    private void handleExternalEventReceived(String payload) throws Exception {
+    private void handleExternalEventReceived(String payload) {
         try {
-            JsonNode node = objectMapper.readTree(payload);
-            String eventType = node.has("eventType") && node.get("eventType") != null
-                    && node.get("eventType").isTextual()
-                            ? node.get("eventType").asText()
-                            : "unknown";
-            externalEventRuleService.shouldCreateIncident(eventType, payload);
+            ruleEvaluator.evaluate(payload);
         } catch (Exception e) {
             log.warn("Failed to process external event payload", e);
         }
