@@ -20,6 +20,7 @@ import com.panicattheconsole.gateway.auth.TestSessions;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.method;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withStatus;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -113,6 +114,19 @@ class IncidentsProxyControllerTest {
         mvc.perform(get("/incidents/{id}", INCIDENT_ID).cookie(TestSessions.sessionCookie()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.title").value("Checkout spike"));
+
+        incidentServer.verify();
+    }
+
+    @Test
+    void deleteIncident_proxiesIncidentService() throws Exception {
+        incidentServer
+                .expect(requestTo("http://localhost:8081/incidents/" + INCIDENT_ID))
+                .andExpect(method(HttpMethod.DELETE))
+                .andRespond(withStatus(HttpStatus.NO_CONTENT));
+
+        mvc.perform(delete("/incidents/{id}", INCIDENT_ID).cookie(TestSessions.sessionCookie()))
+                .andExpect(status().isNoContent());
 
         incidentServer.verify();
     }

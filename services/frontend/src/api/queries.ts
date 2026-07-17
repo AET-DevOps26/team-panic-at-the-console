@@ -277,6 +277,25 @@ export function useUpdateIncidentDescription(id: string) {
   });
 }
 
+export function useDeleteIncident(id: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (): Promise<void> => {
+      if (MOCK) return;
+      const { error, response } = await apiClient.DELETE("/incidents/{incidentId}", {
+        params: { path: { incidentId: id } },
+      });
+      if (error) throw new ApiError("Failed to delete incident", response?.status);
+    },
+    onSuccess: () => {
+      // Drop the dead incident's detail/events/comments entries so nothing
+      // refetches a 404, then refresh the list.
+      queryClient.removeQueries({ queryKey: ["incidents", id] });
+      void queryClient.invalidateQueries({ queryKey: ["incidents"] });
+    },
+  });
+}
+
 // ── Event log ─────────────────────────────────────────────────────────────────
 
 export function useIncidentEvents(incidentId: string) {

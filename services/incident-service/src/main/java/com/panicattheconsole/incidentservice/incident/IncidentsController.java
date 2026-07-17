@@ -77,6 +77,12 @@ class IncidentsController implements IncidentsApi {
     }
 
     @Override
+    public ResponseEntity<Void> deleteIncident(UUID incidentId) {
+        incidentService.deleteIncident(incidentId, sessionUserIdOrNull());
+        return ResponseEntity.noContent().build();
+    }
+
+    @Override
     public ResponseEntity<List<IncidentEvent>> listIncidentEvents(UUID incidentId) {
         return ResponseEntity.ok(incidentService.listIncidentEvents(incidentId));
     }

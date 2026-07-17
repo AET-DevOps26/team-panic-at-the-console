@@ -255,6 +255,38 @@ class IncidentsControllerIntegrationTest {
         }
 
         @Test
+        void deleteIncident_removesIncidentAndComments() {
+                incidentService.addComment(
+                                INCIDENT_ID,
+                                UUID.fromString("018e2c5f-1234-7abc-8def-0000000000b1"),
+                                UUID.fromString("018e2c5f-1234-7abc-8def-0000000000b2"),
+                                "note before deletion");
+
+                ResponseEntity<Void> response = rest.exchange(
+                                incidentUrl("/incidents/" + INCIDENT_ID),
+                                HttpMethod.DELETE,
+                                HttpEntity.EMPTY,
+                                Void.class);
+
+                assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
+                assertThat(incidentRepository.findById(INCIDENT_ID)).isEmpty();
+                assertThat(commentRepository.countByIncident_Id(INCIDENT_ID)).isZero();
+        }
+
+        @Test
+        void deleteIncident_returns404WhenMissing() {
+                UUID missing = UUID.fromString("018e2c5f-1234-7abc-8def-000000000099");
+
+                ResponseEntity<Map> response = rest.exchange(
+                                incidentUrl("/incidents/" + missing),
+                                HttpMethod.DELETE,
+                                HttpEntity.EMPTY,
+                                Map.class);
+
+                assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+        }
+
+        @Test
         void getIncident_returns404WhenMissing() {
                 UUID missing = UUID.fromString("018e2c5f-1234-7abc-8def-000000000099");
 

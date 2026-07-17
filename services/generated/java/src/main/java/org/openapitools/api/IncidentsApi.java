@@ -225,6 +225,39 @@ public interface IncidentsApi {
 
 
     /**
+     * DELETE /incidents/{incidentId} : Permanently delete an incident
+     * Deletes the incident and its comments. Timeline events stored by event-service remain in the append-only log; a final incident.deleted entry records the deletion itself.
+     *
+     * @param incidentId UUID of the target incident. (required)
+     * @return Incident deleted; its timeline events remain in the event log (status code 204)
+     *         or Not authenticated (status code 401)
+     *         or No incident exists with the given ID (status code 404)
+     */
+    @Operation(
+        operationId = "deleteIncident",
+        summary = "Permanently delete an incident",
+        description = "Deletes the incident and its comments. Timeline events stored by event-service remain in the append-only log; a final incident.deleted entry records the deletion itself. ",
+        tags = { "incidents" },
+        responses = {
+            @ApiResponse(responseCode = "204", description = "Incident deleted; its timeline events remain in the event log"),
+            @ApiResponse(responseCode = "401", description = "Not authenticated"),
+            @ApiResponse(responseCode = "404", description = "No incident exists with the given ID")
+        }
+    )
+    @RequestMapping(
+        method = RequestMethod.DELETE,
+        value = "/incidents/{incidentId}"
+    )
+
+    default ResponseEntity<Void> deleteIncident(
+        @Parameter(name = "incidentId", description = "UUID of the target incident.", required = true, in = ParameterIn.PATH) @PathVariable("incidentId") UUID incidentId
+    ) {
+        return new ResponseEntity<>(HttpStatus.NOT_IMPLEMENTED);
+
+    }
+
+
+    /**
      * PATCH /incidents/{incidentId}/severity : Manually set incident severity
      * Sets the severity to any level (raise or lower). Requires COMMANDER role.
      *

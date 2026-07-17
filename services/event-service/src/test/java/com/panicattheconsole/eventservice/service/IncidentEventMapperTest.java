@@ -93,6 +93,26 @@ class IncidentEventMapperTest {
     }
 
     @Test
+    void mapsDeletedWithTitle() {
+        Optional<IncidentEventDto> dto = IncidentEventMapper.toApi(
+                event("incident.deleted", Map.of("title", "Checkout 5xx spike")));
+
+        assertThat(dto).hasValueSatisfying(e -> {
+            assertThat(e.type()).isEqualTo("incident_deleted");
+            assertThat(e.description()).isEqualTo("Incident deleted: Checkout 5xx spike");
+            assertThat(e.newValue()).isNull();
+        });
+    }
+
+    @Test
+    void mapsDeletedWithoutTitle() {
+        Optional<IncidentEventDto> dto = IncidentEventMapper.toApi(event("incident.deleted", Map.of()));
+
+        assertThat(dto).hasValueSatisfying(e ->
+                assertThat(e.description()).isEqualTo("Incident deleted"));
+    }
+
+    @Test
     void skipsGenericUpdatedAndRedundantResolvedEvents() {
         assertThat(IncidentEventMapper.toApi(event("incident.updated", Map.of()))).isEmpty();
         assertThat(IncidentEventMapper.toApi(event("incident.resolved", Map.of()))).isEmpty();

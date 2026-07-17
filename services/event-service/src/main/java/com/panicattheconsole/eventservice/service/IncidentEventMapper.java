@@ -27,6 +27,7 @@ final class IncidentEventMapper {
             case "incident.severity.escalated" -> describeSeverityChange(event.getPayload());
             case "incident.comment.added" -> text(event.getPayload(), "content").orElse("Comment added");
             case "incident.assigned" -> "User assigned";
+            case "incident.deleted" -> describeDeleted(event.getPayload());
             default -> null;
         };
         if (description == null) {
@@ -54,6 +55,7 @@ final class IncidentEventMapper {
             case "incident.severity.escalated" -> "severity_changed";
             case "incident.comment.added" -> "comment_added";
             case "incident.assigned" -> "assigned";
+            case "incident.deleted" -> "incident_deleted";
             default -> eventType;
         };
     }
@@ -65,6 +67,12 @@ final class IncidentEventMapper {
             return "Incident created: " + title.get() + " (" + severity.get() + ")";
         }
         return "Incident created";
+    }
+
+    private static String describeDeleted(JsonNode payload) {
+        return text(payload, "title")
+                .map(title -> "Incident deleted: " + title)
+                .orElse("Incident deleted");
     }
 
     private static String describeStatusChange(JsonNode payload) {
