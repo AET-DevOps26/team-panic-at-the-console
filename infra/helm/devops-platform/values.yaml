@@ -222,19 +222,6 @@ services:
         value: devops
       - name: SPRING_DATASOURCE_PASSWORD
 
-  rule-engine:
-    enabled: true
-    inheritGlobalEnv: true
-    port: 8083
-    image:
-      repository: rule-engine
-    env:
-      - name: SPRING_DATASOURCE_URL
-        value: "jdbc:postgresql://postgres:5432/rules"
-      - name: SPRING_DATASOURCE_USERNAME
-        value: devops
-      - name: SPRING_DATASOURCE_PASSWORD
-
   user-service:
     enabled: true
     port: 8084

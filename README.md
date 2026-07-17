@@ -60,7 +60,6 @@ pixi run pre-commit-install
 │   ├── gateway/                # API gateway - single entry point
 │   ├── incident-service/       # Core incident CRUD + lifecycle
 │   ├── event-service/          # Append-only event log / timeline
-│   ├── rule-engine/            # Evaluates external signals → incident decisions
 │   ├── user-service/           # Auth + role management
 │   ├── notification-service/   # Notifies users on incident events
 │   ├── webhook-service/        # Receives CI/CD webhook events

@@ -37,11 +37,6 @@ scrape_configs:
     static_configs:
       - targets: ["gateway:8090"]
 
-  - job_name: rule-engine
-    metrics_path: /actuator/prometheus
-    static_configs:
-      - targets: ["rule-engine:8083"]
-
   - job_name: notification-service
     metrics_path: /actuator/prometheus
     static_configs:

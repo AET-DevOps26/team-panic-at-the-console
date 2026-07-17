@@ -58,7 +58,7 @@ jobs:
     # Boot via the canonical flag-free `docker compose`, so CI runs what users run.
     # Ollama pulls a multi-GB model on first boot; we cache the volume across runs.
     env:
-      SMOKE_SERVICES: "postgres postgres-init nats ollama ollama-init gateway incident-service event-service rule-engine user-service notification-service webhook-service genai-service edge swagger-ui prometheus grafana"
+      SMOKE_SERVICES: "postgres postgres-init nats ollama ollama-init gateway incident-service event-service user-service notification-service webhook-service genai-service edge swagger-ui prometheus grafana"
       # frontend is WIP (served on :3000, not via edge). The coverage guard below
       # fails if any service is in neither list, so none can escape unnoticed.
       EXCLUDED_SERVICES: "frontend"
@@ -140,7 +140,7 @@ jobs:
             -p "${COMPOSE_PROJECT}" \
             up -d --no-recreate --wait --wait-timeout 600 \
             postgres nats ollama gateway incident-service event-service \
-            rule-engine user-service notification-service webhook-service \
+            user-service notification-service webhook-service \
             genai-service edge swagger-ui prometheus grafana
 
       - name: Probe edge proxy over HTTP
