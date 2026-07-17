@@ -1,5 +1,5 @@
 import { Link, NavLink, useNavigate } from "react-router-dom";
-import { AlertTriangle, ExternalLink, Settings, Webhook, LayoutDashboard, LogOut } from "lucide-react";
+import { AlertTriangle, ExternalLink, Settings, Webhook, Filter, LayoutDashboard, LogOut } from "lucide-react";
 import { useCurrentUser, useLogout } from "@/api/queries";
 import { appConfig } from "@/lib/appConfig";
 import { cn } from "@/lib/utils";
@@ -9,6 +9,7 @@ import { GatewayStatus } from "@/components/layout/GatewayStatus";
 const linkedNavItems = [
   { to: "/incidents", label: "Incidents", icon: AlertTriangle },
   { to: "/sources", label: "Sources", icon: Webhook },
+  { to: "/rules", label: "Rules", icon: Filter },
   { to: "/settings", label: "Settings", icon: Settings },
 ];
 

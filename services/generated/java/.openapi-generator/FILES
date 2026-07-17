@@ -5,6 +5,7 @@ src/main/java/org/openapitools/api/GenaiApi.java
 src/main/java/org/openapitools/api/HealthApi.java
 src/main/java/org/openapitools/api/IncidentsApi.java
 src/main/java/org/openapitools/api/NotificationsApi.java
+src/main/java/org/openapitools/api/RulesApi.java
 src/main/java/org/openapitools/api/UsersApi.java
 src/main/java/org/openapitools/api/WebhookSourcesApi.java
 src/main/java/org/openapitools/api/WebhooksApi.java
@@ -32,6 +33,12 @@ src/main/java/org/openapitools/model/NotificationType.java
 src/main/java/org/openapitools/model/PostmortemResponse.java
 src/main/java/org/openapitools/model/RegenAccepted.java
 src/main/java/org/openapitools/model/RegisterRequest.java
+src/main/java/org/openapitools/model/Rule.java
+src/main/java/org/openapitools/model/RuleCondition.java
+src/main/java/org/openapitools/model/RuleInput.java
+src/main/java/org/openapitools/model/RuleListResponse.java
+src/main/java/org/openapitools/model/RuleMetadataField.java
+src/main/java/org/openapitools/model/RuleOperator.java
 src/main/java/org/openapitools/model/Severity.java
 src/main/java/org/openapitools/model/SeverityResponse.java
 src/main/java/org/openapitools/model/SolutionsResponse.java

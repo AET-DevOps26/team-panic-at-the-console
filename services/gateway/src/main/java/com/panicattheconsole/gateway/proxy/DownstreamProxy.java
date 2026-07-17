@@ -51,6 +51,17 @@ final class DownstreamProxy {
         return ResponseEntity.status(downstream.getStatusCode()).body(downstream.getBody());
     }
 
+    static <T> ResponseEntity<T> put(
+            RestClient client, String path, Object requestBody, Class<T> bodyType, Object... uriVariables) {
+        ResponseEntity<T> downstream = client.put()
+                .uri(path, uriVariables)
+                .body(requestBody)
+                .retrieve()
+                .onStatus(HttpStatusCode::isError, (request, response) -> {})
+                .toEntity(bodyType);
+        return ResponseEntity.status(downstream.getStatusCode()).body(downstream.getBody());
+    }
+
     static ResponseEntity<Void> delete(RestClient client, String path, Object... uriVariables) {
         ResponseEntity<Void> downstream = client.delete()
                 .uri(path, uriVariables)

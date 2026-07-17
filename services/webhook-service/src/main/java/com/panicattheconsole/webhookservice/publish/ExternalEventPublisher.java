@@ -87,6 +87,7 @@ public class ExternalEventPublisher {
     private byte[] buildMessage(ExternalEvent event) throws Exception {
         ObjectNode message = objectMapper.createObjectNode();
         message.put("sourceId", event.getId().toString());
+        message.put("source", event.getSource());
         message.put("eventType", event.getEventType());
         message.put("timestamp", DateTimeFormatter.ISO_INSTANT.format(event.getReceivedAt()));
         message.set("rawPayload", objectMapper.readTree(event.getRawPayload()));

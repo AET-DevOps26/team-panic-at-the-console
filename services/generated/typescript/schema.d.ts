@@ -562,6 +562,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/rules": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List incident rules, highest priority first
+         * @description Rules decide which external events become incidents. They are evaluated in ascending `priority` order and the first enabled rule that matches an event creates the incident.
+         */
+        get: operations["listRules"];
+        put?: never;
+        /** Create an incident rule */
+        post: operations["createRule"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/rules/{ruleId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Fetch a single rule */
+        get: operations["getRule"];
+        /** Replace a rule's definition */
+        put: operations["updateRule"];
+        post?: never;
+        /** Delete a rule */
+        delete: operations["deleteRule"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1025,6 +1065,96 @@ export interface components {
              */
             lastEventAt?: string;
         };
+        /**
+         * @description How a condition compares the value at its field path against the condition value. `exists`/`not_exists` ignore the value; every other operator compares the field's scalar value as a string.
+         * @enum {string}
+         */
+        RuleOperator: "equals" | "not_equals" | "contains" | "not_contains" | "matches" | "in" | "exists" | "not_exists";
+        /** @description A single match condition. The field is a dotted path into the event, rooted at an object exposing `source`, `eventType` and `payload` (the raw webhook body), e.g. `payload.workflow_run.conclusion`. */
+        RuleCondition: {
+            /**
+             * @description Dotted path into the event, e.g. `payload.workflow_run.conclusion`.
+             * @example payload.workflow_run.conclusion
+             */
+            field: string;
+            operator: components["schemas"]["RuleOperator"];
+            /**
+             * @description Comparison value. For `in` this is a comma-separated list. Ignored by `exists`/`not_exists`.
+             * @example failure
+             */
+            value?: string;
+        };
+        /** @description A labelled value pulled from the event into the incident description. */
+        RuleMetadataField: {
+            /** @example Repository */
+            label: string;
+            /**
+             * @description Dotted path into the event.
+             * @example payload.repository.full_name
+             */
+            field: string;
+        };
+        /** @description Definition used to create or replace a rule. */
+        RuleInput: {
+            /**
+             * @description Human-readable rule name.
+             * @example GitHub CI failures
+             */
+            name: string;
+            /** @default true */
+            enabled: boolean;
+            /**
+             * @description Lower runs first; the first matching enabled rule wins.
+             * @default 100
+             * @example 100
+             */
+            priority: number;
+            /**
+             * @description Only evaluate events from this source slug; omit to match any source.
+             * @example github
+             */
+            source?: string;
+            /** @description All conditions must match (logical AND). An empty list matches every event. */
+            conditions?: components["schemas"]["RuleCondition"][];
+            severity: components["schemas"]["Severity"];
+            /**
+             * @description Incident title; supports `{{dotted.path}}` placeholders.
+             * @example CI failure: {{payload.workflow_run.name}}
+             */
+            titleTemplate: string;
+            /** @description Optional leading description text; supports `{{dotted.path}}` placeholders (Markdown). */
+            descriptionTemplate?: string;
+            /** @description Fields rendered as a labelled Markdown list appended to the description. */
+            metadataFields?: components["schemas"]["RuleMetadataField"][];
+            /**
+             * @description Placeholder template computing a dedup key; at most one incident is created per (rule, key). Empty falls back to the event id, e.g. `{{payload.workflow_run.id}}`.
+             * @example {{payload.workflow_run.id}}
+             */
+            dedupKeyTemplate?: string;
+        };
+        /** @description A configured incident rule. */
+        Rule: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            enabled: boolean;
+            priority: number;
+            source?: string;
+            conditions: components["schemas"]["RuleCondition"][];
+            severity: components["schemas"]["Severity"];
+            titleTemplate: string;
+            descriptionTemplate?: string;
+            metadataFields: components["schemas"]["RuleMetadataField"][];
+            dedupKeyTemplate?: string;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        /** @description All configured rules, highest priority first. */
+        RuleListResponse: {
+            items: components["schemas"]["Rule"][];
+        };
         /** @description Registered webhook sources, oldest first. */
         WebhookSourceListResponse: {
             items: components["schemas"]["WebhookSource"][];
@@ -1094,6 +1224,8 @@ export interface components {
         WebhookSourceParam: string;
         /** @description UUID of the external event (the `sourceId` carried on NATS events). */
         ExternalEventIdParam: string;
+        /** @description UUID of the rule. */
+        RuleIdParam: string;
     };
     requestBodies: never;
     headers: never;
@@ -2222,6 +2354,195 @@ export interface operations {
                 content?: never;
             };
             /** @description No external event exists with the given ID */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    listRules: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description All configured rules */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RuleListResponse"];
+                };
+            };
+            /** @description Not authenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    createRule: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RuleInput"];
+            };
+        };
+        responses: {
+            /** @description Rule created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Rule"];
+                };
+            };
+            /** @description Invalid rule definition */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not authenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getRule: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description UUID of the rule. */
+                ruleId: components["parameters"]["RuleIdParam"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Rule"];
+                };
+            };
+            /** @description Not authenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No rule exists with the given ID */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    updateRule: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description UUID of the rule. */
+                ruleId: components["parameters"]["RuleIdParam"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RuleInput"];
+            };
+        };
+        responses: {
+            /** @description Rule updated */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Rule"];
+                };
+            };
+            /** @description Invalid rule definition */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not authenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No rule exists with the given ID */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    deleteRule: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description UUID of the rule. */
+                ruleId: components["parameters"]["RuleIdParam"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Rule deleted */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not authenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No rule exists with the given ID */
             404: {
                 headers: {
                     [name: string]: unknown;

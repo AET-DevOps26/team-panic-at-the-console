@@ -923,6 +923,115 @@ paths:
         "404":
           description: No external event exists with the given ID
 
+  /rules:
+    get:
+      operationId: listRules
+      summary: List incident rules, highest priority first
+      description: >-
+        Rules decide which external events become incidents. They are evaluated in ascending
+        `priority` order and the first enabled rule that matches an event creates the incident.
+      tags: [rules]
+      security: []
+      responses:
+        "200":
+          description: All configured rules
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RuleListResponse"
+        "401":
+          description: Not authenticated
+    post:
+      operationId: createRule
+      summary: Create an incident rule
+      tags: [rules]
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RuleInput"
+      responses:
+        "201":
+          description: Rule created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Rule"
+        "400":
+          description: Invalid rule definition
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Not authenticated
+
+  /rules/{ruleId}:
+    get:
+      operationId: getRule
+      summary: Fetch a single rule
+      tags: [rules]
+      security: []
+      parameters:
+        - $ref: "#/components/parameters/RuleIdParam"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Rule"
+        "401":
+          description: Not authenticated
+        "404":
+          description: No rule exists with the given ID
+    put:
+      operationId: updateRule
+      summary: Replace a rule's definition
+      tags: [rules]
+      security: []
+      parameters:
+        - $ref: "#/components/parameters/RuleIdParam"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RuleInput"
+      responses:
+        "200":
+          description: Rule updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Rule"
+        "400":
+          description: Invalid rule definition
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Not authenticated
+        "404":
+          description: No rule exists with the given ID
+    delete:
+      operationId: deleteRule
+      summary: Delete a rule
+      tags: [rules]
+      security: []
+      parameters:
+        - $ref: "#/components/parameters/RuleIdParam"
+      responses:
+        "204":
+          description: Rule deleted
+        "401":
+          description: Not authenticated
+        "404":
+          description: No rule exists with the given ID
+
 components:
   parameters:
     UserListLimitParam:
@@ -1004,6 +1113,16 @@ components:
         type: string
         format: uuid
         example: 018e2c5f-1234-7abc-8def-0000000000e1
+
+    RuleIdParam:
+      name: ruleId
+      in: path
+      required: true
+      description: UUID of the rule.
+      schema:
+        type: string
+        format: uuid
+        example: 018e2c5f-1234-7abc-8def-0000000000f1
 
   responses:
     RegenAccepted:
@@ -1708,6 +1827,167 @@ components:
           type: string
           format: date-time
           description: Receipt time of the newest external event for this slug; absent if none arrived yet.
+
+    RuleOperator:
+      type: string
+      description: >-
+        How a condition compares the value at its field path against the
+        condition value. `exists`/`not_exists` ignore the value; every other
+        operator compares the field's scalar value as a string.
+      enum:
+        - equals
+        - not_equals
+        - contains
+        - not_contains
+        - matches
+        - in
+        - exists
+        - not_exists
+
+    RuleCondition:
+      type: object
+      description: >-
+        A single match condition. The field is a dotted path into the event,
+        rooted at an object exposing `source`, `eventType` and `payload` (the
+        raw webhook body), e.g. `payload.workflow_run.conclusion`.
+      required: [field, operator]
+      additionalProperties: false
+      properties:
+        field:
+          type: string
+          description: Dotted path into the event, e.g. `payload.workflow_run.conclusion`.
+          example: payload.workflow_run.conclusion
+        operator:
+          $ref: "#/components/schemas/RuleOperator"
+        value:
+          type: string
+          description: >-
+            Comparison value. For `in` this is a comma-separated list. Ignored by
+            `exists`/`not_exists`.
+          example: failure
+
+    RuleMetadataField:
+      type: object
+      description: A labelled value pulled from the event into the incident description.
+      required: [label, field]
+      additionalProperties: false
+      properties:
+        label:
+          type: string
+          example: Repository
+        field:
+          type: string
+          description: Dotted path into the event.
+          example: payload.repository.full_name
+
+    RuleInput:
+      type: object
+      description: Definition used to create or replace a rule.
+      required: [name, severity, titleTemplate]
+      additionalProperties: false
+      properties:
+        name:
+          type: string
+          description: Human-readable rule name.
+          example: GitHub CI failures
+        enabled:
+          type: boolean
+          default: true
+        priority:
+          type: integer
+          default: 100
+          description: Lower runs first; the first matching enabled rule wins.
+          example: 100
+        source:
+          type: string
+          description: Only evaluate events from this source slug; omit to match any source.
+          example: github
+        conditions:
+          type: array
+          description: All conditions must match (logical AND). An empty list matches every event.
+          items:
+            $ref: "#/components/schemas/RuleCondition"
+        severity:
+          $ref: "#/components/schemas/Severity"
+        titleTemplate:
+          type: string
+          description: Incident title; supports `{{dotted.path}}` placeholders.
+          example: "CI failure: {{payload.workflow_run.name}}"
+        descriptionTemplate:
+          type: string
+          description: Optional leading description text; supports `{{dotted.path}}` placeholders (Markdown).
+        metadataFields:
+          type: array
+          description: Fields rendered as a labelled Markdown list appended to the description.
+          items:
+            $ref: "#/components/schemas/RuleMetadataField"
+        dedupKeyTemplate:
+          type: string
+          description: >-
+            Placeholder template computing a dedup key; at most one incident is created per
+            (rule, key). Empty falls back to the event id, e.g. `{{payload.workflow_run.id}}`.
+          example: "{{payload.workflow_run.id}}"
+
+    Rule:
+      type: object
+      description: A configured incident rule.
+      required:
+        - id
+        - name
+        - enabled
+        - priority
+        - conditions
+        - severity
+        - titleTemplate
+        - metadataFields
+        - createdAt
+        - updatedAt
+      additionalProperties: false
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        enabled:
+          type: boolean
+        priority:
+          type: integer
+        source:
+          type: string
+        conditions:
+          type: array
+          items:
+            $ref: "#/components/schemas/RuleCondition"
+        severity:
+          $ref: "#/components/schemas/Severity"
+        titleTemplate:
+          type: string
+        descriptionTemplate:
+          type: string
+        metadataFields:
+          type: array
+          items:
+            $ref: "#/components/schemas/RuleMetadataField"
+        dedupKeyTemplate:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    RuleListResponse:
+      type: object
+      description: All configured rules, highest priority first.
+      required: [items]
+      additionalProperties: false
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/Rule"
 
     WebhookSourceListResponse:
       type: object

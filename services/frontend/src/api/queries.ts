@@ -27,6 +27,11 @@ export type CreateWebhookSourceRequest = components["schemas"]["CreateWebhookSou
 export type ExternalEventSummary = components["schemas"]["ExternalEventSummary"];
 export type ExternalEventDetail = components["schemas"]["ExternalEventDetail"];
 export type ExternalEventListResponse = components["schemas"]["ExternalEventListResponse"];
+export type Rule = components["schemas"]["Rule"];
+export type RuleInput = components["schemas"]["RuleInput"];
+export type RuleCondition = components["schemas"]["RuleCondition"];
+export type RuleMetadataField = components["schemas"]["RuleMetadataField"];
+export type RuleOperator = components["schemas"]["RuleOperator"];
 
 const MOCK = import.meta.env.VITE_MOCK === "true";
 
@@ -577,6 +582,90 @@ export function useExternalEvent(id: string | null) {
       return data;
     },
     enabled: Boolean(id),
+  });
+}
+
+// ── Rules ───────────────────────────────────────────────────────────────────
+
+const MOCK_RULES: Rule[] = [
+  {
+    id: "018e2c5f-1234-7abc-8def-000000000f01",
+    name: "GitHub CI failures",
+    enabled: true,
+    priority: 100,
+    source: "github",
+    severity: "SEV2",
+    titleTemplate: "CI failure: {{payload.workflow_run.name}}",
+    descriptionTemplate: "Workflow **{{payload.workflow_run.name}}** failed on `{{payload.workflow_run.head_branch}}`.",
+    dedupKeyTemplate: "{{payload.workflow_run.id}}",
+    conditions: [{ field: "eventType", operator: "equals", value: "ci_failure" }],
+    metadataFields: [
+      { label: "Repository", field: "payload.repository.full_name" },
+      { label: "Branch", field: "payload.workflow_run.head_branch" },
+    ],
+    createdAt: new Date(Date.now() - 5 * 24 * 3600_000).toISOString(),
+    updatedAt: new Date(Date.now() - 5 * 24 * 3600_000).toISOString(),
+  },
+];
+
+export function useRules() {
+  return useQuery({
+    queryKey: ["rules"],
+    queryFn: async (): Promise<Rule[]> => {
+      if (MOCK) return MOCK_RULES;
+      const { data, error } = await apiClient.GET("/rules");
+      if (error || !data) throw new Error("Failed to fetch rules");
+      return data.items;
+    },
+  });
+}
+
+export function useCreateRule() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (body: RuleInput): Promise<Rule> => {
+      if (MOCK) return { ...MOCK_RULES[0], ...body, id: crypto.randomUUID(), createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() } as Rule;
+      const { data, error, response } = await apiClient.POST("/rules", { body });
+      if (error || !data) throw new ApiError("Failed to create rule", response?.status);
+      return data;
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["rules"] });
+    },
+  });
+}
+
+export function useUpdateRule() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, body }: { id: string; body: RuleInput }): Promise<Rule> => {
+      if (MOCK) return { ...MOCK_RULES[0], ...body, id, updatedAt: new Date().toISOString() } as Rule;
+      const { data, error, response } = await apiClient.PUT("/rules/{ruleId}", {
+        params: { path: { ruleId: id } },
+        body,
+      });
+      if (error || !data) throw new ApiError("Failed to update rule", response?.status);
+      return data;
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["rules"] });
+    },
+  });
+}
+
+export function useDeleteRule() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string): Promise<void> => {
+      if (MOCK) return;
+      const { error, response } = await apiClient.DELETE("/rules/{ruleId}", {
+        params: { path: { ruleId: id } },
+      });
+      if (error) throw new ApiError("Failed to delete rule", response?.status);
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["rules"] });
+    },
   });
 }
 
