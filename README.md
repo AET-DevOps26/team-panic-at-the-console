@@ -385,9 +385,17 @@ Prism reads the spec and serves auto-generated responses on `http://localhost:40
 
 ## Student Responsibilities
 
-- **Frontend** (`services/frontend`): [@LeonSpoerl](https://github.com/LeonSpoerl)
-- **Backend** (`services/incident-service`, `services/event-service`): [@florian-pesco](https://github.com/florian-pesco)
-- **GenAI** (`services/genai-service`): [@ManuelLerchner](https://github.com/ManuelLerchner)
+[@florian-pesco](https://github.com/florian-pesco)
+- **Project role**: Backend
+- **Services**: `services/incident-service`, `services/event-service`
+
+[@ManuelLerchner](https://github.com/ManuelLerchner)
+- **Project role**: GenAI
+- **Services**: `services/genai-service`, `services/gateway`, `infra/observability`
+
+[@LeonSpoerl](https://github.com/LeonSpoerl):
+- **Project role**: Frontend
+- **Services**: `services/frontend`, `services/user-service`, `services/notification-service`, `services/webhook-service`
 
 
 ## Development Memes
