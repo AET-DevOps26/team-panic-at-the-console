@@ -193,25 +193,6 @@ services:
         condition: service_started
     restart: unless-stopped
 
-  rule-engine:
-    image: ghcr.io/aet-devops26/team-panic-at-the-console/rule-engine:${IMAGE_TAG:-latest}
-    build:
-      context: ./services/rule-engine
-      dockerfile: Dockerfile
-    environment:
-      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/rules
-      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-devops}
-      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-devops}
-      NATS_URL: ${NATS_URL:-nats://nats:4222}
-    ports:
-      - "8083:8083"
-    depends_on:
-      postgres-init:
-        condition: service_completed_successfully
-      nats:
-        condition: service_started
-    restart: unless-stopped
-
   user-service:
     image: ghcr.io/aet-devops26/team-panic-at-the-console/user-service:${IMAGE_TAG:-latest}
     build:
