@@ -16,4 +16,6 @@ public interface CommentRepository extends JpaRepository<Comment, UUID> {
     Page<Comment> findByIncident_IdOrderByCreatedAtAsc(UUID incidentId, Pageable pageable);
 
     long countByIncident_Id(UUID incidentId);
+
+    void deleteByIncident_Id(UUID incidentId);
 }

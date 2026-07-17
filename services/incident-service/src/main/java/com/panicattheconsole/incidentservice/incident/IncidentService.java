@@ -265,6 +265,28 @@ public class IncidentService {
     }
 
     /**
+     * Permanently delete an incident and its comments.
+     * Timeline events in event-service are append-only and deliberately kept;
+     * the incident.deleted event published here becomes the log's final entry
+     * for the incident, so the deletion itself stays auditable.
+     */
+    public void deleteIncident(UUID incidentId, UUID actorId) {
+        Incident incident = getIncident(incidentId);
+
+        Map<String, Object> event = createBaseEvent(incidentId);
+        if (incident.getTitle() != null) {
+            event.put("title", incident.getTitle());
+        }
+        putAudience(event, incident, actorId);
+
+        commentRepository.deleteByIncident_Id(incidentId);
+        incidentRepository.delete(incident);
+        publishAfterCommit("incident.deleted", event);
+
+        log.info("Deleted incident [id={}]", incidentId);
+    }
+
+    /**
      * Trigger on-demand regeneration of one AI field.
      * Publishes incident.regen.requested with a task the genai consumer
      * understands.

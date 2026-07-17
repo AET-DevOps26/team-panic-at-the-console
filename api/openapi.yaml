@@ -147,6 +147,24 @@ paths:
                 $ref: "#/components/schemas/Incident"
         "404":
           description: Incident not found
+    delete:
+      operationId: deleteIncident
+      summary: Permanently delete an incident
+      description: |
+        Deletes the incident and its comments. Timeline events stored by
+        event-service remain in the append-only log; a final incident.deleted
+        entry records the deletion itself.
+      tags: [incidents]
+      security: []
+      parameters:
+        - $ref: "#/components/parameters/IncidentIdParam"
+      responses:
+        "204":
+          description: Incident deleted; its timeline events remain in the event log
+        "401":
+          description: Not authenticated
+        "404":
+          $ref: "#/components/responses/IncidentNotFound"
 
   /incidents/{incidentId}/description:
     patch:

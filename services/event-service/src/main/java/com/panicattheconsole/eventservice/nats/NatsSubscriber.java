@@ -56,6 +56,7 @@ public class NatsSubscriber {
                 dispatcher.subscribe("incident.assigned");
                 dispatcher.subscribe("incident.comment.added");
                 dispatcher.subscribe("incident.severity.escalated");
+                dispatcher.subscribe("incident.deleted");
 
                 log.info("Event service subscribed to incident events");
         }

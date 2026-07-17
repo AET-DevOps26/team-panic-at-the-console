@@ -1,11 +1,12 @@
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useNavigate } from "react-router-dom";
 import { useState } from "react";
-import { ArrowLeft, Check, RefreshCw, Clock, Loader2, MessageSquare, AlertTriangle, Zap } from "lucide-react";
+import { ArrowLeft, Check, RefreshCw, Clock, Loader2, MessageSquare, AlertTriangle, Trash2, Zap } from "lucide-react";
 import { EditableDescription } from "@/components/incident/EditableDescription";
 import { Markdown } from "@/components/Markdown";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { SeverityBadge, StatusBadge, severityDotColor, statusDotColor } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -14,7 +15,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import type React from "react";
 import NotFoundPage from "@/pages/NotFoundPage";
-import { isNotFound, useIncident, useIncidentEvents, useComments, useAddComment, useRegeneratePostmortem, useRegenerateSeverity, useRegenerateSolutions, useRegenerateSummary, useSetIncidentSeverity, useUpdateIncidentStatus, useUsers, type Incident, type IncidentEvent, type IncidentStatus, type Severity, type Comment } from "@/api/queries";
+import { isNotFound, useIncident, useIncidentEvents, useComments, useAddComment, useDeleteIncident, useRegeneratePostmortem, useRegenerateSeverity, useRegenerateSolutions, useRegenerateSummary, useSetIncidentSeverity, useUpdateIncidentStatus, useUsers, type Incident, type IncidentEvent, type IncidentStatus, type Severity, type Comment } from "@/api/queries";
 import { AssigneesCard } from "@/components/incident/AssigneesCard";
 import { cn, formatDateTime, formatRelativeTime } from "@/lib/utils";
 import { isAutoGenerating, solutionsToMarkdown, suggestedSeverity, useIntervalRerender, REGEN_WATCH_MS } from "@/lib/genai";
@@ -255,6 +256,48 @@ function SeveritySelect({ incident }: { incident: Incident }) {
   );
 }
 
+// Confirmation gate for the only place incidents can be deleted. Deletion is
+// permanent for the incident and its comments; already-logged timeline events
+// stay in the append-only event log.
+function DeleteIncidentDialog({ incident }: { incident: Incident }) {
+  const navigate = useNavigate();
+  const [open, setOpen] = useState(false);
+  const deleteIncident = useDeleteIncident(incident.id);
+
+  return (
+    <Dialog open={open} onOpenChange={(next) => !deleteIncident.isPending && setOpen(next)}>
+      <DialogTrigger asChild>
+        <Button variant="outline" size="sm" className="w-full border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive">
+          <Trash2 className="h-3.5 w-3.5 mr-1.5" />
+          Delete incident
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Delete this incident?</DialogTitle>
+          <DialogDescription>
+            “{incident.title}” and its comments will be permanently deleted. Entries already recorded in the event log are kept.
+          </DialogDescription>
+        </DialogHeader>
+        {deleteIncident.isError && <p className="text-xs text-red-600">Failed to delete incident. Please try again.</p>}
+        <DialogFooter>
+          <Button variant="outline" onClick={() => setOpen(false)} disabled={deleteIncident.isPending}>
+            Cancel
+          </Button>
+          <Button
+            variant="destructive"
+            disabled={deleteIncident.isPending}
+            onClick={() => deleteIncident.mutate(undefined, { onSuccess: () => navigate("/incidents") })}
+          >
+            {deleteIncident.isPending ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5 mr-1.5" />}
+            {deleteIncident.isPending ? "Deleting…" : "Delete incident"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 export default function IncidentDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { data: incident, isLoading, isError, error, refetch } = useIncident(id ?? "");
@@ -447,6 +490,8 @@ export default function IncidentDetailPage() {
             </Card>
 
             <AssigneesCard incident={incident} />
+
+            <DeleteIncidentDialog incident={incident} />
           </div>
         </div>
       </div>

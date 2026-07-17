@@ -77,6 +77,39 @@ class IncidentServiceTest {
     }
 
     @Test
+    void deleteIncident_removesCommentsAndIncidentAndPublishesDeletedEvent() {
+        UUID actorId = UUID.randomUUID();
+        UUID assigneeId = UUID.randomUUID();
+        incident.setAssignedUsers(Set.of(assigneeId));
+        when(incidentRepository.findById(incidentId)).thenReturn(Optional.of(incident));
+
+        incidentService.deleteIncident(incidentId, actorId);
+
+        verify(commentRepository).deleteByIncident_Id(incidentId);
+        verify(incidentRepository).delete(incident);
+        ArgumentCaptor<IncidentNatsEvent> captor = ArgumentCaptor.forClass(IncidentNatsEvent.class);
+        verify(applicationEventPublisher).publishEvent(captor.capture());
+        assertThat(captor.getValue().getSubject()).isEqualTo("incident.deleted");
+        assertThat(captor.getValue().getPayload())
+                .containsEntry("incidentId", incidentId.toString())
+                .containsEntry("title", "Test incident")
+                .containsEntry("actorId", actorId.toString())
+                .containsEntry("assignedUserIds", List.of(assigneeId.toString()));
+    }
+
+    @Test
+    void deleteIncident_throwsNotFound_whenIncidentMissing() {
+        when(incidentRepository.findById(incidentId)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> incidentService.deleteIncident(incidentId, null))
+                .isInstanceOf(java.util.NoSuchElementException.class)
+                .hasMessageContaining("Incident not found");
+
+        verify(incidentRepository, never()).delete(any(Incident.class));
+        verify(applicationEventPublisher, never()).publishEvent(any());
+    }
+
+    @Test
     void validatePostmortemAllowed_allowsResolvedIncident() {
         incident.setStatus(IncidentStatus.RESOLVED);
         when(incidentRepository.findById(incidentId)).thenReturn(Optional.of(incident));

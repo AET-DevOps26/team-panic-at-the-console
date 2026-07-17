@@ -67,6 +67,11 @@ class IncidentsProxyController implements IncidentsApi {
     }
 
     @Override
+    public ResponseEntity<Void> deleteIncident(UUID incidentId) {
+        return DownstreamProxy.delete(incidentServiceClient, "/incidents/{incidentId}", incidentId);
+    }
+
+    @Override
     public ResponseEntity<List<IncidentEvent>> listIncidentEvents(UUID incidentId) {
         return DownstreamProxy.get(
                 eventServiceClient,

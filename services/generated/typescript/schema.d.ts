@@ -50,7 +50,14 @@ export interface paths {
         get: operations["getIncident"];
         put?: never;
         post?: never;
-        delete?: never;
+        /**
+         * Permanently delete an incident
+         * @description Deletes the incident and its comments. Timeline events stored by
+         *     event-service remain in the append-only log; a final incident.deleted
+         *     entry records the deletion itself.
+         *
+         */
+        delete: operations["deleteIncident"];
         options?: never;
         head?: never;
         patch?: never;
@@ -1372,6 +1379,35 @@ export interface operations {
                 };
                 content?: never;
             };
+        };
+    };
+    deleteIncident: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description UUID of the target incident. */
+                incidentId: components["parameters"]["IncidentIdParam"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Incident deleted; its timeline events remain in the event log */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not authenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            404: components["responses"]["IncidentNotFound"];
         };
     };
     updateIncidentDescription: {
