@@ -284,12 +284,14 @@ Ingress uses cert-manager (`letsencrypt-prod`) and TLS secret `devops-platform-t
 | --- | ------- |
 | `http://localhost:8080/api/v1/` | Gateway (via `edge`) |
 | `http://localhost:8080/swagger` | Swagger UI (via `edge`) |
+| `http://localhost:8080/grafana` | Grafana (via `edge`; `admin` / `admin`) |
+| `http://localhost:8080/prometheus` | Prometheus UI (via `edge`) |
 | `http://localhost:3000/` | Frontend (direct) |
-| `http://localhost:3030/` | Grafana (`admin` / `admin`) |
-| `http://localhost:9090/` | Prometheus UI |
+| `http://localhost:3030/` | Grafana (direct) |
+| `http://localhost:9090/prometheus` | Prometheus (direct) |
 | `http://localhost:8087/metrics` | genai-service Prometheus scrape |
 
-Grafana talks to Prometheus at `http://prometheus:9090` inside Docker; use `localhost` from your browser.
+Grafana talks to Prometheus at `http://prometheus:9090/prometheus` inside Docker; use `localhost` from your browser.
 
 Populate Grafana panels after boot: `pixi run compose-smoke-genai-metrics`.
 
@@ -348,12 +350,14 @@ Docker auto-discovers the root `compose.yaml` (a symlink to `infra/compose/docke
 | --- | ------- |
 | `http://localhost:8080/api/v1/` | Gateway (via `edge`; e.g. `/health`) |
 | `http://localhost:8080/swagger` | Swagger UI |
+| `http://localhost:8080/grafana` | Grafana (via `edge`; `admin` / `admin`) |
+| `http://localhost:8080/prometheus` | Prometheus (via `edge`) |
 | `http://localhost:3000/` | Frontend (direct) |
-| `http://localhost:3030/` | Grafana (`admin` / `admin`) |
-| `http://localhost:9090/` | Prometheus |
+| `http://localhost:3030/` | Grafana (direct) |
+| `http://localhost:9090/prometheus` | Prometheus (direct) |
 | `http://localhost:8087/metrics` | genai-service metrics |
 
-Same path layout as the stud-cluster ingress for app routes (`/api`, `/swagger`). Observability uses dedicated host ports locally. After boot: `pixi run compose-smoke-genai-metrics` to fill the genai dashboard.
+Same path layout as the stud-cluster ingress (`/api`, `/swagger`, `/grafana`, `/prometheus`); the direct host ports stay published for local debugging. After boot: `pixi run compose-smoke-genai-metrics` to fill the genai dashboard.
 
 Shared non-secret defaults (for example `NATS_URL`) are defined once in `.env.example` and referenced from service-specific environment sections.
 

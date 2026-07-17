@@ -5,6 +5,8 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
+import com.panicattheconsole.incidentservice.nats.ExternalEventRuleService;
+
 import java.lang.reflect.Method;
 import java.nio.charset.StandardCharsets;
 import java.util.UUID;
@@ -25,185 +27,237 @@ import io.nats.client.Message;
 @ExtendWith(MockitoExtension.class)
 class NatsSubscriberTest {
 
-    @Mock
-    private Connection natsConnection;
+        @Mock
+        private Connection natsConnection;
 
-    @Mock
-    private IncidentService incidentService;
+        @Mock
+        private IncidentService incidentService;
 
-    @Mock
-    private Message message;
+        @Mock
+        private ExternalEventRuleService externalEventRuleService;
 
-    private ObjectMapper objectMapper;
-    private NatsSubscriber subscriber;
+        @Mock
+        private Message message;
 
-    @BeforeEach
-    void setUp() {
-        objectMapper = new ObjectMapper();
-        subscriber = new NatsSubscriber(
-                natsConnection,
-                objectMapper,
-                incidentService);
-    }
+        private ObjectMapper objectMapper;
+        private NatsSubscriber subscriber;
 
-    @Test
-    void createRequested_createsIncident() throws Exception {
-        UUID sourceId = UUID.randomUUID();
+        @BeforeEach
+        void setUp() {
+                objectMapper = new ObjectMapper();
+                subscriber = new NatsSubscriber(
+                                natsConnection,
+                                objectMapper,
+                                incidentService,
+                                externalEventRuleService);
+        }
 
-        String payload = """
-                {
-                  "sourceId":"%s",
-                  "severity":"SEV3"
-                }
-                """.formatted(sourceId);
+        @Test
+        void createRequested_createsIncident() throws Exception {
+                UUID sourceId = UUID.randomUUID();
 
-        invokeHandleMessage(
-                "incident.create.requested",
-                payload);
+                String payload = """
+                                {
+                                  "sourceId":"%s",
+                                  "severity":"SEV3"
+                                }
+                                """.formatted(sourceId);
 
-        verify(incidentService).createIncident(
-                any(UUID.class),
-                eq(Severity.SEV3),
-                eq("Created from external event"),
-                eq(sourceId));
-    }
+                invokeHandleMessage(
+                                "incident.create.requested",
+                                payload);
 
-    @Test
-    void createRequested_invalidUuid_isIgnored() throws Exception {
-        String payload = """
-                {
-                  "sourceId":"not-a-uuid",
-                  "severity":"SEV3"
-                }
-                """;
+                verify(incidentService).createIncident(
+                                any(UUID.class),
+                                eq(Severity.SEV3),
+                                eq("Created from external event"),
+                                eq(sourceId));
+        }
 
-        invokeHandleMessage(
-                "incident.create.requested",
-                payload);
+        @Test
+        void externalEventReceived_ciFailure_createsIncident() throws Exception {
+                UUID externalEventId = UUID.randomUUID();
 
-        verify(incidentService, never())
-                .createIncident(any(), any(), any(), any());
-    }
+                String payload = """
+                                {
+                                  "sourceId":"%s",
+                                  "eventType":"ci_failure",
+                                  "timestamp":"2026-07-15T10:00:00Z",
+                                  "rawPayload":{
+                                    "repository":"demo/repo",
+                                    "workflow":"build"
+                                  }
+                                }
+                                """.formatted(externalEventId);
 
-    @Test
-    void createRequested_unknownSeverity_isIgnored() throws Exception {
-        UUID sourceId = UUID.randomUUID();
+                org.mockito.Mockito.when(externalEventRuleService.shouldCreateIncident("ci_failure", payload))
+                                .thenReturn(true);
 
-        String payload = """
-                {
-                  "sourceId":"%s",
-                  "severity":"SEV999"
-                }
-                """.formatted(sourceId);
+                invokeHandleMessage("external.event.received", payload);
 
-        invokeHandleMessage(
-                "incident.create.requested",
-                payload);
+                verify(externalEventRuleService).shouldCreateIncident("ci_failure", payload);
+        }
 
-        verify(incidentService, never())
-                .createIncident(any(), any(), any(), any());
-    }
+        @Test
+        void externalEventReceived_nonMatchingEvent_isIgnored() throws Exception {
+                UUID externalEventId = UUID.randomUUID();
 
-    @Test
-    void createRequested_missingFields_isIgnored() throws Exception {
-        String payload = """
-                {
-                  "sourceId": null,
-                  "severity":"SEV3"
-                }
-                """;
+                String payload = """
+                                {
+                                  "sourceId":"%s",
+                                  "eventType":"ci_success",
+                                  "timestamp":"2026-07-15T10:00:00Z",
+                                  "rawPayload":{
+                                    "repository":"demo/repo",
+                                    "workflow":"build"
+                                  }
+                                }
+                                """.formatted(externalEventId);
 
-        invokeHandleMessage(
-                "incident.create.requested",
-                payload);
+                org.mockito.Mockito.when(externalEventRuleService.shouldCreateIncident("ci_success", payload))
+                                .thenReturn(false);
 
-        verify(incidentService, never())
-                .createIncident(any(), any(), any(), any());
-    }
+                invokeHandleMessage("external.event.received", payload);
 
-    @Test
-    void severityEscalationRequested_escalatesSeverity() throws Exception {
-        UUID incidentId = UUID.randomUUID();
+                verify(externalEventRuleService).shouldCreateIncident("ci_success", payload);
+        }
 
-        String payload = """
-                {
-                  "incidentId":"%s",
-                  "requestedSeverity":"SEV1"
-                }
-                """.formatted(incidentId);
+        @Test
+        void createRequested_invalidUuid_isIgnored() throws Exception {
+                String payload = """
+                                {
+                                  "sourceId":"not-a-uuid",
+                                  "severity":"SEV3"
+                                }
+                                """;
 
-        invokeHandleMessage(
-                "incident.severity.escalate.requested",
-                payload);
+                invokeHandleMessage(
+                                "incident.create.requested",
+                                payload);
 
-        verify(incidentService)
-                .escalateSeverity(
-                        incidentId,
-                        Severity.SEV1);
-    }
+                verify(incidentService, never())
+                                .createIncident(any(), any(), any(), any());
+        }
 
-    @Test
-    void severityEscalationRequested_invalidUuid_isIgnored() throws Exception {
-        String payload = """
-                {
-                  "incidentId":"invalid",
-                  "requestedSeverity":"SEV1"
-                }
-                """;
+        @Test
+        void createRequested_unknownSeverity_isIgnored() throws Exception {
+                UUID sourceId = UUID.randomUUID();
 
-        invokeHandleMessage(
-                "incident.severity.escalate.requested",
-                payload);
+                String payload = """
+                                {
+                                  "sourceId":"%s",
+                                  "severity":"SEV999"
+                                }
+                                """.formatted(sourceId);
 
-        verify(incidentService, never())
-                .escalateSeverity(any(), any());
-    }
+                invokeHandleMessage(
+                                "incident.create.requested",
+                                payload);
 
-    @Test
-    void severityEscalationRequested_unknownSeverity_isIgnored() throws Exception {
-        UUID incidentId = UUID.randomUUID();
+                verify(incidentService, never())
+                                .createIncident(any(), any(), any(), any());
+        }
 
-        String payload = """
-                {
-                  "incidentId":"%s",
-                  "requestedSeverity":"INVALID"
-                }
-                """.formatted(incidentId);
+        @Test
+        void createRequested_missingFields_isIgnored() throws Exception {
+                String payload = """
+                                {
+                                  "sourceId": null,
+                                  "severity":"SEV3"
+                                }
+                                """;
 
-        invokeHandleMessage(
-                "incident.severity.escalate.requested",
-                payload);
+                invokeHandleMessage(
+                                "incident.create.requested",
+                                payload);
 
-        verify(incidentService, never())
-                .escalateSeverity(any(), any());
-    }
+                verify(incidentService, never())
+                                .createIncident(any(), any(), any(), any());
+        }
 
-    @Test
-    void unknownSubject_isIgnored() throws Exception {
-        invokeHandleMessage(
-                "some.random.subject",
-                "{}");
+        @Test
+        void severityEscalationRequested_escalatesSeverity() throws Exception {
+                UUID incidentId = UUID.randomUUID();
 
-        verify(incidentService, never())
-                .createIncident(any(), any(), any(), any());
+                String payload = """
+                                {
+                                  "incidentId":"%s",
+                                  "requestedSeverity":"SEV1"
+                                }
+                                """.formatted(incidentId);
 
-        verify(incidentService, never())
-                .escalateSeverity(any(), any());
-    }
+                invokeHandleMessage(
+                                "incident.severity.escalate.requested",
+                                payload);
 
-    private void invokeHandleMessage(String subject, String payload)
-            throws Exception {
+                verify(incidentService)
+                                .escalateSeverity(
+                                                incidentId,
+                                                Severity.SEV1);
+        }
 
-        org.mockito.Mockito.when(message.getSubject())
-                .thenReturn(subject);
+        @Test
+        void severityEscalationRequested_invalidUuid_isIgnored() throws Exception {
+                String payload = """
+                                {
+                                  "incidentId":"invalid",
+                                  "requestedSeverity":"SEV1"
+                                }
+                                """;
 
-        org.mockito.Mockito.when(message.getData())
-                .thenReturn(payload.getBytes(StandardCharsets.UTF_8));
+                invokeHandleMessage(
+                                "incident.severity.escalate.requested",
+                                payload);
 
-        Method method = NatsSubscriber.class
-                .getDeclaredMethod("handleMessage", Message.class);
+                verify(incidentService, never())
+                                .escalateSeverity(any(), any());
+        }
 
-        method.setAccessible(true);
-        method.invoke(subscriber, message);
-    }
+        @Test
+        void severityEscalationRequested_unknownSeverity_isIgnored() throws Exception {
+                UUID incidentId = UUID.randomUUID();
+
+                String payload = """
+                                {
+                                  "incidentId":"%s",
+                                  "requestedSeverity":"INVALID"
+                                }
+                                """.formatted(incidentId);
+
+                invokeHandleMessage(
+                                "incident.severity.escalate.requested",
+                                payload);
+
+                verify(incidentService, never())
+                                .escalateSeverity(any(), any());
+        }
+
+        @Test
+        void unknownSubject_isIgnored() throws Exception {
+                invokeHandleMessage(
+                                "some.random.subject",
+                                "{}");
+
+                verify(incidentService, never())
+                                .createIncident(any(), any(), any(), any());
+
+                verify(incidentService, never())
+                                .escalateSeverity(any(), any());
+        }
+
+        private void invokeHandleMessage(String subject, String payload)
+                        throws Exception {
+
+                org.mockito.Mockito.when(message.getSubject())
+                                .thenReturn(subject);
+
+                org.mockito.Mockito.when(message.getData())
+                                .thenReturn(payload.getBytes(StandardCharsets.UTF_8));
+
+                Method method = NatsSubscriber.class
+                                .getDeclaredMethod("handleMessage", Message.class);
+
+                method.setAccessible(true);
+                method.invoke(subscriber, message);
+        }
 }

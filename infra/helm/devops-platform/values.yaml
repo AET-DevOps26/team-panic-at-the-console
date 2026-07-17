@@ -162,11 +162,13 @@ services:
       limits:
         cpu: 100m
         memory: 128Mi
-    # Sidebar footer link to the namespace-local Grafana. Prometheus is also
-    # exposed under /prometheus for demonstration.
+    # Sidebar footer links to the namespace-local Grafana and Prometheus,
+    # both routed via the ingress.
     env:
       - name: GRAFANA_URL
         value: /grafana
+      - name: PROMETHEUS_URL
+        value: /prometheus
 
   gateway:
     enabled: true
@@ -216,19 +218,6 @@ services:
     env:
       - name: SPRING_DATASOURCE_URL
         value: "jdbc:postgresql://postgres:5432/events"
-      - name: SPRING_DATASOURCE_USERNAME
-        value: devops
-      - name: SPRING_DATASOURCE_PASSWORD
-
-  rule-engine:
-    enabled: true
-    inheritGlobalEnv: true
-    port: 8083
-    image:
-      repository: rule-engine
-    env:
-      - name: SPRING_DATASOURCE_URL
-        value: "jdbc:postgresql://postgres:5432/rules"
       - name: SPRING_DATASOURCE_USERNAME
         value: devops
       - name: SPRING_DATASOURCE_PASSWORD

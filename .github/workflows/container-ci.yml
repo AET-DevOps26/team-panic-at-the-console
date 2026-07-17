@@ -25,7 +25,7 @@ jobs:
         run: |
           set -euo pipefail
           missing=0
-          for service in frontend gateway incident-service event-service rule-engine user-service notification-service webhook-service genai-service; do
+          for service in frontend gateway incident-service event-service user-service notification-service webhook-service genai-service; do
             dockerfile="services/${service}/Dockerfile"
             if [ ! -f "$dockerfile" ]; then
               echo "::error title=Missing Dockerfile::Expected ${dockerfile}"

@@ -80,22 +80,11 @@ resource "azurerm_network_security_group" "main" {
     destination_address_prefix = "*"
   }
 
-  # React frontend
+  # Edge proxy: the single public entry point. Routes / (frontend),
+  # /api (gateway, REST + SSE), /swagger, /webhooks (ingest only),
+  # /grafana and /prometheus. See infra/compose/nginx.conf.
   security_rule {
-    name                       = "Frontend"
-    priority                   = 110
-    direction                  = "Inbound"
-    access                     = "Allow"
-    protocol                   = "Tcp"
-    source_port_range          = "*"
-    destination_port_range     = "3000"
-    source_address_prefix      = "*"
-    destination_address_prefix = "*"
-  }
-
-  # API Gateway (REST + SSE)
-  security_rule {
-    name                       = "Gateway"
+    name                       = "Edge"
     priority                   = 120
     direction                  = "Inbound"
     access                     = "Allow"
@@ -106,38 +95,17 @@ resource "azurerm_network_security_group" "main" {
     destination_address_prefix = "*"
   }
 
-  # Webhook service — must receive inbound webhooks from GitHub/GitLab
-  security_rule {
-    name                       = "WebhookService"
-    priority                   = 130
-    direction                  = "Inbound"
-    access                     = "Allow"
-    protocol                   = "Tcp"
-    source_port_range          = "*"
-    destination_port_range     = "8086"
-    source_address_prefix      = "*"
-    destination_address_prefix = "*"
-  }
-
-  # Swagger UI — API docs / manual testing
-  security_rule {
-    name                       = "SwaggerUI"
-    priority                   = 140
-    direction                  = "Inbound"
-    access                     = "Allow"
-    protocol                   = "Tcp"
-    source_port_range          = "*"
-    destination_port_range     = "8090"
-    source_address_prefix      = "*"
-    destination_address_prefix = "*"
-  }
-
-  # Intentionally NOT exposed:
-  #   5432  — Postgres (internal Docker network only)
-  #   4222  — NATS client (internal Docker network only)
-  #   8222  — NATS monitoring (internal Docker network only)
-  #   11434 — Ollama (internal Docker network only)
-  #   8081–8085, 8087 — microservices (clients use the gateway)
+  # Intentionally NOT exposed (everything public rides the edge on 8080):
+  #   3000  - frontend (served at :8080/)
+  #   3030  - Grafana (served at :8080/grafana)
+  #   9090  - Prometheus (served at :8080/prometheus)
+  #   8086  - webhook-service (only the /webhooks ingest route is public,
+  #           via edge; the service's read API stays internal)
+  #   5432  - Postgres (internal Docker network only)
+  #   4222  - NATS client (internal Docker network only)
+  #   8222  - NATS monitoring (internal Docker network only)
+  #   11434 - Ollama (internal Docker network only)
+  #   8081-8085, 8087 - microservices (clients use the gateway via /api)
 }
 
 resource "azurerm_network_interface" "main" {
