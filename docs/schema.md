@@ -109,3 +109,49 @@ Source: [services/notification-service/src/main/java/com/panicattheconsole/notif
 | notificationId | UUID    | Part of composite key                         |
 | userId         | UUID    | Part of composite key                         |
 | readAt         | Instant | Timestamp when the user read the notification |
+
+## Webhook Service
+
+Source: [services/webhook-service/src/main/java/com/panicattheconsole/webhookservice/event/ExternalEvent.java](../services/webhook-service/src/main/java/com/panicattheconsole/webhookservice/event/ExternalEvent.java)
+
+### ExternalEvent
+
+| Field           | Type    | Notes                                                           |
+| --------------- | ------- | --------------------------------------------------------------- |
+| id              | UUID    | Primary key                                                     |
+| source          | String  | Source system identifier (e.g. GitHub)                          |
+| eventType       | String  | Type of the received external event                             |
+| deliveryId      | String  | Sender-provided delivery identifier used for deduplication      |
+| receivedAt      | Instant | Timestamp when the webhook was received                         |
+| rawPayload      | JSON    | Original webhook payload, persisted verbatim as `jsonb`         |
+| publishedAt     | Instant | Timestamp when the event was successfully published to NATS     |
+| publishAttempts | int     | Number of failed publish attempts before successful publication |
+
+The `external_events` table stores immutable webhook payloads received from external systems. It provides an auditable record of incoming events and tracks publication to the event bus.
+
+### WebhookSource
+
+Source: [services/webhook-service/src/main/java/com/panicattheconsole/webhookservice/source/WebhookSource.java](../services/webhook-service/src/main/java/com/panicattheconsole/webhookservice/source/WebhookSource.java)
+
+| Field           | Type    | Notes                                                |
+| --------------- | ------- | ---------------------------------------------------- |
+| slug            | String  | Primary key; unique webhook endpoint identifier      |
+| secret          | String  | Shared HMAC secret used to verify webhook signatures |
+| createdAt       | Instant | Creation timestamp                                   |
+| secretRotatedAt | Instant | Timestamp of the last secret rotation                |
+
+The `webhook_sources` table stores registered webhook endpoints and their associated HMAC secrets used to authenticate incoming webhook requests.
+
+## Event Processing
+
+Source: [services/incident-service/src/main/java/com/panicattheconsole/incidentservice/nats/ProcessedExternalEvent.java](../services/incident-service/src/main/java/com/panicattheconsole/incidentservice/nats/ProcessedExternalEvent.java)
+
+### ProcessedExternalEvent
+
+| Field           | Type    | Notes                                             |
+| --------------- | ------- | ------------------------------------------------- |
+| id              | UUID    | Primary key (generated)                           |
+| externalEventId | String  | Unique identifier of the processed external event |
+| processedAt     | Instant | Timestamp when the event was processed            |
+
+The `processed_external_events` table records external events that have already been processed by the incident service. The unique constraint on `externalEventId` provides idempotency by preventing duplicate processing of the same event.
