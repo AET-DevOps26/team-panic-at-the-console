@@ -80,7 +80,10 @@ services:
 
   # ── Application Services ──────────────────────────────────────────────────
 
-  # Routes :8080 like cluster ingress (/ -> frontend, /api -> gateway, /swagger). See nginx.conf.
+  # Routes :8080 like cluster ingress (/ -> frontend, /api -> gateway,
+  # /swagger, /grafana, /prometheus). See nginx.conf. Upstreams are resolved
+  # per request via Docker DNS, so a missing or recreated upstream means a 502
+  # until it is up, never a stale nginx. depends_on is start-order polish only.
   edge:
     image: nginx:1.27-alpine
     ports:
@@ -108,10 +111,12 @@ services:
         # CI builds pass the real commit; local source builds show "dev".
         VITE_COMMIT_SHA: ${GIT_SHA:-dev}
     environment:
-      # Sidebar footer links. ":port" resolves against the host the browser
-      # used to reach the frontend, so it works for localhost and a VM alike.
-      GRAFANA_URL: ${GRAFANA_URL:-:3030}
-      PROMETHEUS_URL: ${PROMETHEUS_URL:-:9090}
+      # Sidebar footer links. ":port/path" resolves against the host the
+      # browser used to reach the frontend, so it works for localhost and a
+      # VM alike. Routed through edge :8080 like the Helm ingress; the VM
+      # firewall only opens 8080, not the direct observability ports.
+      GRAFANA_URL: ${GRAFANA_URL:-:8080/grafana}
+      PROMETHEUS_URL: ${PROMETHEUS_URL:-:8080/prometheus}
     ports:
       - "3000:3000"
     restart: unless-stopped
@@ -325,6 +330,10 @@ services:
       - --config.file=/etc/prometheus/prometheus.yml
       - --storage.tsdb.path=/prometheus
       - --web.enable-lifecycle
+      # Serve under /prometheus (route-prefix comes from this URL's path),
+      # mirroring the Helm ingress. Reachable via edge at :8080/prometheus;
+      # direct access moves to :9090/prometheus.
+      - --web.external-url=http://localhost:9090/prometheus
     volumes:
       - ./infra/compose/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - ./infra/compose/prometheus/alerts.yml:/etc/prometheus/alerts.yml:ro
@@ -332,7 +341,7 @@ services:
     ports:
       - "9090:9090"
     healthcheck:
-      test: ["CMD", "wget", "-q", "--spider", "http://localhost:9090/-/ready"]
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:9090/prometheus/-/ready"]
       interval: 5s
       timeout: 3s
       retries: 5
@@ -345,6 +354,10 @@ services:
       GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
       GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
       GF_USERS_ALLOW_SIGN_UP: "false"
+      # Serve under /grafana like the Helm deployment (edge routes
+      # :8080/grafana). serve_from_sub_path also keeps direct :3030 working.
+      GF_SERVER_ROOT_URL: "%(protocol)s://%(domain)s:%(http_port)s/grafana/"
+      GF_SERVER_SERVE_FROM_SUB_PATH: "true"
     volumes:
       - ./infra/observability/grafana/provisioning:/etc/grafana/provisioning:ro
       - ./infra/observability/grafana/dashboards:/etc/grafana/dashboards:ro

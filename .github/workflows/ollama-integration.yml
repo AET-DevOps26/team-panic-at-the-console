@@ -14,6 +14,7 @@ on:
     - cron: "0 0 * * 1" # every Monday at midnight
 
 env:
+  OLLAMA_VERSION: v0.31.2
   OLLAMA_INTEGRATION_MODEL: qwen2.5:0.5b
 
 jobs:
@@ -39,10 +40,15 @@ jobs:
         uses: actions/cache@v6.1.0
         with:
           path: ~/.ollama/models
-          key: ollama-models-${{ env.OLLAMA_INTEGRATION_MODEL }}
+          key: ollama-models-${{ env.OLLAMA_VERSION }}-${{ env.OLLAMA_INTEGRATION_MODEL }}-v2
 
       - name: Install Ollama
-        run: curl -fsSL https://ollama.com/install.sh | sh
+        run: |
+          curl -fsSL \
+            "https://github.com/ollama/ollama/releases/download/${OLLAMA_VERSION}/ollama-linux-amd64.tar.zst" \
+            -o /tmp/ollama-linux-amd64.tar.zst
+          zstd -d /tmp/ollama-linux-amd64.tar.zst -c | sudo tar -xf - -C /usr/local
+          /usr/local/bin/ollama --version
 
       - name: Start Ollama
         run: |
@@ -60,6 +66,22 @@ jobs:
 
       - name: Pull model
         run: ollama pull "$OLLAMA_INTEGRATION_MODEL"
+
+      - name: Smoke test Ollama generation
+        run: |
+          curl -sf http://localhost:11434/api/generate \
+            -H 'Content-Type: application/json' \
+            -d "$(printf '{"model":"%s","prompt":"Reply with ok.","stream":false}' "$OLLAMA_INTEGRATION_MODEL")" \
+            > /tmp/ollama-generate.json || {
+              cat /tmp/ollama.log
+              exit 1
+            }
+          jq -e '.response | strings | length > 0' /tmp/ollama-generate.json > /dev/null || {
+            printf 'Unexpected Ollama smoke response:\n'
+            sed -n '1,120p' /tmp/ollama-generate.json
+            cat /tmp/ollama.log
+            exit 1
+          }
 
       - name: Run integration tests
         env:

@@ -7,6 +7,8 @@ rule_files:
 
 scrape_configs:
   - job_name: prometheus
+    # Self-scrape must include the route-prefix set by --web.external-url.
+    metrics_path: /prometheus/metrics
     static_configs:
       - targets: ["localhost:9090"]
 
