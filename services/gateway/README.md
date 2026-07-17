@@ -52,4 +52,4 @@ The gateway validates the `session` JWT cookie on protected API routes and deriv
 
 Gateway subscribes to `incident.>` on NATS and exposes `GET /api/v1/incidents/stream` as an SSE cache-invalidation stream. The frontend reloads data through REST after receiving an event.
 
-Event-service routes and GenAI write-back `PATCH .../genai/*/result` remain cluster-internal; the gateway returns `403` for GenAI write-back paths.
+The gateway proxies the incident timeline read (`GET /api/v1/incidents/{incidentId}/events`) to event-service, which serves it from its append-only Event Log. Other event-service routes and GenAI write-back `PATCH .../genai/*/result` remain cluster-internal; the gateway returns `403` for GenAI write-back paths.

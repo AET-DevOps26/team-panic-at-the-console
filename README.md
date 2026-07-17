@@ -278,7 +278,7 @@ Optional: `VALUES_FILE=path/to/other.enc.yaml` when running `helm-deploy`.
 
 Ingress uses cert-manager (`letsencrypt-prod`) and TLS secret `devops-platform-tls`. Observability is self-hosted in the namespace: the chart deploys its own Prometheus and Grafana (plain Deployments, no operator or CRDs), provisioned with the exported dashboards and alert rules, and exposes them under `/grafana` and `/prometheus`.
 
-**Local compose** (via `docker compose up`):
+**Local compose** (via `pixi run compose-up`):
 
 | URL | Service |
 | --- | ------- |
@@ -329,12 +329,18 @@ pixi run lint
 A single command from the repository root starts the full stack. Docker Desktop must be running:
 
 ```bash
+pixi run compose-up
+```
+
+Starts all services plus shared infrastructure (Postgres, NATS). The task passes `--build` (so local source changes are rebuilt instead of reusing stale `:latest` images) and `--env-file .env.example`, and targets `infra/compose/docker-compose.yml`. Service env vars (`DATABASE_URL`, `NATS_URL`) are pre-wired, and every variable has a baked-in default. Stop it with `pixi run compose-down`.
+
+The plain Docker command also works:
+
+```bash
 docker compose up
 ```
 
-Starts all services plus shared infrastructure (Postgres, NATS). Service env vars (`DATABASE_URL`, `NATS_URL`) are pre-wired, and every variable has a baked-in default, so no `.env` is required for a default boot.
-
-The root `compose.yaml` is the entry point Docker discovers automatically (it points at `infra/compose/docker-compose.yml`, where the stack is defined).
+Docker auto-discovers the root `compose.yaml` (a symlink to `infra/compose/docker-compose.yml`). This boots the stack from the published `ghcr.io` `:latest` images without rebuilding; add `--build` (`docker compose up --build`) to rebuild from local source. Either way the plain command skips `.env.example`, so `pixi run compose-up` (which passes both `--build` and `--env-file .env.example`) stays the recommended path.
 
 #### URLs and routes
 
@@ -351,21 +357,17 @@ Same path layout as the stud-cluster ingress for app routes (`/api`, `/swagger`)
 
 Shared non-secret defaults (for example `NATS_URL`) are defined once in `.env.example` and referenced from service-specific environment sections.
 
-- Override the image tag: `IMAGE_TAG=v0.0.1 docker compose up`
+- Override the image tag: `IMAGE_TAG=v0.0.1 pixi run compose-up`
 
 ## Troubleshooting
 
 | Symptom | Resolution |
 | --- | --- |
-| Compose cannot start | Start Docker Desktop, then rerun `docker compose up`. |
-| A local port is already in use | Stop the process using the port or run `docker compose down` to remove the local stack. |
+| Compose cannot start | Start Docker Desktop, then rerun `pixi run compose-up`. |
+| A local port is already in use | Stop the process using the port or run `pixi run compose-down` to remove the local stack. |
 | Grafana panels are empty after startup | Run `pixi run compose-smoke-genai-metrics` to generate sample GenAI metrics. |
 | Kubernetes deployment cannot decrypt values | Configure `SOPS_AGE_KEY` as described in [New team member access](#new-team-member-access). |
 
-## Known Limitations
-
-- Webhook rules are intentionally lightweight: failure-like events create `SEV2` incidents, but rules are not yet configurable through a policy engine or UI.
-- Webhook-service unit tests exist but are not part of the Java CI matrix yet.
 
 ## Mock API Server
 
