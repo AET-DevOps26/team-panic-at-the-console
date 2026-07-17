@@ -16,6 +16,7 @@ on:
       - "services/gateway/**"
       - "services/event-service/**"
       - "services/notification-service/**"
+      - "services/webhook-service/**"
       - "services/generated/java/**"
       - "api/openapi.yaml"
   pull_request:
@@ -25,6 +26,7 @@ on:
       - "services/gateway/**"
       - "services/event-service/**"
       - "services/notification-service/**"
+      - "services/webhook-service/**"
       - "services/generated/java/**"
       - "api/openapi.yaml"
   merge_group:
@@ -36,7 +38,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        service: [incident-service, user-service, gateway, event-service, notification-service]
+        service: [incident-service, user-service, gateway, event-service, notification-service, webhook-service]
 
     steps:
       - name: Checkout branch
