@@ -27,7 +27,7 @@ import io.micrometer.core.instrument.MeterRegistry;
 /**
  * Receives webhooks from external systems (e.g. GitHub Actions): verifies the
  * signature, persists the payload verbatim as an External Event, and publishes
- * {@code external.event.received} for the rule engine.
+ * {@code external.event.received} for incident-service to evaluate.
  *
  * <p>Serves the {@code POST /webhooks/{source}} operation from the OpenAPI
  * spec, but deliberately does NOT implement the generated {@code WebhooksApi}

@@ -130,7 +130,6 @@ The enabled workloads total ~5.6Gi / 3.45 cpu of limits, which leaves no room fo
 | `llm_fallback_total` | counter | `from_provider`, `to_provider` |
 | `nats_messages_total` | counter | `subject`, `outcome` |
 | `nats_consumer_connected` | gauge | — |
-| `rule_evaluations_total` | counter | `matched=true\|false` |
 | `webhooks_received_total` | counter | `source_type` |
 
 **DB ownership**: one shared Postgres pod, one database per stateful service. `init-dbs.sh` creates them idempotently and runs on every deploy (compose `postgres-init` one-shot, Helm pre-upgrade job), not just on first boot, so databases added to the list also appear on environments with existing Postgres volumes.
