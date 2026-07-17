@@ -28,7 +28,6 @@ jobs:
           - gateway
           - incident-service
           - event-service
-          - rule-engine
           - user-service
           - notification-service
           - webhook-service
