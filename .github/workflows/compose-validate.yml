@@ -58,7 +58,7 @@ jobs:
     # Boot via the canonical flag-free `docker compose`, so CI runs what users run.
     # Ollama pulls a multi-GB model on first boot; we cache the volume across runs.
     env:
-      SMOKE_SERVICES: "postgres postgres-init nats ollama ollama-init gateway incident-service event-service rule-engine user-service notification-service webhook-service genai-service edge swagger-ui prometheus grafana"
+      SMOKE_SERVICES: "postgres postgres-init nats ollama ollama-init gateway incident-service event-service user-service notification-service webhook-service genai-service edge swagger-ui prometheus grafana"
       # frontend is WIP (served on :3000, not via edge). The coverage guard below
       # fails if any service is in neither list, so none can escape unnoticed.
       EXCLUDED_SERVICES: "frontend"
@@ -140,7 +140,7 @@ jobs:
             -p "${COMPOSE_PROJECT}" \
             up -d --no-recreate --wait --wait-timeout 600 \
             postgres nats ollama gateway incident-service event-service \
-            rule-engine user-service notification-service webhook-service \
+            user-service notification-service webhook-service \
             genai-service edge swagger-ui prometheus grafana
 
       - name: Probe edge proxy over HTTP
@@ -188,8 +188,13 @@ jobs:
             echo "::error::GET ${url} -> ${code:-no response} (expected ${want})"
             return 1
           }
-          probe http://localhost:9090/-/ready 200
+          # Direct ports (local dev); Prometheus serves under its route-prefix.
+          probe http://localhost:9090/prometheus/-/ready 200
           probe http://localhost:3030/api/health 200
+          # Via the edge proxy, like the Helm ingress (and the Azure VM, where
+          # only :8080 is open).
+          probe http://localhost:8080/prometheus/-/ready 200
+          probe http://localhost:8080/grafana/api/health 200
 
       - name: Save Ollama model cache
         if: success() && steps.ollama-cache.outputs.cache-hit != 'true'

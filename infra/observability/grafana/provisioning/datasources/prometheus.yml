@@ -4,6 +4,7 @@ datasources:
     uid: prometheus
     type: prometheus
     access: proxy
-    url: http://prometheus:9090
+    # Prometheus serves its API under the route-prefix from --web.external-url.
+    url: http://prometheus:9090/prometheus
     isDefault: true
     editable: false

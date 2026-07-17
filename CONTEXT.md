@@ -13,16 +13,16 @@ An immutable, timestamped record of something that happened to an Incident — s
 _Avoid_: Log entry, audit record, message
 
 **External Event**:
-A raw payload received from an external system (e.g. GitHub Actions webhook) that may trigger incident creation via the Rule Engine.
+A raw payload received from an external system (e.g. GitHub Actions webhook) that may trigger incident creation through the embedded incident-service evaluator.
 _Avoid_: Webhook payload, signal (overloaded)
 
 **Event Log**:
 The append-only, chronological sequence of Incident Events for a given Incident. Owned by the event-service. Serves as the audit trail and timeline — it is a secondary read model, not the primary write model.
 _Avoid_: Event store, timeline (use timeline only in UI context), audit log
 
-**Rule**:
-A configurable condition evaluated against an External Event that determines whether to auto-create an Incident and at what severity.
-_Avoid_: Trigger, automation, policy
+**Webhook evaluation**:
+The incident-service behavior that detects failure-like External Events and creates a deduplicated `SEV2` Incident.
+_Avoid_: Separate rule service, policy engine
 
 **Summary**:
 An AI-generated concise description of an Incident's current state, derived from the Event Log and Incident metadata.
@@ -32,12 +32,9 @@ _Avoid_: AI summary (redundant), description (that's user-authored)
 An AI-generated document produced after Incident resolution, containing root cause analysis, timeline, and action items.
 _Avoid_: Post-incident report, retrospective
 
-**RuleEvaluator**:
-The deep module in `rule-engine` that tests a single Rule's conditions against a single External Event and returns a `MatchResult`. All condition-matching logic (field extraction, operator dispatch, AND-ing) lives here. Interface: `evaluate(rule, externalEvent) → MatchResult`.
-_Avoid_: rule checker, rule processor, condition evaluator
-
-**MatchResult**:
-The output of `RuleEvaluator.evaluate()` — whether the Rule matched and, if so, what action to take (`createIncident`, `severity`). A non-match carries no action.
+**ExternalEventRuleService**:
+The deep module in `incident-service` that evaluates an External Event. It detects failure-like event types and payload values, creates one `SEV2` Incident when appropriate, and records processed event IDs to prevent duplicate creation.
+_Avoid_: separate rule service, policy engine
 
 **PromptBuilder**:
 The deep module in `genai-service` that constructs a fully-formed Ollama prompt from an Incident, its Event Log, and a `PromptTask`. All context-length management, formatting, and structured output schema specification lives here. Interface: `build(incident, events, task) → Prompt`.
@@ -50,7 +47,7 @@ An enumeration of what the `PromptBuilder` is asked to produce: `SUMMARY`, `SEVE
 
 - An **Incident** has exactly one current **IncidentStatus** and one current **Severity**
 - An **Incident** produces many **Events** over its lifecycle
-- An **External Event** is evaluated by one or more **Rules**; a matching **Rule** auto-creates an **Incident**
+- An **External Event** is evaluated by `incident-service`; a failure-like, previously unprocessed event auto-creates an **Incident**
 - An **Incident** has one **Summary** (regenerated on demand) and at most one **Postmortem** (generated post-resolution)
 
 ## Architecture decisions
@@ -63,15 +60,13 @@ An enumeration of what the `PromptBuilder` is asked to produce: `SUMMARY`, `SEVE
 
 **Data aggregation**: None needed. `incident-service` owns all incident data including AI results. Frontend makes a single REST call to get a complete incident view.
 
-**NATS event shape**: Events are thin by default — `{incidentId, timestamp}` only. Exceptions carry the minimal extra fields a subscriber needs to act without a REST callback: `incident.created` adds `title` and `severity` (timeline rendering), `incident.status.changed` adds `oldStatus` and `newStatus` (the generic `incident.updated` cannot distinguish status changes from other updates), `incident.severity.escalated` adds `oldSeverity` and `newSeverity`, `incident.comment.added` adds `commentId` and `content` (comments are immutable, so the copy never goes stale), `incident.assigned` adds `userId`, `incident.regen.requested` adds `task` (which AI field to regenerate), rule-engine events add the minimal fields needed to act (`sourceId`, `severity`, `requestedSeverity`). Full schemas in `api/specs/nats/*.schema.json`.
+**NATS event shape**: Events are thin by default — `{incidentId, timestamp}` only. Exceptions carry the minimal extra fields a subscriber needs to act without a REST callback: `incident.created` adds `title` and `severity` (timeline rendering), `incident.status.changed` adds `oldStatus` and `newStatus` (the generic `incident.updated` cannot distinguish status changes from other updates), `incident.severity.escalated` adds `oldSeverity` and `newSeverity`, `incident.comment.added` adds `commentId` and `content` (comments are immutable, so the copy never goes stale), `incident.assigned` adds `userId`, and `incident.regen.requested` adds `task` (which AI field to regenerate). `external.event.received` carries the external event `sourceId`, normalized `eventType`, timestamp, and raw payload. Full schemas live in `api/specs/nats/*.schema.json`.
 
-**`incident.create.requested` and incident title/description**: The schema carries only `{sourceId, severity, timestamp}`. `sourceId` references the External Event in webhook-service. `incident-service` must either: (a) call `GET /external-events/{sourceId}` on webhook-service to build a title (requires exposing that endpoint + `WEBHOOK_SERVICE_URL` env), or (b) auto-generate a title from the sourceId (e.g. `"Auto-created from external event {sourceId}"`). The genai-service will generate a Summary on `incident.created` regardless. Decision needed before implementing `incident-service`'s NATS consumer.
+**Real-time updates**: Gateway subscribes to `incident.>` on NATS and fans out compact invalidation envelopes to connected frontend clients via Server-Sent Events (`SseEmitter` in Spring Boot). Frontend uses one `EventSource` connection and refreshes incident data through REST.
 
-**Real-time updates**: SSE. Gateway subscribes to NATS incident events and fans out to connected frontend clients via Server-Sent Events (`SseEmitter` in Spring Boot). Frontend uses a single `EventSource` connection.
+**Authentication**: JWT in an `httpOnly`, `SameSite=Strict` cookie. `user-service` issues the token on login; Gateway validates its signature on protected API routes and derives `X-User-Id` / `X-User-Role` from the validated claims. It strips client-supplied identity headers before relaying requests. Downstream services trust only those gateway-derived headers; they are cluster-internal services and do not expose public ingress routes.
 
-**Authentication**: JWT in `httpOnly` cookie (`SameSite=Strict`). `user-service` issues tokens on login; browser stores them as httpOnly cookies (not accessible to JS). Gateway reads the cookie, validates signature, injects `X-User-Id` / `X-User-Role` headers. Downstream services trust injected headers — no per-request call to user-service. **Security invariant**: downstream services must only be reachable via the gateway (cluster-internal networking only); they must reject requests that include `X-User-*` headers not originating from the gateway to prevent header spoofing.
-
-**Rule condition format**: Fixed JSON field-matcher schema. Each Rule has `conditions` (list of `{field, operator, value}`, all must match) and an `action` (`{createIncident: true, severity: "SEV2"}`). Rule engine evaluates conditions against normalized External Event fields. No expression language.
+**Webhook evaluation**: `ExternalEventRuleService` applies a lightweight failure classifier to the normalized event type and raw payload. A failure-like, previously unprocessed event creates a `SEV2` incident. Configurable policies and a rule-management UI are out of scope.
 
 **Notifications**: In-app only. `notification-service` stores notifications in its own DB. No email. Frontend fetches via REST or receives via SSE.
 
@@ -85,9 +80,7 @@ An enumeration of what the `PromptBuilder` is asked to produce: `SUMMARY`, `SEVE
 | `incident-service` | `incident.resolved`         | event-service, genai-service (postmortem), notification-service, gateway (SSE) |
 | `incident-service` | `incident.comment.added`    | event-service, notification-service                                            |
 | `incident-service` | `incident.assigned`         | event-service, notification-service                                            |
-| `webhook-service`  | `external.event.received`   | rule-engine                                                                    |
-| `rule-engine`      | `incident.create.requested`            | incident-service                                                               |
-| `rule-engine`      | `incident.severity.escalate.requested` | incident-service                                                               |
+| `webhook-service`  | `external.event.received`   | incident-service                                                               |
 | `incident-service` | `incident.regen.requested`             | genai-service                                                                  |
 
 **Tech stack**:
@@ -137,7 +130,6 @@ The enabled workloads total ~5.6Gi / 3.45 cpu of limits, which leaves no room fo
 | `llm_fallback_total` | counter | `from_provider`, `to_provider` |
 | `nats_messages_total` | counter | `subject`, `outcome` |
 | `nats_consumer_connected` | gauge | — |
-| `rule_evaluations_total` | counter | `matched=true\|false` |
 | `webhooks_received_total` | counter | `source_type` |
 
 **DB ownership**: one shared Postgres pod, one database per stateful service. `init-dbs.sh` creates them idempotently and runs on every deploy (compose `postgres-init` one-shot, Helm pre-upgrade job), not just on first boot, so databases added to the list also appear on environments with existing Postgres volumes.
@@ -147,7 +139,6 @@ The enabled workloads total ~5.6Gi / 3.45 cpu of limits, which leaves no room fo
 | `event-service` | `events` | yes |
 | `user-service` | `users` | yes |
 | `notification-service` | `notifications` | yes |
-| `rule-engine` | `rules` | yes |
 | `webhook-service` | `webhooks` | yes |
 | `gateway` | — | no |
 | `genai-service` | — | no |

@@ -34,11 +34,34 @@ function payloadUrl(slug: string): string {
   return `${window.location.origin}/webhooks/${slug}`;
 }
 
+/**
+ * navigator.clipboard only exists in secure contexts; the Azure VM serves the
+ * app over plain http://<ip>:8080, so fall back to a hidden textarea and
+ * execCommand("copy") there.
+ */
+async function copyToClipboard(value: string): Promise<boolean> {
+  if (window.isSecureContext && navigator.clipboard) {
+    await navigator.clipboard.writeText(value);
+    return true;
+  }
+  const textarea = document.createElement("textarea");
+  textarea.value = value;
+  textarea.style.position = "fixed";
+  textarea.style.opacity = "0";
+  document.body.appendChild(textarea);
+  textarea.select();
+  try {
+    return document.execCommand("copy");
+  } finally {
+    textarea.remove();
+  }
+}
+
 function CopyButton({ value, title = "Copy" }: { value: string; title?: string }) {
   const [copied, setCopied] = useState(false);
 
   async function copy() {
-    await navigator.clipboard.writeText(value);
+    if (!(await copyToClipboard(value))) return;
     setCopied(true);
     setTimeout(() => setCopied(false), 1500);
   }
@@ -53,7 +76,7 @@ function CopyButton({ value, title = "Copy" }: { value: string; title?: string }
 function CopyableValue({ value, mono = true }: { value: string; mono?: boolean }) {
   return (
     <div className="flex items-center gap-1 rounded-md border bg-muted/50 pl-3 pr-1 py-1">
-      <code className={`flex-1 overflow-x-auto whitespace-nowrap text-xs ${mono ? "font-mono" : ""}`}>{value}</code>
+      <code className={`flex-1 overflow-x-auto whitespace-nowrap pb-0.5 text-xs [scrollbar-width:thin] ${mono ? "font-mono" : ""}`}>{value}</code>
       <CopyButton value={value} />
     </div>
   );
@@ -120,7 +143,8 @@ function AddSourceDialog() {
           Add source
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-lg">
+      {/* Wide enough that the payload URL and secret fit without scrolling. */}
+      <DialogContent className={created ? "sm:max-w-3xl" : "sm:max-w-lg"}>
         {created ? (
           <>
             <DialogHeader>
@@ -157,7 +181,7 @@ function AddSourceDialog() {
                 <p className="text-xs text-muted-foreground">
                   Lowercase letters, digits, <code className="font-mono">-</code> and <code className="font-mono">_</code>; must start with a letter or digit.
                 </p>
-                {slugValid && <p className="text-xs text-muted-foreground font-mono">{payloadUrl(slug)}</p>}
+                {slugValid && <p className="break-all text-xs text-muted-foreground font-mono">{payloadUrl(slug)}</p>}
               </div>
               {error && <p className="text-sm text-destructive">{error}</p>}
             </div>
@@ -206,7 +230,7 @@ function RotateSecretDialog({ slug }: { slug: string }) {
           <KeyRound className="h-4 w-4" />
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent className={rotated ? "sm:max-w-3xl" : "sm:max-w-lg"}>
         {rotated ? (
           <>
             <DialogHeader>
@@ -436,10 +460,10 @@ function EventDetailDialog({ eventId, onClose }: { eventId: string | null; onClo
           <div className="space-y-3">
             <div className="grid grid-cols-2 gap-x-6 gap-y-1 text-sm">
               <span className="text-muted-foreground">Event type</span>
-              <code className="font-mono text-xs">{event.eventType}</code>
+              <code className="font-mono text-xs break-all">{event.eventType}</code>
               <span className="text-muted-foreground">Delivery ID</span>
               <code className="font-mono text-xs break-all">{event.deliveryId ?? "–"}</code>
-              <span className="text-muted-foreground">Forwarded to rule engine</span>
+              <span className="text-muted-foreground">Forwarded to incident-service</span>
               <span>{event.publishedAt ? formatDateTime(event.publishedAt) : "pending"}</span>
             </div>
             <div className="space-y-1.5">

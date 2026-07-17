@@ -13,6 +13,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.panicattheconsole.incidentservice.incident.IncidentService;
 import com.panicattheconsole.incidentservice.incident.Severity;
@@ -35,14 +36,17 @@ public class NatsSubscriber {
     private final Connection natsConnection;
     private final ObjectMapper objectMapper;
     private final IncidentService incidentService;
+    private final ExternalEventRuleService externalEventRuleService;
 
     private Dispatcher dispatcher;
     private final ExecutorService executor = Executors.newFixedThreadPool(2);
 
-    public NatsSubscriber(Connection natsConnection, ObjectMapper objectMapper, IncidentService incidentService) {
+    public NatsSubscriber(Connection natsConnection, ObjectMapper objectMapper, IncidentService incidentService,
+            ExternalEventRuleService externalEventRuleService) {
         this.natsConnection = natsConnection;
         this.objectMapper = objectMapper;
         this.incidentService = incidentService;
+        this.externalEventRuleService = externalEventRuleService;
     }
 
     @PostConstruct
@@ -60,6 +64,7 @@ public class NatsSubscriber {
 
             dispatcher.subscribe("incident.create.requested");
             dispatcher.subscribe("incident.severity.escalate.requested");
+            dispatcher.subscribe("external.event.received");
             dispatcher.subscribe("incident.genai.summary.generated");
             dispatcher.subscribe("incident.genai.severity.generated");
             dispatcher.subscribe("incident.genai.solutions.generated");
@@ -82,6 +87,9 @@ public class NatsSubscriber {
                     break;
                 case "incident.severity.escalate.requested":
                     handleSeverityEscalationRequested(payload);
+                    break;
+                case "external.event.received":
+                    handleExternalEventReceived(payload);
                     break;
                 case "incident.genai.summary.generated":
                     handleGenaiSummaryGenerated(payload);
@@ -167,6 +175,19 @@ public class NatsSubscriber {
         }
     }
 
+    private void handleExternalEventReceived(String payload) throws Exception {
+        try {
+            JsonNode node = objectMapper.readTree(payload);
+            String eventType = node.has("eventType") && node.get("eventType") != null
+                    && node.get("eventType").isTextual()
+                            ? node.get("eventType").asText()
+                            : "unknown";
+            externalEventRuleService.shouldCreateIncident(eventType, payload);
+        } catch (Exception e) {
+            log.warn("Failed to process external event payload", e);
+        }
+    }
+
     private void handleGenaiSummaryGenerated(String payload) throws Exception {
         GenaiSummaryGeneratedEvent evt = objectMapper.readValue(payload, GenaiSummaryGeneratedEvent.class);
         UUID incidentId = UUID.fromString(evt.getIncidentId());
@@ -204,6 +225,7 @@ public class NatsSubscriber {
             try {
                 dispatcher.unsubscribe("incident.create.requested");
                 dispatcher.unsubscribe("incident.severity.escalate.requested");
+                dispatcher.unsubscribe("external.event.received");
             } catch (Exception e) {
                 log.warn("Failed to unsubscribe dispatcher", e);
             }

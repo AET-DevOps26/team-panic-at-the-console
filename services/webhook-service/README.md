@@ -1,6 +1,6 @@
 # webhook-service
 
-Receives webhooks from external systems (e.g. GitHub Actions), persists each one verbatim as an **External Event** (ADR 0008: auditability), and publishes `external.event.received` to NATS for the rule engine.
+Receives webhooks from external systems (e.g. GitHub Actions), persists each one verbatim as an **External Event** (ADR 0008: auditability), and publishes `external.event.received` to NATS for `incident-service` evaluation.
 
 Ingestion is decoupled from delivery: the event is committed to Postgres first, then published. If NATS is down, the webhook is still accepted (202) and a scheduled retrier republishes pending events once NATS is back. `external.event.received` is therefore at-least-once; the stable `sourceId` (the External Event id) is the dedup key for subscribers.
 
@@ -33,7 +33,7 @@ Sources are self-service: register one on the frontend Sources page (or `POST /w
 
 1. Register a slug, e.g. `grafana`, copy the payload URL and secret, and configure both on the sender (content type `application/json`). Registered sources must sign every delivery (`X-Hub-Signature-256`), so they work in deployments with `WEBHOOK_REQUIRE_SIGNATURE=true` without any operator involvement.
 2. Make the events matchable: either the sender includes an `eventType` field / `X-Event-Type` header, or extend `EventTypeNormalizer` with an inference rule for that sender.
-3. Create a Rule (rule-engine) matching the normalised event so incidents are actually created.
+3. Send a failure-like event type or payload value so the embedded `incident-service` evaluator creates a `SEV2` incident.
 
 For GitHub specifically: repo → Settings → Webhooks → add `https://<host>/webhooks/github`, content type `application/json`, secret = the secret from registration, and select the events (e.g. workflow runs).
 
@@ -74,7 +74,7 @@ pixi run --manifest-path services/webhook-service/pixi.toml test    # needs Dock
 pixi run --manifest-path services/webhook-service/pixi.toml start   # needs compose postgres + nats
 ```
 
-Smoke test against the compose stack (`pixi run compose-up`):
+Smoke test against the Compose stack (`docker compose up`):
 
 ```bash
 curl -i -X POST http://localhost:8086/webhooks/github \

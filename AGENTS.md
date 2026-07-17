@@ -92,7 +92,6 @@ See `CONTEXT.md` for full architectural decisions and `docs/adr/` for key trade-
 | `gateway`              | 8080                  | Single API entry point                                    |
 | `incident-service`     | 8081                  | Core incident CRUD + lifecycle                            |
 | `event-service`        | 8082                  | Append-only event log                                     |
-| `rule-engine`          | 8083                  | Evaluates signals → incident decisions                    |
 | `user-service`         | 8084                  | Auth + role management                                    |
 | `notification-service` | 8085                  | Notifies users on incident events                         |
 | `webhook-service`      | 8086                  | Receives CI/CD webhook events                             |
@@ -101,7 +100,7 @@ See `CONTEXT.md` for full architectural decisions and `docs/adr/` for key trade-
 
 ### Infrastructure
 
-- **Postgres** (`localhost:5432`) - shared instance; one database per stateful service (`incidents`, `events`, `users`, `notifications`, `rules`); initialized by `infra/helm/devops-platform/files/init-dbs.sh`
+- **Postgres** (`localhost:5432`) - shared instance; one database per stateful service (`incidents`, `events`, `users`, `notifications`, `webhooks`); initialized by `infra/helm/devops-platform/files/init-dbs.sh`
 - **NATS** (`localhost:4222`, monitoring: `localhost:8222`) - event bus with JetStream; used for all side effects between services
 - **Ollama** (`localhost:11434`) - local LLM inference; model `qwen2.5:3b` pulled on startup. Local dev only: the in-cluster deployment is disabled under the project quota, where genai-service uses TUM Logos instead (see `docs/adr/0003-ollama-in-production.md`)
 

@@ -136,7 +136,7 @@ If a generation fails Pydantic validation (small models occasionally produce mal
 Skipped unless `OLLAMA_INTEGRATION_URL` is set. Run locally against the compose stack:
 
 ```bash
-pixi run compose-up   # in the repo root
+docker compose up     # in the repo root
 OLLAMA_INTEGRATION_URL=http://localhost:11434 \
 OLLAMA_INTEGRATION_MODEL=qwen2.5:3b \
   pixi run test-integration

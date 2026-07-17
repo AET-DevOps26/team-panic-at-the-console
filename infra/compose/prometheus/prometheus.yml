@@ -7,6 +7,8 @@ rule_files:
 
 scrape_configs:
   - job_name: prometheus
+    # Self-scrape must include the route-prefix set by --web.external-url.
+    metrics_path: /prometheus/metrics
     static_configs:
       - targets: ["localhost:9090"]
 
@@ -34,11 +36,6 @@ scrape_configs:
     metrics_path: /actuator/prometheus
     static_configs:
       - targets: ["gateway:8090"]
-
-  - job_name: rule-engine
-    metrics_path: /actuator/prometheus
-    static_configs:
-      - targets: ["rule-engine:8083"]
 
   - job_name: notification-service
     metrics_path: /actuator/prometheus
