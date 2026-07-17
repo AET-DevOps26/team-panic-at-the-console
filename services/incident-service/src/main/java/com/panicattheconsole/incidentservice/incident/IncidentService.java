@@ -56,7 +56,7 @@ public class IncidentService {
     /**
      * Enrich an event with the notification audience: the incident's current
      * assignee set and the acting user (null for machine-triggered changes,
-     * e.g. rule-engine escalation requests).
+     * e.g. automated rule-based escalation requests).
      */
     private static void putAudience(Map<String, Object> event, Incident incident, UUID actorId) {
         event.put("assignedUserIds", incident.getAssignedUsers().stream().map(UUID::toString).toList());

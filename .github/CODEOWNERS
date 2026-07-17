@@ -19,7 +19,6 @@
 /services/gateway/             @florian-pesco
 /services/incident-service/   @florian-pesco
 /services/event-service/       @florian-pesco
-/services/rule-engine/         @florian-pesco
 /services/user-service/        @florian-pesco
 /services/notification-service/ @LeonSpoerl
 /services/webhook-service/     @florian-pesco
