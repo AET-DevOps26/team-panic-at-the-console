@@ -458,7 +458,7 @@ export interface paths {
         put?: never;
         /**
          * Ingest a webhook from an external system
-         * @description Persists the payload verbatim as an External Event (ADR 0008) and publishes `external.event.received` to NATS for the rule engine. Sources with a configured secret must sign the raw request body (`X-Hub-Signature-256`, GitHub convention); with `WEBHOOK_REQUIRE_SIGNATURE=true` sources without a secret are rejected. Redeliveries carrying an already-seen delivery id are acknowledged with the original event id (`duplicate: true`) and not re-published.
+         * @description Persists the payload verbatim as an External Event (ADR 0008) and publishes `external.event.received` to NATS for incident-service to evaluate. Sources with a configured secret must sign the raw request body (`X-Hub-Signature-256`, GitHub convention); with `WEBHOOK_REQUIRE_SIGNATURE=true` sources without a secret are rejected. Redeliveries carrying an already-seen delivery id are acknowledged with the original event id (`duplicate: true`) and not re-published.
          */
         post: operations["receiveWebhook"];
         delete?: never;

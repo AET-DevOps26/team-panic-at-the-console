@@ -4,6 +4,8 @@ Lightweight incident management system - detect, track, and resolve incidents wi
 
 > TUM DevOps Project - Spring 2026 · Team Panic! At the Console
 
+<img width="1445" height="832" alt="Incident management dashboard" src="https://github.com/user-attachments/assets/5bd97923-fe16-438e-aded-9ff14bdd7a10" />
+
 ## Quick Start
 
 ```bash
@@ -13,14 +15,6 @@ pixi run pre-commit-install
 
 # run the same checks as CI
 pixi run lint
-```
-
-Equivalent Pixi tasks:
-
-```bash
-pixi run compose-up
-pixi run compose-down
-pixi run compose-validate
 ```
 
 ## Installation
@@ -36,12 +30,6 @@ Install Pixi on macOS:
 brew install pixi
 ```
 
-Use a VS Code Dev Container (optional):
-
-```bash
-# in VS Code: Dev Containers: Reopen in Container
-```
-
 Install project tooling and Git hooks:
 
 ```bash
@@ -53,12 +41,13 @@ pixi run pre-commit-install
 
 ```text
 .
-├── api/                        # OpenAPI specs
+├── api/                        # OpenAPI contract and generated-client tooling
+│   ├── openapi.yaml
 │   └── specs/
 ├── services/
 │   ├── frontend/               # Web dashboard (Client subsystem)
 │   ├── gateway/                # API gateway - single entry point
-│   ├── incident-service/       # Core incident CRUD + lifecycle
+│   ├── incident-service/       # Core incident CRUD, lifecycle, and external-event handling
 │   ├── event-service/          # Append-only event log / timeline
 │   ├── user-service/           # Auth + role management
 │   ├── notification-service/   # Notifies users on incident events
@@ -69,22 +58,86 @@ pixi run pre-commit-install
 │   └── compose/                # Local docker-compose stack
 ├── docs/
 │   ├── schema.md               # Persistence schema snapshot
+│   ├── deliverables/           # UML diagrams and project deliverables
 │   └── submissions/
-├── tests/
+├── tests/                      # Contract and end-to-end tests
 └── scripts/
 ```
+
+## Architecture
+
+The frontend uses REST through the gateway for request/response operations. `incident-service` owns incident state and publishes lifecycle events to NATS JetStream. The event log, notifications, GenAI processing, and live UI updates react asynchronously to those events. Each stateful service owns its data in a separate PostgreSQL database.
+
+### Service communication
+
+```mermaid
+flowchart LR
+    user["Users"] --> frontend["Frontend"]
+    frontend -->|REST and SSE| gateway["Gateway"]
+
+    gateway -->|REST| incident["incident-service<br/>including webhook rules"]
+    gateway -->|REST| events["event-service"]
+    gateway -->|REST| users["user-service"]
+    gateway -->|REST| notifications["notification-service"]
+    gateway -->|REST| webhooks["webhook-service"]
+
+    external["External systems"] -->|Webhook| webhooks
+    webhooks -->|external.event.received| nats["NATS JetStream"]
+    nats -->|external.event.received| incident
+    incident -->|incident.*| nats
+
+    nats -->|incident.*| events
+    nats -->|incident.*| notifications
+    nats -->|incident.created, resolved,<br/>regen.requested| genai["genai-service"]
+    nats -->|incident.*| gateway
+    genai -->|GET/PATCH incident data| incident
+    genai -->|Generation| llm["Ollama locally / TUM Logos in Kubernetes"]
+
+    classDef app fill:#e3f2fd,stroke:#1565c0,color:#000
+    classDef bus fill:#e8f5e9,stroke:#2e7d32,color:#000
+    class frontend,gateway,incident,events,users,notifications,webhooks,genai app
+    class nats bus
+```
+
+- [Subsystem decomposition](docs/deliverables/2026-05-08-uml-diagrams/component_diagram.md)
+- [Deployment layout](docs/deliverables/2026-05-08-uml-diagrams/deployment_diagram.md)
+- [Incident processing sequence](docs/deliverables/2026-05-08-uml-diagrams/sequence_diagram.md)
+- [Incident lifecycle](docs/deliverables/2026-05-08-uml-diagrams/state_diagram.md)
+- [Analysis object model](docs/deliverables/2026-05-08-uml-diagrams/analysis_object_model.md)
+- [Use cases](docs/deliverables/2026-05-08-uml-diagrams/use_case_diagram.md)
+- [Persistence schema](docs/schema.md)
+
+### Incident workflow
+
+Users create and manage incidents through the dashboard. `incident-service` persists the current state, then publishes lifecycle events to NATS. `event-service` writes the immutable timeline, `notification-service` stores in-app notifications, `genai-service` creates analysis, and the gateway forwards changes to connected browsers through Server-Sent Events.
+
+`webhook-service` persists signed external events and publishes `external.event.received` to NATS. `incident-service` consumes that event and applies an embedded, failure-like rule: it creates one `SEV2` incident for a new event whose type or payload contains failure indicators. Processed event IDs prevent duplicate incident creation.
+
+### GenAI
+
+`genai-service` is a separate, stateless FastAPI service. It consumes incident lifecycle events from NATS, fetches incident context from `incident-service`, generates summaries, severity suggestions, solution suggestions, and postmortems, then publishes the results back through NATS. It uses Ollama (`qwen2.5:3b`) in local Compose and TUM Logos in Kubernetes.
+
+### API
+
+The combined [OpenAPI contract](api/openapi.yaml) defines the public API. Run the stack and open [Swagger UI](http://localhost:8080/swagger) to explore and invoke endpoints locally. `pixi run openapi-lint` validates the contract; `pixi run mock-api` starts a Prism mock server for frontend development.
 
 ## CI/CD
 
 See [.github/workflows/](.github/workflows/).
 
-| Workflow                          | Trigger                                               | Uses SOPS?                               |
-| --------------------------------- | ----------------------------------------------------- | ---------------------------------------- |
-| `ci.yml` / `compose-validate.yml` | PR, merge queue                                       | No (lint/compose only)                   |
-| `container-ci.yml`                | PR, merge queue                                       | No (builds only, no push)                |
-| `release.yml`                     | GitHub Release                                        | Orchestrates build + push + both deploys |
-| `deploy-k8s.yml`                  | Called by `release.yml`, manual (`workflow_dispatch`) | Yes: deploy to Kubernetes                |
-| `deploy-azure-vm.yml`             | Called by `release.yml`, manual (`workflow_dispatch`) | No (uses OIDC + Ansible)                 |
+| Workflow | Trigger | Purpose |
+| --- | --- | --- |
+| `ci.yml` | PR, merge queue | Lint and lockfile consistency |
+| `java-tests.yml` | Push, PR, merge queue | Java service unit tests |
+| `frontend-tests.yml` | Push, PR, merge queue | Frontend tests |
+| `python-tests.yml` | Push, PR, merge queue | GenAI type check and tests |
+| `openapi-lint.yml` | Push, PR, merge queue | OpenAPI lint and code-generation validation |
+| `compose-validate.yml` | Push, PR, merge queue | Compose validation and full-stack smoke test |
+| `container-ci.yml` | PR, merge queue | Container build validation without pushing images |
+| `deploy-on-merge.yml` | Push to `main` | Build, push, and deploy to Kubernetes |
+| `release.yml` | GitHub Release | Build, push, and deploy to Kubernetes and Azure |
+| `deploy-k8s.yml` | Called by `release.yml`, manual dispatch | Kubernetes deployment; decrypts SOPS values |
+| `deploy-azure-vm.yml` | Called by `release.yml`, manual dispatch | Azure deployment via OIDC and Ansible |
 
 **PR CI does not decrypt SOPS or deploy to the cluster** (no cluster credentials on PRs). Deploy workflows gate on the `kubernetes` and `azure` GitHub Environments; credentials live in repository Actions secrets (below).
 
@@ -150,7 +203,7 @@ export SOPS_AGE_KEY_FILE=~/.config/sops/age/keys.txt
 **Option B (new key):** Generate a key with `pixi run -e deploy age-keygen -o ~/.config/sops/age/keys.txt`, send the `# public key: age1...` line to someone who can already decrypt. They add your public key to `.sops.yaml` and re-encrypt:
 
 ```bash
-sops updatekeys infra/helm/secrets/values.prod.enc.yaml
+pixi run -e deploy sops updatekeys infra/helm/secrets/values.prod.enc.yaml
 ```
 
 Then commit the updated `.sops.yaml` and `values.prod.enc.yaml`.
@@ -220,10 +273,12 @@ Optional: `VALUES_FILE=path/to/other.enc.yaml` when running `helm-deploy`.
 | `/` | Frontend |
 | `/api` | Gateway (`/api/v1/...`) |
 | `/swagger` | Swagger UI (OpenAPI) |
+| `/grafana` | Grafana (dashboards) |
+| `/prometheus` | Prometheus UI |
 
-Ingress uses cert-manager (`letsencrypt-prod`) and TLS secret `devops-platform-tls`. Metrics are not self-hosted on the cluster: the release ships a PodMonitor, PrometheusRule, and a Grafana dashboard ConfigMap that the shared cluster prometheus-operator and Grafana consume.
+Ingress uses cert-manager (`letsencrypt-prod`) and TLS secret `devops-platform-tls`. Observability is self-hosted in the namespace: the chart deploys its own Prometheus and Grafana (plain Deployments, no operator or CRDs), provisioned with the exported dashboards and alert rules, and exposes them under `/grafana` and `/prometheus`.
 
-**Local compose** (via `docker compose up` or `pixi run compose-up`):
+**Local compose** (via `pixi run compose-up`):
 
 | URL | Service |
 | --- | ------- |
@@ -240,7 +295,7 @@ Grafana talks to Prometheus at `http://prometheus:9090/prometheus` inside Docker
 
 Populate Grafana panels after boot: `pixi run compose-smoke-genai-metrics`.
 
-**On Kubernetes**, the chart does not self-host Grafana or Prometheus. It ships namespaced CRs (PodMonitor, PrometheusRule) and a Grafana dashboard ConfigMap that the shared cluster prometheus-operator scrapes and the shared Grafana renders. View metrics and the GenAI dashboard in the cluster's Grafana.
+**On Kubernetes**, the chart self-hosts a namespace-local Prometheus and Grafana as plain Deployments (no kube-prometheus-stack, no CRDs, no cluster-scoped RBAC). Prometheus scrapes every service via static config and loads the alert rules directly; Grafana is auto-provisioned with the Prometheus datasource and the exported dashboards (Spring services + GenAI). Both are reachable through the ingress at `/grafana` and `/prometheus`. For clusters that already run prometheus-operator, set `monitoring.operatorCrds.enabled=true` to switch to PodMonitor + PrometheusRule CRs consumed by the shared operator instead.
 
 #### Debug the cluster
 
@@ -256,31 +311,38 @@ Use a kubeconfig/context that points at the stud cluster (`kubectl config curren
 # Lint (all services, same as CI)
 pixi run lint
 
-# Java service unit tests
-pixi run --manifest-path services/incident-service/pixi.toml test
-pixi run --manifest-path services/user-service/pixi.toml test
+# Frontend
+(cd services/frontend && pixi run test)
+
+# Java services with test tasks
+(cd services/incident-service && pixi run test)
+(cd services/event-service && pixi run test)
+(cd services/gateway && pixi run test)
+(cd services/notification-service && pixi run test)
+(cd services/user-service && pixi run test)
+(cd services/webhook-service && pixi run test)
 
 # genai-service (Python)
-pixi run test-genai
+(cd services/genai-service && pixi run test)
 ```
 
 ## Local Runtime
 
-A single command from the repository root, no extra tooling required:
+A single command from the repository root starts the full stack. Docker Desktop must be running:
+
+```bash
+pixi run compose-up
+```
+
+Starts all services plus shared infrastructure (Postgres, NATS). The task passes `--build` (so local source changes are rebuilt instead of reusing stale `:latest` images) and `--env-file .env.example`, and targets `infra/compose/docker-compose.yml`. Service env vars (`DATABASE_URL`, `NATS_URL`) are pre-wired, and every variable has a baked-in default. Stop it with `pixi run compose-down`.
+
+The plain Docker command also works:
 
 ```bash
 docker compose up
 ```
 
-Starts all services plus shared infrastructure (Postgres, NATS). Service env vars (`DATABASE_URL`, `NATS_URL`) are pre-wired, and every variable has a baked-in default, so no `.env` is required for a default boot.
-
-The root `compose.yaml` is the entry point Docker discovers automatically (it points at `infra/compose/docker-compose.yml`, where the stack is defined).
-
-For local development, the Pixi wrapper builds from source and loads `.env.example`:
-
-```bash
-pixi run compose-up
-```
+Docker auto-discovers the root `compose.yaml` (a symlink to `infra/compose/docker-compose.yml`). This boots the stack from the published `ghcr.io` `:latest` images without rebuilding; add `--build` (`docker compose up --build`) to rebuild from local source. Either way the plain command skips `.env.example`, so `pixi run compose-up` (which passes both `--build` and `--env-file .env.example`) stays the recommended path.
 
 #### URLs and routes
 
@@ -301,6 +363,16 @@ Shared non-secret defaults (for example `NATS_URL`) are defined once in `.env.ex
 
 - Override the image tag: `IMAGE_TAG=v0.0.1 pixi run compose-up`
 
+## Troubleshooting
+
+| Symptom | Resolution |
+| --- | --- |
+| Compose cannot start | Start Docker Desktop, then rerun `pixi run compose-up`. |
+| A local port is already in use | Stop the process using the port or run `pixi run compose-down` to remove the local stack. |
+| Grafana panels are empty after startup | Run `pixi run compose-smoke-genai-metrics` to generate sample GenAI metrics. |
+| Kubernetes deployment cannot decrypt values | Configure `SOPS_AGE_KEY` as described in [New team member access](#new-team-member-access). |
+
+
 ## Mock API Server
 
 Spin up a local HTTP mock server driven by `api/openapi.yaml` using [Prism](https://stoplight.io/open-source/prism):
@@ -309,10 +381,10 @@ Spin up a local HTTP mock server driven by `api/openapi.yaml` using [Prism](http
 pixi run mock-api
 ```
 
-Prism reads the spec and serves auto-generated responses on `http://localhost:4010`. The spec declares `servers: /api/v1`, so endpoints are available under `http://localhost:4010/api/v1` (e.g. `http://localhost:4010/api/v1/health`). No services need to be running — useful for frontend development and API exploration before backends exist.
+Prism reads the spec and serves auto-generated responses on `http://localhost:4010` (for example, `http://localhost:4010/health`). No services need to be running — useful for frontend development and API exploration before backends exist.
 
 ## Student Responsibilities
 
-- **Frontend** (`/services/frontend`): @LeonSpoerl
-- **Backend** (`/services/gateway`, `incident-service`, `event-service`, `rule-engine`, `user-service`, `notification-service`, `webhook-service`): @florian-pesco
-- **GenAI** (`/services/genai-service`): @manuellerchner
+- **Frontend** (`services/frontend`): [@LeonSpoerl](https://github.com/LeonSpoerl)
+- **Backend** (`services/gateway`, `services/incident-service`, `services/event-service`, `services/user-service`, `services/notification-service`, `services/webhook-service`): [@florian-pesco](https://github.com/florian-pesco)
+- **GenAI** (`services/genai-service`): [@ManuelLerchner](https://github.com/ManuelLerchner)

@@ -47,7 +47,7 @@ public interface WebhooksApi {
 
     /**
      * POST /webhooks/{source} : Ingest a webhook from an external system
-     * Persists the payload verbatim as an External Event (ADR 0008) and publishes &#x60;external.event.received&#x60; to NATS for the rule engine. Sources with a configured secret must sign the raw request body (&#x60;X-Hub-Signature-256&#x60;, GitHub convention); with &#x60;WEBHOOK_REQUIRE_SIGNATURE&#x3D;true&#x60; sources without a secret are rejected. Redeliveries carrying an already-seen delivery id are acknowledged with the original event id (&#x60;duplicate: true&#x60;) and not re-published.
+     * Persists the payload verbatim as an External Event (ADR 0008) and publishes &#x60;external.event.received&#x60; to NATS for incident-service to evaluate. Sources with a configured secret must sign the raw request body (&#x60;X-Hub-Signature-256&#x60;, GitHub convention); with &#x60;WEBHOOK_REQUIRE_SIGNATURE&#x3D;true&#x60; sources without a secret are rejected. Redeliveries carrying an already-seen delivery id are acknowledged with the original event id (&#x60;duplicate: true&#x60;) and not re-published.
      *
      * @param source Operator-chosen slug identifying the sending system. (required)
      * @param requestBody Raw webhook payload; persisted verbatim. (required)
@@ -63,7 +63,7 @@ public interface WebhooksApi {
     @Operation(
         operationId = "receiveWebhook",
         summary = "Ingest a webhook from an external system",
-        description = "Persists the payload verbatim as an External Event (ADR 0008) and publishes `external.event.received` to NATS for the rule engine. Sources with a configured secret must sign the raw request body (`X-Hub-Signature-256`, GitHub convention); with `WEBHOOK_REQUIRE_SIGNATURE=true` sources without a secret are rejected. Redeliveries carrying an already-seen delivery id are acknowledged with the original event id (`duplicate: true`) and not re-published.",
+        description = "Persists the payload verbatim as an External Event (ADR 0008) and publishes `external.event.received` to NATS for incident-service to evaluate. Sources with a configured secret must sign the raw request body (`X-Hub-Signature-256`, GitHub convention); with `WEBHOOK_REQUIRE_SIGNATURE=true` sources without a secret are rejected. Redeliveries carrying an already-seen delivery id are acknowledged with the original event id (`duplicate: true`) and not re-published.",
         tags = { "webhooks" },
         responses = {
             @ApiResponse(responseCode = "202", description = "Event ingested (or redelivery acknowledged)", content = {

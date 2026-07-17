@@ -1,54 +1,54 @@
-## Incident Management System - CI Failure Auto-Incident Sequence
-
-Shows the full NATS-driven flow when a CI pipeline failure auto-creates an incident and fans out to all subscribers.
+## Incident Management System - Webhook-driven Incident Processing
 
 ```mermaid
 sequenceDiagram
-    participant GH as GitHub Actions
+    participant EXT as External system
     participant WH as webhook-service
     participant NATS as NATS JetStream
-    participant RE as rule-engine
     participant IS as incident-service
+    participant DB as incidents DB
     participant ES as event-service
-    participant GS as genai-service
-    participant Ollama as Ollama (qwen2.5:3b)
     participant NS as notification-service
-    participant GW as gateway (SSE)
+    participant GS as genai-service
+    participant LLM as Ollama or TUM Logos
+    participant GW as Gateway
     participant FE as Frontend
 
-    GH->>WH: POST /webhooks/{sourceId} (ci_failure payload)
-    WH->>NATS: publish external.event.received {sourceId, type, payload}
+    EXT->>WH: POST signed webhook
+    WH->>WH: Persist ExternalEvent
+    WH->>NATS: Publish external.event.received
+    NATS->>IS: external.event.received
+    IS->>IS: Evaluate failure-like event type and payload
 
-    NATS->>RE: external.event.received
-    RE->>RE: evaluate rules against event fields
-    note right of RE: condition match: type=ci_failure, branch=main
-    RE->>NATS: publish incident.create.requested {sourceId, severity: SEV2}
-
-    NATS->>IS: incident.create.requested
-    IS->>IS: create Incident in DB (status: OPEN)
-    IS->>NATS: publish incident.created {incidentId, timestamp}
-
-    par NATS fan-out on incident.created
-        NATS->>ES: incident.created
-        ES->>ES: append INCIDENT_CREATED event to log
-    and
-        NATS->>GS: incident.created
-        GS->>IS: GET /incidents/{incidentId}
-        IS-->>GS: incident data
-        GS->>Ollama: generate summary + severity suggestion + solutions
-        Ollama-->>GS: structured JSON result
-        GS->>IS: PATCH /incidents/{incidentId}/ai-results
-        IS->>IS: store Summary + Solutions in DB
-        IS->>NATS: publish incident.updated {incidentId, timestamp}
-    and
-        NATS->>NS: incident.created
-        NS->>NS: store in-app notification for assigned users
-    and
-        NATS->>GW: incident.created
-        GW->>FE: SSE push: incident.created {incidentId}
-        note right of FE: frontend fetches full incident via REST
+    alt New failure-like event
+        IS->>DB: Persist ProcessedExternalEvent and SEV2 Incident
+        IS->>NATS: Publish incident.created
+        par Event log
+            NATS->>ES: incident.created
+            ES->>ES: Append immutable timeline event
+        and Notifications
+            NATS->>NS: incident.created
+            NS->>NS: Store in-app notification
+        and AI analysis
+            NATS->>GS: incident.created
+            GS->>IS: GET incident context
+            IS-->>GS: Incident data
+            GS->>LLM: Generate summary, severity suggestion, solutions
+            LLM-->>GS: Structured result
+            GS->>NATS: Publish incident.genai.summary.generated,<br/>incident.genai.severity.generated, or<br/>incident.genai.solutions.generated
+            NATS->>IS: Generated AI result
+            IS->>DB: Store generated fields
+            IS->>NATS: Publish incident.updated
+        and Live UI update
+            NATS->>GW: incident.created and incident.updated
+            GW-->>FE: Server-Sent Event
+        end
+    else Duplicate or non-failure event
+        IS->>DB: Record processed event or skip duplicate
+        Note over IS: No incident is created
     end
 
-    NATS->>GW: incident.updated (AI results ready)
-    GW->>FE: SSE push: incident.updated {incidentId}
+    Note over GS,NATS: On resolution, GS publishes<br/>incident.genai.postmortem.generated
 ```
+
+The embedded rule is deliberately small: it detects failure-like event types or payload values and creates a `SEV2` incident. It is not yet a configurable rule-policy engine.

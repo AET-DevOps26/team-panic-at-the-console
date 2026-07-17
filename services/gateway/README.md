@@ -16,6 +16,7 @@ OpenAPI exploration uses the standalone **swagger-ui** service (`api/openapi.yam
 | `GET/POST /api/v1/notifications*`          | Proxy to `notification-service` notification REST API |
 | `GET /api/v1/external-events*`             | Proxy to `webhook-service` external-events audit API  |
 | `GET/POST/DELETE /api/v1/webhook-sources*` | Proxy to `webhook-service` source management API      |
+| `GET /api/v1/incidents/stream`             | NATS-backed SSE invalidation stream                   |
 
 GenAI compute runs via NATS (`genai-service`); Ollama reachability is checked on that service (`/api/v1/genai/ollama/health`), not exposed on the gateway.
 
@@ -41,13 +42,14 @@ pixi run --manifest-path services/gateway/pixi.toml test
 pixi run --manifest-path services/gateway/pixi.toml start
 ```
 
-With compose (`pixi run compose-up`), use the `edge` proxy on port **8080** (`/api/v1/...` for API, `/swagger/` for docs). Downstream URLs are set via environment variables.
+With Compose (`docker compose up`), use the `edge` proxy on port **8080** (`/api/v1/...` for API, `/swagger/` for docs). Downstream URLs are set via environment variables.
 
 `pixi run start` on this module binds **8080** directly (API only, no `/swagger/`).
 
-## Not yet implemented
+## Authentication and real-time updates
 
-- JWT cookie validation and `X-User-Id` / `X-User-Role` injection (notifications identity scoping depends on this)
-- NATS → SSE fan-out to browsers
-- Routes for event-service
-- Genai write-back `PATCH .../genai/*/result` (cluster-internal; gateway returns 403)
+The gateway validates the `session` JWT cookie on protected API routes and derives `X-User-Id` / `X-User-Role` from its validated claims. Client-supplied identity headers are never forwarded. Downstream services receive only the gateway-derived headers.
+
+Gateway subscribes to `incident.>` on NATS and exposes `GET /api/v1/incidents/stream` as an SSE cache-invalidation stream. The frontend reloads data through REST after receiving an event.
+
+The gateway proxies the incident timeline read (`GET /api/v1/incidents/{incidentId}/events`) to event-service, which serves it from its append-only Event Log. Other event-service routes and GenAI write-back `PATCH .../genai/*/result` remain cluster-internal; the gateway returns `403` for GenAI write-back paths.

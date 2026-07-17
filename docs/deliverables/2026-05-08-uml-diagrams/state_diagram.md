@@ -1,68 +1,29 @@
 ## Incident Management System - Incident Lifecycle State Machine
 
-Shows valid status transitions and the side effects triggered at each state change.
-
 ```mermaid
 stateDiagram-v2
-    direction LR
+    [*] --> OPEN: manual creation or failure-like external event
 
-    [*] --> OPEN: created (manual or auto via rule-engine)
-
-    OPEN --> INVESTIGATING: Commander updates status
-    OPEN --> RESOLVED: Commander marks resolved directly
-
-    INVESTIGATING --> RESOLVED: Commander marks resolved
-
+    OPEN --> INVESTIGATING: responder updates status
+    OPEN --> RESOLVED: responder resolves
+    INVESTIGATING --> RESOLVED: responder resolves
     RESOLVED --> [*]
 
     note right of OPEN
-        On entry:
-        - genai-service generates Summary + Solutions
-        - notification-service notifies users
-        - Event appended to Event Log
+        incident.created is published to NATS.
+        It triggers the event log, notifications,
+        GenAI analysis, and gateway SSE fan-out.
     end note
 
     note right of INVESTIGATING
-        On entry:
-        - status change recorded in Event Log
-        - Severity may be escalated by rule-engine
-          at any point (independent of status)
+        incident.status.changed is published to NATS
+        and appended to the immutable timeline.
     end note
 
     note right of RESOLVED
-        On entry:
-        - genai-service generates Postmortem
-        - resolution recorded in Event Log
+        incident.status.changed and incident.resolved
+        are published. GenAI generates a postmortem.
     end note
 ```
 
-## Severity (independent of status)
-
-Severity is an attribute of the Incident, not a status. It can change in any state.
-
-**Two sources of severity change:**
-
-- **Automatic (rule-engine)**: detects repeated `external.event.received` events from the same source within a time window → publishes `incident.severity.escalate.requested` to NATS → incident-service raises severity one level
-- **Manual (Commander)**: overrides severity directly via REST
-
-**Note:** genai-service also suggests a severity level (displayed as advisory in the UI) but does NOT change the actual severity — that is rule-engine or Commander only.
-
-```mermaid
-stateDiagram-v2
-    direction LR
-
-    [*] --> SEV_RULE: incident created\n(severity set by matching rule action)
-
-    SEV_RULE --> SEV4 : rule action = SEV4
-    SEV_RULE --> SEV3 : rule action = SEV3
-    SEV_RULE --> SEV2 : rule action = SEV2
-    SEV_RULE --> SEV1 : rule action = SEV1
-
-    SEV4 --> SEV3: escalate (rule-engine auto or Commander)
-    SEV3 --> SEV2: escalate (rule-engine auto or Commander)
-    SEV2 --> SEV1: escalate (rule-engine auto or Commander)
-
-    SEV3 --> SEV4: de-escalate (Commander)
-    SEV2 --> SEV3: de-escalate (Commander)
-    SEV1 --> SEV2: de-escalate (Commander)
-```
+Severity is independent of lifecycle state. Failure-like external events create a `SEV2` incident through the embedded `incident-service` rule. Responders can later set severity manually; each change publishes `incident.severity.escalated` and creates a timeline event and notification.

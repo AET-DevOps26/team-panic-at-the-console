@@ -463,7 +463,7 @@ function EventDetailDialog({ eventId, onClose }: { eventId: string | null; onClo
               <code className="font-mono text-xs break-all">{event.eventType}</code>
               <span className="text-muted-foreground">Delivery ID</span>
               <code className="font-mono text-xs break-all">{event.deliveryId ?? "–"}</code>
-              <span className="text-muted-foreground">Forwarded to rule engine</span>
+              <span className="text-muted-foreground">Forwarded to incident-service</span>
               <span>{event.publishedAt ? formatDateTime(event.publishedAt) : "pending"}</span>
             </div>
             <div className="space-y-1.5">
