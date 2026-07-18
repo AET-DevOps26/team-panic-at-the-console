@@ -385,17 +385,50 @@ Prism reads the spec and serves auto-generated responses on `http://localhost:40
 
 ## Student Responsibilities
 
+| Microservice | Primary owner | Partial ownership / domain |
+|---|---|---|
+| `frontend` | Leon | Dashboard and user-facing workflows |
+| `gateway` | Manuel | API routing, external API boundary, OpenAPI integration |
+| `incident-service` | Florian | Incident lifecycle and core domain |
+| `event-service` | Florian | Immutable event log and timeline data |
+| `user-service` | Leon | Authentication, users, roles, identity |
+| `notification-service` | Leon | In-app notifications and read state |
+| `webhook-service` | Leon | Webhook ingestion and source management |
+| `genai-service` | Manuel | AI generation, providers, and NATS processing |
+
 [@florian-pesco](https://github.com/florian-pesco)
-- **Project role**: Backend
-- **Services**: `services/incident-service`, `services/event-service`
+
+- **Project role**: Core domain backend and event-driven incident workflow
+- **Primary services**: `services/incident-service`, `services/event-service`
+- **Domains**:
+  - Incident lifecycle, persistence, REST API, and NATS publishing/subscription
+  - Append-only event log and incident timeline data
+  - External-event rule evaluation and automatic incident creation
+  - Database schema documentation and product/backlog documentation
 
 [@ManuelLerchner](https://github.com/ManuelLerchner)
-- **Project role**: GenAI
-- **Services**: `services/genai-service`, `services/gateway`, `infra/observability`
 
-[@LeonSpoerl](https://github.com/LeonSpoerl):
-- **Project role**: Frontend
-- **Services**: `services/frontend`, `services/user-service`, `services/notification-service`, `services/webhook-service`
+- **Project role**: Platform architecture, GenAI, and delivery infrastructure
+- **Primary services**: `services/genai-service`, `services/gateway`
+- **Domains**:
+  - GenAI generation pipeline: structured prompts, Ollama and TUM Logos providers, NATS integration, evaluation, and integration tests
+  - API gateway, OpenAPI contracts, generated clients, Swagger UI, and code-generation workflow
+  - Platform infrastructure: Docker Compose, Helm, Kubernetes, SOPS, deployment workflows, and service health checks
+  - Observability: Prometheus, Grafana, alerting, JVM sizing, resource-quota hardening
+  - CI/CD, dependency/security maintenance, architecture decisions, ADRs, and project documentation
+
+[@LeonSpoerl](https://github.com/LeonSpoerl)
+
+- **Project role**: Frontend, identity, and user-facing workflow integration
+- **Primary services**: `services/frontend`, `services/user-service`, `services/notification-service`, `services/webhook-service`
+- **Domains**:
+  - React dashboard, typed API client, incident workflow UI, timeline, AI output display, and frontend test setup
+  - Session authentication, invite-only registration, user management, and identity propagation
+  - In-app notifications, per-user read state, assignee targeting, and notification UI
+  - Webhook ingestion, audit trail, source management, and frontend integration
+  - Edge routing/ingress, Azure/Terraform deployment work, and shared Helm/Compose operational fixes
+
+Shared responsibility covers Helm/Compose operations, CI, OpenAPI alignment, and documentation.
 
 
 ## Development Memes
