@@ -1,5 +1,5 @@
 import { Link, NavLink, useNavigate } from "react-router-dom";
-import { AlertTriangle, ExternalLink, Settings, Webhook, Filter, LayoutDashboard, LogOut } from "lucide-react";
+import { AlertTriangle, ExternalLink, Settings, Webhook, Filter, LogOut } from "lucide-react";
 import { useCurrentUser, useLogout } from "@/api/queries";
 import { appConfig } from "@/lib/appConfig";
 import { cn } from "@/lib/utils";
@@ -31,12 +31,10 @@ export default function Sidebar() {
   return (
     <aside className="flex h-full w-60 flex-col bg-slate-900 text-slate-100">
       {/* Brand */}
-      <Link to="/" className="flex items-center gap-2.5 px-5 py-4 border-b border-slate-700 transition-colors hover:bg-slate-800">
-        <div className="flex h-8 w-8 items-center justify-center rounded-md bg-red-600">
-          <LayoutDashboard className="h-4 w-4 text-white" />
-        </div>
+      <Link to="/" className="flex items-center gap-2.5 border-b border-slate-700 px-5 py-4 transition-colors hover:bg-slate-800">
+        <img src="/logo-sidebar.png" alt="Panic! At The Console" className="h-10 w-10 shrink-0 rounded-md" />
         <div>
-          <p className="text-sm font-semibold leading-tight">Incident Platform</p>
+          <p className="text-sm font-semibold leading-tight">Panic! At The Console</p>
           <p className="text-xs text-slate-400 leading-tight">Operations</p>
         </div>
       </Link>
