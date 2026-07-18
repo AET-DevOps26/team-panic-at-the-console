@@ -15,6 +15,10 @@ on:
         description: Secondary image tag (e.g. "latest" on release, or "sha-<sha>" on CI builds).
         type: string
         required: true
+      platforms:
+        description: Target platforms for the image manifest.
+        type: string
+        required: true
 
 jobs:
   build:
@@ -70,6 +74,10 @@ jobs:
         id: repo
         run: echo "lower=${GITHUB_REPOSITORY,,}" >> "$GITHUB_OUTPUT"
 
+      - name: Set up QEMU
+        if: ${{ contains(inputs.platforms, 'arm64') }}
+        uses: docker/setup-qemu-action@96fe6ef7f33517b61c61be40b68a1882f3264fb8 # v4.2.0
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@d7f5e7f509e45cec5c76c4d5afdd7de93d0b3df5 # v4.1.0
 
@@ -87,6 +95,7 @@ jobs:
           context: ${{ matrix.build_context || format('./services/{0}', matrix.service) }}
           file: ${{ matrix.build_dockerfile || format('./services/{0}/Dockerfile', matrix.service) }}
           build-args: ${{ matrix.build_args || '' }}
+          platforms: ${{ inputs.platforms }}
           push: ${{ inputs.push }}
           tags: |
             ghcr.io/${{ steps.repo.outputs.lower }}/${{ matrix.service }}:${{ inputs.primary_tag }}

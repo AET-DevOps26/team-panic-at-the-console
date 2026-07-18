@@ -49,3 +49,4 @@ jobs:
       push: false
       primary_tag: dev
       sha_tag: sha-${{ github.sha }}
+      platforms: linux/amd64
