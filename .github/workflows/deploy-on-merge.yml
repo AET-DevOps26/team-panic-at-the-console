@@ -27,6 +27,7 @@ jobs:
       push: true
       primary_tag: sha-${{ github.sha }}
       sha_tag: latest
+      platforms: linux/amd64
 
   deploy-k8s:
     name: Deploy to Kubernetes
