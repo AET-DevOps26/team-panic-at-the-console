@@ -8,10 +8,11 @@ Lightweight incident management system - detect, track, and resolve incidents wi
 
 ## Try It (Grading and Evaluation)
 
-The application is deployed in two environments:
+The application is deployed in three environments:
 
 - **Kubernetes (TUM stud cluster):** <https://team-panic-at-the-console-devops26.stud.k8s.aet.cit.tum.de/>
 - **Azure VM:** <http://20.52.156.209:8080/>
+- **Raspberry Pi (self-hosted):** <https://panic.manuellerchner.de/>
 
 No credentials are needed up front: register a new account with an arbitrary name, email (e.g. `evaluation@example.com`), and password, and leave the invite code empty (no invite code is set for the demo deployments).
 
