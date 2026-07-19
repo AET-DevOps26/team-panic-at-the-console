@@ -6,29 +6,38 @@ Lightweight incident management system - detect, track, and resolve incidents wi
 
 <img width="1445" height="832" alt="Incident management dashboard" src="https://github.com/user-attachments/assets/5bd97923-fe16-438e-aded-9ff14bdd7a10" />
 
-## Quick Start
+## Try It (Grading and Evaluation)
+
+The application is deployed in three environments:
+
+- **Kubernetes (TUM stud cluster):** <https://team-panic-at-the-console-devops26.stud.k8s.aet.cit.tum.de/>
+- **Azure VM:** <http://20.52.156.209:8080/>
+- **Raspberry Pi (self-hosted):** <https://panic.manuellerchner.de/>
+
+No credentials are needed up front: register a new account with an arbitrary name, email (e.g. `evaluation@example.com`), and password, and leave the invite code empty (no invite code is set for the demo deployments).
+
+To build and run the stack locally, Docker is the only prerequisite:
 
 ```bash
-# install tools and hooks once
-pixi install
-pixi run pre-commit-install
-
-# run the same checks as CI
-pixi run lint
+docker compose up --build
 ```
+
+Pixi is only needed for development tasks (lint, tests, hooks); see [Installation](#installation) and [Local Runtime](#local-runtime).
 
 ## Installation
 
 Prerequisites:
 
-- Git
-- Pixi
+- Docker: sufficient to build and run the local compose stack
+- Git and Pixi: needed for development tasks (lint, tests, hooks, deploys)
 
 Install Pixi on macOS:
 
 ```bash
 brew install pixi
 ```
+
+For other platforms, see the [Pixi installation guide](https://pixi.sh/latest/installation/).
 
 Install project tooling and Git hooks:
 
@@ -52,14 +61,15 @@ pixi run pre-commit-install
 │   ├── user-service/           # Auth + role management
 │   ├── notification-service/   # Notifies users on incident events
 │   ├── webhook-service/        # Receives CI/CD webhook events
-│   └── genai-service/          # AI summaries, triage, postmortem drafts
+│   ├── genai-service/          # AI summaries, triage, postmortem drafts
+│   └── generated/              # API clients generated from api/openapi.yaml
 ├── infra/
 │   ├── helm/                   # Helm chart + SOPS-encrypted deploy values
 │   └── compose/                # Local docker-compose stack
 ├── docs/
+│   ├── adr/                    # Architecture decision records
 │   ├── schema.md               # Persistence schema snapshot
-│   ├── deliverables/           # UML diagrams and project deliverables
-│   └── submissions/
+│   └── deliverables/           # UML diagrams and project deliverables
 ├── tests/                      # Contract and end-to-end tests
 └── scripts/
 ```
@@ -90,7 +100,8 @@ flowchart LR
     nats -->|incident.*| notifications
     nats -->|incident.created, resolved,<br/>regen.requested| genai["genai-service"]
     nats -->|incident.*| gateway
-    genai -->|GET/PATCH incident data| incident
+    genai -->|GET incident context| incident
+    genai -->|incident.genai.*.generated| nats
     genai -->|Generation| llm["Ollama locally / TUM Logos in Kubernetes"]
 
     classDef app fill:#e3f2fd,stroke:#1565c0,color:#000
@@ -106,12 +117,13 @@ flowchart LR
 - [Analysis object model](docs/deliverables/2026-05-08-uml-diagrams/analysis_object_model.md)
 - [Use cases](docs/deliverables/2026-05-08-uml-diagrams/use_case_diagram.md)
 - [Persistence schema](docs/schema.md)
+- [Architecture decision records](docs/adr/)
 
 ### Incident workflow
 
 Users create and manage incidents through the dashboard. `incident-service` persists the current state, then publishes lifecycle events to NATS. `event-service` writes the immutable timeline, `notification-service` stores in-app notifications, `genai-service` creates analysis, and the gateway forwards changes to connected browsers through Server-Sent Events.
 
-`webhook-service` persists signed external events and publishes `external.event.received` to NATS. `incident-service` consumes that event and applies an embedded, failure-like rule: it creates one `SEV2` incident for a new event whose type or payload contains failure indicators. Processed event IDs prevent duplicate incident creation.
+`webhook-service` persists signed external events and publishes `external.event.received` to NATS. `incident-service` consumes that event and evaluates it against configurable incident rules, managed through the API and the frontend Rules page. Each rule matches conditions on the event's `source`, `eventType`, or `payload` fields (operators like equals, contains, regex) and creates an incident with a templated title, description, severity, and metadata. A per-rule deduplication key template prevents duplicate incidents for the same underlying event. On first start, a default "GitHub CI failures" rule is seeded that opens a `SEV2` incident for `ci_failure` events.
 
 ### GenAI
 
@@ -131,13 +143,19 @@ See [.github/workflows/](.github/workflows/).
 | `java-tests.yml` | Push, PR, merge queue | Java service unit tests |
 | `frontend-tests.yml` | Push, PR, merge queue | Frontend tests |
 | `python-tests.yml` | Push, PR, merge queue | GenAI type check and tests |
+| `ollama-integration.yml` | Manual dispatch, weekly schedule | GenAI integration tests against a real Ollama |
 | `openapi-lint.yml` | Push, PR, merge queue | OpenAPI lint and code-generation validation |
 | `compose-validate.yml` | Push, PR, merge queue | Compose validation and full-stack smoke test |
 | `container-ci.yml` | PR, merge queue | Container build validation without pushing images |
+| `workflow-hygiene.yml` | Push, PR, merge queue | actionlint on workflow files |
+| `semantic-pr.yml` | PR | Conventional Commits PR title check |
+| `pr-labeler.yml` | PR | Auto-labels pull requests |
+| `_build-images.yml` | Called by `release.yml`, `deploy-on-merge.yml`, `container-ci.yml` | Reusable image build (and optional push) matrix |
 | `deploy-on-merge.yml` | Push to `main` | Build, push, and deploy to Kubernetes |
 | `release.yml` | GitHub Release | Build, push, and deploy to Kubernetes and Azure |
 | `deploy-k8s.yml` | Called by `release.yml`, manual dispatch | Kubernetes deployment; decrypts SOPS values |
 | `deploy-azure-vm.yml` | Called by `release.yml`, manual dispatch | Azure deployment via OIDC and Ansible |
+| `terraform-destroy.yml` | Manual dispatch | Tears down the Azure VM infrastructure |
 
 **PR CI does not decrypt SOPS or deploy to the cluster** (no cluster credentials on PRs). Deploy workflows gate on the `kubernetes` and `azure` GitHub Environments; credentials live in repository Actions secrets (below).
 
@@ -264,9 +282,9 @@ pixi run -e deploy helm-uninstall
 
 Optional: `VALUES_FILE=path/to/other.enc.yaml` when running `helm-deploy`.
 
-#### URLs and routes
+#### URLs and routes (stud cluster)
 
-**Stud cluster** (`https://team-panic-at-the-console-devops26.stud.k8s.aet.cit.tum.de/`):
+`https://team-panic-at-the-console-devops26.stud.k8s.aet.cit.tum.de/`:
 
 | Path | Service |
 | ---- | ------- |
@@ -276,26 +294,11 @@ Optional: `VALUES_FILE=path/to/other.enc.yaml` when running `helm-deploy`.
 | `/grafana` | Grafana (dashboards) |
 | `/prometheus` | Prometheus UI |
 
-Ingress uses cert-manager (`letsencrypt-prod`) and TLS secret `devops-platform-tls`. Observability is self-hosted in the namespace: the chart deploys its own Prometheus and Grafana (plain Deployments, no operator or CRDs), provisioned with the exported dashboards and alert rules, and exposes them under `/grafana` and `/prometheus`.
+Ingress uses cert-manager (`letsencrypt-prod`) and TLS secret `devops-platform-tls`.
 
-**Local compose** (via `pixi run compose-up`):
+Observability is self-hosted in the namespace: the chart deploys its own Prometheus and Grafana as plain Deployments (no kube-prometheus-stack, no CRDs, no cluster-scoped RBAC). Prometheus scrapes every service via static config and loads the alert rules directly; Grafana is auto-provisioned with the Prometheus datasource and the exported dashboards (Spring services + GenAI). Both are reachable through the ingress at `/grafana` and `/prometheus`. For clusters that already run prometheus-operator, set `monitoring.operatorCrds.enabled=true` to switch to PodMonitor + PrometheusRule CRs consumed by the shared operator instead.
 
-| URL | Service |
-| --- | ------- |
-| `http://localhost:8080/api/v1/` | Gateway (via `edge`) |
-| `http://localhost:8080/swagger` | Swagger UI (via `edge`) |
-| `http://localhost:8080/grafana` | Grafana (via `edge`; `admin` / `admin`) |
-| `http://localhost:8080/prometheus` | Prometheus UI (via `edge`) |
-| `http://localhost:3000/` | Frontend (direct) |
-| `http://localhost:3030/` | Grafana (direct) |
-| `http://localhost:9090/prometheus` | Prometheus (direct) |
-| `http://localhost:8087/metrics` | genai-service Prometheus scrape |
-
-Grafana talks to Prometheus at `http://prometheus:9090/prometheus` inside Docker; use `localhost` from your browser.
-
-Populate Grafana panels after boot: `pixi run compose-smoke-genai-metrics`.
-
-**On Kubernetes**, the chart self-hosts a namespace-local Prometheus and Grafana as plain Deployments (no kube-prometheus-stack, no CRDs, no cluster-scoped RBAC). Prometheus scrapes every service via static config and loads the alert rules directly; Grafana is auto-provisioned with the Prometheus datasource and the exported dashboards (Spring services + GenAI). Both are reachable through the ingress at `/grafana` and `/prometheus`. For clusters that already run prometheus-operator, set `monitoring.operatorCrds.enabled=true` to switch to PodMonitor + PrometheusRule CRs consumed by the shared operator instead.
+For local compose URLs, see [Local Runtime](#urls-and-routes-local-compose).
 
 #### Debug the cluster
 
@@ -328,26 +331,28 @@ pixi run lint
 
 ## Local Runtime
 
-A single command from the repository root starts the full stack. Docker Desktop must be running:
+A single command from the repository root starts the full stack; Docker is the only prerequisite:
+
+```bash
+docker compose up           # published ghcr.io :latest images
+docker compose up --build   # rebuild from local source
+```
+
+Docker auto-discovers the root `compose.yaml` (a symlink to `infra/compose/docker-compose.yml`) and starts all services plus shared infrastructure (Postgres, NATS). Service env vars (`DATABASE_URL`, `NATS_URL`) are pre-wired, and every variable has a baked-in default.
+
+For development, the Pixi wrapper is handy:
 
 ```bash
 pixi run compose-up
 ```
 
-Starts all services plus shared infrastructure (Postgres, NATS). The task passes `--build` (so local source changes are rebuilt instead of reusing stale `:latest` images) and `--env-file .env.example`, and targets `infra/compose/docker-compose.yml`. Service env vars (`DATABASE_URL`, `NATS_URL`) are pre-wired, and every variable has a baked-in default. Stop it with `pixi run compose-down`.
+It always passes `--build` (so local source changes are rebuilt instead of reusing stale `:latest` images) and `--env-file .env.example`. Stop the stack with `docker compose down` or `pixi run compose-down`.
 
-The plain Docker command also works:
-
-```bash
-docker compose up
-```
-
-Docker auto-discovers the root `compose.yaml` (a symlink to `infra/compose/docker-compose.yml`). This boots the stack from the published `ghcr.io` `:latest` images without rebuilding; add `--build` (`docker compose up --build`) to rebuild from local source. Either way the plain command skips `.env.example`, so `pixi run compose-up` (which passes both `--build` and `--env-file .env.example`) stays the recommended path.
-
-#### URLs and routes
+#### URLs and routes (local compose)
 
 | URL | Service |
 | --- | ------- |
+| `http://localhost:8080/` | Frontend (via `edge`) |
 | `http://localhost:8080/api/v1/` | Gateway (via `edge`; e.g. `/health`) |
 | `http://localhost:8080/swagger` | Swagger UI |
 | `http://localhost:8080/grafana` | Grafana (via `edge`; `admin` / `admin`) |
@@ -357,7 +362,7 @@ Docker auto-discovers the root `compose.yaml` (a symlink to `infra/compose/docke
 | `http://localhost:9090/prometheus` | Prometheus (direct) |
 | `http://localhost:8087/metrics` | genai-service metrics |
 
-Same path layout as the stud-cluster ingress (`/api`, `/swagger`, `/grafana`, `/prometheus`); the direct host ports stay published for local debugging. After boot: `pixi run compose-smoke-genai-metrics` to fill the genai dashboard.
+Same path layout as the stud-cluster ingress (`/api`, `/swagger`, `/grafana`, `/prometheus`); the direct host ports stay published for local debugging. Grafana talks to Prometheus at `http://prometheus:9090/prometheus` inside Docker; use `localhost` from your browser. After boot: `pixi run compose-smoke-genai-metrics` to fill the genai dashboard.
 
 Shared non-secret defaults (for example `NATS_URL`) are defined once in `.env.example` and referenced from service-specific environment sections.
 
@@ -367,7 +372,7 @@ Shared non-secret defaults (for example `NATS_URL`) are defined once in `.env.ex
 
 | Symptom | Resolution |
 | --- | --- |
-| Compose cannot start | Start Docker Desktop, then rerun `pixi run compose-up`. |
+| Compose cannot start | Start Docker Desktop, then rerun `docker compose up`. |
 | A local port is already in use | Stop the process using the port or run `pixi run compose-down` to remove the local stack. |
 | Grafana panels are empty after startup | Run `pixi run compose-smoke-genai-metrics` to generate sample GenAI metrics. |
 | Kubernetes deployment cannot decrypt values | Configure `SOPS_AGE_KEY` as described in [New team member access](#new-team-member-access). |
@@ -381,7 +386,7 @@ Spin up a local HTTP mock server driven by `api/openapi.yaml` using [Prism](http
 pixi run mock-api
 ```
 
-Prism reads the spec and serves auto-generated responses on `http://localhost:4010` (for example, `http://localhost:4010/health`). No services need to be running — useful for frontend development and API exploration before backends exist.
+Prism reads the spec and serves auto-generated responses on `http://localhost:4010` (for example, `http://localhost:4010/health`). No services need to be running: useful for frontend development and API exploration before backends exist.
 
 ## Student Responsibilities
 
