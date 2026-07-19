@@ -26,7 +26,7 @@ _GENERATION_BUCKETS = (0.5, 1, 2, 5, 10, 20, 30, 45, 60, 90, 120)
 
 ai_generation_seconds = Histogram(
     "ai_generation_seconds",
-    "Wall time of one AI task (LLM call + incident-service PATCH), by PromptTask and provider.",
+    "Wall time of one AI task (LLM call + NATS result publish), by PromptTask and provider.",
     labelnames=("type", "provider"),
     buckets=_GENERATION_BUCKETS,
 )
@@ -34,7 +34,7 @@ ai_generation_seconds = Histogram(
 
 ai_generations_total = Counter(
     "ai_generations_total",
-    "AI tasks completed (LLM + PATCH), by PromptTask, provider, and outcome.",
+    "AI tasks completed (LLM + result publish), by PromptTask, provider, and outcome.",
     labelnames=("type", "provider", "outcome"),
 )
 
@@ -85,7 +85,7 @@ def _resolve_provider(provider: ProviderLabel) -> str:
 
 @contextmanager
 def time_generation(task: str, provider: ProviderLabel) -> Iterator[None]:
-    """Record duration + outcome of one end-to-end AI task (LLM + PATCH).
+    """Record duration + outcome of one end-to-end AI task (LLM + result publish).
 
     Pass a callable for `provider` when the label is only known after the LLM
     call (e.g. `FallbackLLMClient.last_provider_used`).
